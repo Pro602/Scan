@@ -337,7 +337,7 @@ async function startScanning() {
         }
 
         function handleRecognition(student) {
-            const record = { id: student.studentid, name: student.name, class: student.class, timestamp: new Date().toISOString(), status: 'มาทำงาน' };
+            const record = { id: student.studentid, name: student.name, class: student.class, timestamp: new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }), status: 'มาทำงาน' };
             checkedInToday.set(student.studentid, record);
             
             const overlay = document.getElementById('scan-success-overlay');
@@ -384,14 +384,30 @@ async function startScanning() {
             document.getElementById(`btn-group-${id}`).innerHTML = `<span class="${status === 'ขาด' ? 'text-red-500' : 'text-yellow-500'} text-sm">${status}</span>`;
         }
 
-        async function finishAttendance() {
-            const records = students.map(s => checkedInToday.get(s.studentid) || { id: s.studentid, name: s.name, class: s.class, timestamp: new Date().toISOString(), status: 'ขาด' });
-            const res = await apiCall({ action: 'recordAttendanceBulk', data: records });
-            if (res.success) {
-                alert("บันทึกเรียบร้อย");
-                switchTab('dashboard');
-            }
-        }
+async function finishAttendance() {
+    // ดึงค่า Location ล่าสุดก่อนส่ง
+    getLocation(); 
+
+    const records = students.map(s => {
+        const checked = checkedInToday.get(s.studentid);
+        return {
+            id: s.studentid,
+            name: s.name,
+            class: s.class,
+            // ปรับเรื่องเวลา
+            timestamp: new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }), 
+            status: checked ? checked.status : 'ขาด',
+            // เพิ่มการส่งพิกัด
+            location: currentGeoLocation ? `${currentGeoLocation.lat}, ${currentGeoLocation.lng}` : 'ไม่ได้อนุญาตสิทธิ์พิกัด'
+        };
+    });
+
+    const res = await apiCall({ action: 'recordAttendanceBulk', data: records });
+    if (res.success) {
+        alert("บันทึกข้อมูลเรียบร้อยพร้อมพิกัด");
+        switchTab('dashboard');
+    }
+}
 
         // --- MANAGE STUDENTS ---
         function openStudentModal(student = null) {
@@ -551,7 +567,7 @@ async function startScanning() {
             const filtered = attendance.filter(r => new Date(r.timestamp).toDateString() === new Date(dateStr).toDateString());
             
             const present = filtered.filter(r => r.status === 'มาทำงาน').length;
-            const late = filtered.filter(r => r.status === 'มาทำงานสาย' && new Date(r.timestamp).getHours() >= 9).length; // สมมติสายหลัง 9 โมง
+            const late = filtered.filter(r => r.status === 'มาทำงาน' && new Date(r.timestamp).getHours() >= 9).length; // สมมติสายหลัง 9 โมง
             const absent = filtered.filter(r => r.status === 'ขาด' || r.status === 'ลา').length;
 
             document.getElementById('stat-present').innerText = present;
