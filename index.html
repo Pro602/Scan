@@ -258,22 +258,52 @@
         }
 
         // --- ATTENDANCE LOGIC ---
-        async function startScanning() {
-            checkedInToday.clear();
-            document.getElementById('start-scan-section').classList.add('hidden');
-            document.getElementById('scanning-section').classList.remove('hidden');
-            
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                const video = document.getElementById('video');
-                video.srcObject = stream;
-                isScanning = true;
-                video.onplay = onVideoPlay;
-            } catch (e) {
-                alert("เข้าถึงกล้องไม่ได้: " + e.message);
-                stopScanning(false);
-            }
-        }
+// 1. เพิ่มการแจ้งเตือน Error ให้ละเอียดขึ้น
+async function startScanning() {
+    checkedInToday.clear();
+    
+    // ตรวจสอบว่าโมเดลโหลดเสร็จหรือยัง
+    if (!faceapi.nets.ssdMobilenetv1.params) {
+        alert("โมเดล AI ยังโหลดไม่เสร็จ กรุณารอสักครู่แล้วลองใหม่ครับ");
+        return;
+    }
+
+    document.getElementById('start-scan-section').classList.add('hidden');
+    document.getElementById('scanning-section').classList.remove('hidden');
+    document.getElementById('video-loader').style.display = 'flex'; // แสดง Loader
+    
+    try {
+        // เพิ่ม constraints สำหรับมือถือ (เลือกกล้องหน้า)
+        const constraints = { 
+            video: { 
+                facingMode: "user", // บังคับใช้กล้องหน้า
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+            } 
+        };
+        
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+        isScanning = true;
+        
+        // ใช้ event 'loadedmetadata' เพื่อยืนยันว่าวิดีโอมาแล้วก่อนเริ่มสแกน
+        video.onloadedmetadata = () => {
+            video.play();
+            onVideoPlay();
+        };
+
+    } catch (e) {
+        console.error("Camera Error:", e);
+        let errorMsg = "ไม่สามารถเปิดกล้องได้: ";
+        if (e.name === 'NotAllowedError') errorMsg += "คุณยังไม่ได้กดยอมรับการเข้าถึงกล้อง";
+        else if (e.name === 'NotFoundError') errorMsg += "ไม่พบอุปกรณ์กล้องบนเครื่องนี้";
+        else errorMsg += e.message;
+        
+        alert(errorMsg);
+        stopScanning(false);
+    }
+}
 
         function onVideoPlay() {
             const video = document.getElementById('video');
@@ -521,7 +551,7 @@
             const filtered = attendance.filter(r => new Date(r.timestamp).toDateString() === new Date(dateStr).toDateString());
             
             const present = filtered.filter(r => r.status === 'มาทำงาน').length;
-            const late = filtered.filter(r => r.status === 'มาทำงาน' && new Date(r.timestamp).getHours() >= 9).length; // สมมติสายหลัง 9 โมง
+            const late = filtered.filter(r => r.status === 'มาทำงานสาย' && new Date(r.timestamp).getHours() >= 9).length; // สมมติสายหลัง 9 โมง
             const absent = filtered.filter(r => r.status === 'ขาด' || r.status === 'ลา').length;
 
             document.getElementById('stat-present').innerText = present;
