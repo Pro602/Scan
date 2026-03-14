@@ -426,10 +426,10 @@ async function finishAttendance() {
 
     // 2. ส่งข้อมูลไปยัง Google Sheets (ใช้ action ที่เราเพิ่มใน Code.gs)
     try {
-        const response = await fetch(scriptURL, { // ตรวจสอบว่าชื่อตัวแปร scriptURL ตรงกับด้านบน
-            method: 'POST',
-            body: JSON.stringify({ action: 'recordAttendanceUpdate', data: records })
-        });
+const response = await fetch(gasWebAppUrl, { // <--- เปลี่ยนจาก scriptURL เป็น gasWebAppUrl
+    method: 'POST',
+    body: JSON.stringify({ action: 'recordAttendanceUpdate', data: records })
+});
         const res = await response.json();
         
         if (res.success) {
