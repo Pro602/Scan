@@ -298,9 +298,6 @@
                 labels: ['มา', 'สาย', 'ขาด/ลา'], 
                 datasets: [{ data: [p, l, a], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'] }] 
             } 
-        });
-    }
-
         // --- UTILS ---
         async function apiCall(payload) {
             if (!gasWebAppUrl) return { success: false, error: "No URL" };
