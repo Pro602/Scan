@@ -385,26 +385,46 @@ async function startScanning() {
         }
 
 async function finishAttendance() {
-    // ดึงค่า Location ล่าสุดก่อนส่ง
     getLocation(); 
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    // กำหนดเงื่อนไขเวลา
+    const isAfterLateTime = (currentHour > 8 || (currentHour === 8 && currentMinute >= 31));
+    const isAfterAutoReset = (currentHour >= 9);
 
     const records = students.map(s => {
         const checked = checkedInToday.get(s.studentid);
+        let status = null;
+
+        if (checked) {
+            // กรณีมีการสแกนหน้า
+            status = isAfterLateTime ? 'สาย' : 'มาทำงาน';
+        } else if (isAfterAutoReset) {
+            // กรณีหลัง 9 โมงแล้วยังไม่มีการสแกน
+            status = 'ขาด';
+        }
+
+        if (!status) return null;
+
         return {
             id: s.studentid,
             name: s.name,
             class: s.class,
-            // ปรับเรื่องเวลา
             timestamp: new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }), 
-            status: checked ? checked.status : 'ขาด',
-            // เพิ่มการส่งพิกัด
-            location: currentGeoLocation ? `${currentGeoLocation.lat}, ${currentGeoLocation.lng}` : 'ไม่ได้อนุญาตสิทธิ์พิกัด'
+            status: status,
+            location: currentGeoLocation ? `${currentGeoLocation.lat}, ${currentGeoLocation.lng}` : 'ไม่ได้อนุญาตพิกัด',
+            date: new Date().toLocaleDateString('th-TH') // ส่งวันที่ไปเพื่อใช้เช็คชื่อซ้ำในวันเดียวกัน
         };
-    });
+    }).filter(r => r !== null);
 
-    const res = await apiCall({ action: 'recordAttendanceBulk', data: records });
+    if (records.length === 0) return;
+
+    // ส่งคำสั่งไปที่ GAS
+    const res = await apiCall({ action: 'recordAttendanceUpdate', data: records });
     if (res.success) {
-        alert("บันทึกข้อมูลเรียบร้อยพร้อมพิกัด");
+        alert("อัปเดตข้อมูลการลงเวลาเรียบร้อยแล้ว");
         switchTab('dashboard');
     }
 }
