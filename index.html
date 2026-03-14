@@ -132,8 +132,8 @@
     <div id="setup-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 sm:p-8 max-w-lg w-full">
             <h2 class="text-2xl font-bold mb-4">ตั้งค่าระบบ</h2>
-            <p class="text-sm text-gray-500 mb-4 italic">https://script.google.com/macros/s/AKfycbx4cWOci54nGc2uUwDTNyomVhcoWe0W-fCR6BVN2w0SK6UISdEfdXU3u4wM_jtBc1hC/exec</p>
-            <input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycbx4cWOci54nGc2uUwDTNyomVhcoWe0W-fCR6BVN2w0SK6UISdEfdXU3u4wM_jtBc1hC/exec" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg p-3">
+            <p class="text-sm text-gray-500 mb-4 italic">https://script.google.com/macros/s/AKfycby9VOlgQyk4ZsQZA1-U39LqB0z1oAZcNLBu2M5bjzbxIev-H3SewjiOasG3l0N6GVEH/exec</p>
+            <input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycby9VOlgQyk4ZsQZA1-U39LqB0z1oAZcNLBu2M5bjzbxIev-H3SewjiOasG3l0N6GVEH/exec" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg p-3">
             <button onclick="saveGasUrl()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-8 hover:bg-blue-700">เริ่มต้นใช้งาน</button>
         </div>
     </div>
@@ -265,53 +265,49 @@
     // --- DASHBOARD DATA ---
  // --- ปรับปรุง loadAttendanceDataForDashboard ให้ดัก Error ---
 async function loadAttendanceDataForDashboard() {
-    const res = await apiCall({ action: 'getAttendance' });
-    if (res.success && Array.isArray(res.data)) {
-        attendance = res.data.map(r => {
-            const d = new Date(r.timestamp);
-            return { ...r, timestamp: isNaN(d.getTime()) ? null : d };
-        });
-        renderDashboard();
+        const res = await apiCall({ action: 'getAttendance' });
+        if (res.success && Array.isArray(res.data)) {
+            attendance = res.data.map(r => {
+                const d = new Date(r.timestamp);
+                return { ...r, timestamp: isNaN(d.getTime()) ? null : d };
+            });
+            renderDashboard();
+        }
     }
-}
 
  // แทนที่ฟังก์ชัน renderDashboard เดิมด้วยโค้ดนี้
 function renderDashboard() {
-    const dateInput = document.getElementById('dashboard-date').value; // ค่าจะเป็น YYYY-MM-DD
-    if (!dateInput) return;
+        const dateInput = document.getElementById('dashboard-date').value;
+        if (!dateInput || !attendance) return;
 
-    // กรองข้อมูลโดยเทียบจากส่วนของวันที่เท่านั้น
-    const filtered = attendance.filter(r => {
-        // แปลง Timestamp เป็น string แล้วเทียบกับ dateInput
-        const rowDate = r.timestamp instanceof Date ? r.timestamp.toISOString().split('T')[0] : '';
-        return rowDate === dateInput;
-    });
+        const filtered = attendance.filter(r => {
+            return r.timestamp instanceof Date && !isNaN(r.timestamp.getTime()) && 
+                   r.timestamp.toISOString().split('T')[0] === dateInput;
+        });
 
-    const present = filtered.filter(r => r.status === 'มาทำงาน').length;
-    const late = filtered.filter(r => r.status === 'สาย').length;
-    const absent = filtered.filter(r => r.status === 'ขาด' || r.status === 'ลา').length;
+        const present = filtered.filter(r => r.status === 'มาทำงาน').length;
+        const late = filtered.filter(r => r.status === 'สาย').length;
+        const absent = filtered.filter(r => r.status === 'ขาด' || r.status === 'ลา').length;
 
-    document.getElementById('stat-present').innerText = present;
-    document.getElementById('stat-late').innerText = late;
-    document.getElementById('stat-absent').innerText = absent;
+        document.getElementById('stat-present').innerText = present;
+        document.getElementById('stat-late').innerText = late;
+        document.getElementById('stat-absent').innerText = absent;
 
-    updateCharts(present, late, absent);
-}
+        updateCharts(present, late, absent);
+    }
 
 function updateCharts(p, l, a) {
-    const ctx = document.getElementById('attendance-pie-chart');
-    if (!ctx) return; // ดักไว้ก่อนถ้าหา element ไม่เจอ
-    const pieCtx = ctx.getContext('2d');
-    
-    if (pieChart) pieChart.destroy();
-    pieChart = new Chart(pieCtx, { 
-        type: 'pie', 
-        data: { 
-            labels: ['มา', 'สาย', 'ขาด/ลา'], 
-            datasets: [{ data: [p, l, a], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'] }] 
-        } 
-    });
-} // <--- ต้องมีวงเล็บปิดฟังก์ชันนี้
+        const ctx = document.getElementById('attendance-pie-chart');
+        if (!ctx) return;
+        if (pieChart) pieChart.destroy();
+        pieChart = new Chart(ctx.getContext('2d'), { 
+            type: 'pie', 
+            data: { 
+                labels: ['มา', 'สาย', 'ขาด/ลา'], 
+                datasets: [{ data: [p, l, a], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'] }] 
+            } 
+        });
+    }
 
         // --- UTILS ---
         async function apiCall(payload) {
