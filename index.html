@@ -132,7 +132,7 @@
     <div id="setup-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 sm:p-8 max-w-lg w-full">
             <h2 class="text-2xl font-bold mb-4">ตั้งค่าระบบ</h2>
-            <p class="text-sm text-gray-500 mb-4 italic">https://script.google.com/macros/s/AKfycbzxIP43RA0EB6_biKBflIZorxbJJdQKAOt0rV8Z8flz_yAe4Fl33IQ3S4CqXKEt8g7h/exec</p>
+            <p class="text-sm text-gray-500 mb-4 italic">https://script.google.com/macros/s/AKfycby4mfAr9sZCmb6m2WqvVFnGAhTE42YrwYouX9tNbfMrccRtWiumWqrmunUifTwpjUnc/exec</p>
             <input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/..." class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg p-3">
             <button onclick="saveGasUrl()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-8 hover:bg-blue-700">เริ่มต้นใช้งาน</button>
         </div>
@@ -385,24 +385,24 @@ async function startScanning() {
         }
 
 async function finishAttendance() {
-    getLocation(); 
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
+    // 1. ตรวจสอบพิกัดก่อนส่ง
+    if (typeof getLocation === "function") getLocation(); 
 
-    // กำหนดเงื่อนไขเวลา
-    const isAfterLateTime = (currentHour > 8 || (currentHour === 8 && currentMinute >= 31));
-    const isAfterAutoReset = (currentHour >= 9);
+    const now = new Date();
+    const hr = now.getHours();
+    const min = now.getMinutes();
+
+    // ตรรกะเวลา: สายหลัง 08:30 | สรุปคนขาดหลัง 09:00
+    const isLate = (hr > 8 || (hr === 8 && min >= 31));
+    const isAutoSummary = (hr >= 9);
 
     const records = students.map(s => {
         const checked = checkedInToday.get(s.studentid);
         let status = null;
 
         if (checked) {
-            // กรณีมีการสแกนหน้า
-            status = isAfterLateTime ? 'สาย' : 'มาทำงาน';
-        } else if (isAfterAutoReset) {
-            // กรณีหลัง 9 โมงแล้วยังไม่มีการสแกน
+            status = isLate ? 'สาย' : 'มาทำงาน';
+        } else if (isAutoSummary) {
             status = 'ขาด';
         }
 
@@ -414,18 +414,32 @@ async function finishAttendance() {
             class: s.class,
             timestamp: new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }), 
             status: status,
-            location: currentGeoLocation ? `${currentGeoLocation.lat}, ${currentGeoLocation.lng}` : 'ไม่ได้อนุญาตพิกัด',
-            date: new Date().toLocaleDateString('th-TH') // ส่งวันที่ไปเพื่อใช้เช็คชื่อซ้ำในวันเดียวกัน
+            location: currentGeoLocation ? `${currentGeoLocation.lat}, ${currentGeoLocation.lng}` : 'ไม่พบพิกัด',
+            date: new Date().toLocaleDateString('th-TH') // ส่งไปเพื่อให้ Code.gs เช็คชื่อซ้ำในวันเดียวกัน
         };
     }).filter(r => r !== null);
 
-    if (records.length === 0) return;
+    if (records.length === 0) {
+        alert("ยังไม่มีข้อมูลการสแกนหรือยังไม่ถึงเวลาสรุปผลคนขาด (09:00 น.)");
+        return;
+    }
 
-    // ส่งคำสั่งไปที่ GAS
-    const res = await apiCall({ action: 'recordAttendanceUpdate', data: records });
-    if (res.success) {
-        alert("อัปเดตข้อมูลการลงเวลาเรียบร้อยแล้ว");
-        switchTab('dashboard');
+    // 2. ส่งข้อมูลไปยัง Google Sheets (ใช้ action ที่เราเพิ่มใน Code.gs)
+    try {
+        const response = await fetch(scriptURL, { // ตรวจสอบว่าชื่อตัวแปร scriptURL ตรงกับด้านบน
+            method: 'POST',
+            body: JSON.stringify({ action: 'recordAttendanceUpdate', data: records })
+        });
+        const res = await response.json();
+        
+        if (res.success) {
+            alert("บันทึกลงระบบสำเร็จ!");
+            location.reload(); // รีเฟรชหน้าเว็บ
+        } else {
+            alert("เกิดข้อผิดพลาดจากระบบ: " + res.error);
+        }
+    } catch (error) {
+        alert("ไม่สามารถติดต่อ Server ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
     }
 }
 
