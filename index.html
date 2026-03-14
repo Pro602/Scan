@@ -211,7 +211,16 @@
         document.getElementById('dashboard-date').addEventListener('change', loadAttendanceDataForDashboard);
         document.getElementById('image-upload-input').addEventListener('change', handleImageUpload);
     };
-
+function saveGasUrl() {
+    const url = document.getElementById('gas-url').value;
+    if (!url || !url.startsWith('https://script.google.com/')) {
+        alert("กรุณากรอก URL ของ Google Apps Script ให้ถูกต้อง");
+        return;
+    }
+    localStorage.setItem('gasWebAppUrl', url);
+    alert("บันทึกค่าเรียบร้อย ระบบกำลังโหลดใหม่...");
+    location.reload(); // รีโหลดหน้าเว็บเพื่อให้ระบบเริ่มทำงาน
+}
     // --- ATTENDANCE LOGIC ---
     function handleRecognition(student) {
         const record = { 
