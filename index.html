@@ -263,14 +263,17 @@
     }
 
     // --- DASHBOARD DATA ---
-    async function loadAttendanceDataForDashboard() {
-        const res = await apiCall({ action: 'getAttendance' });
-        if (res.success) {
-            // แปลง string จาก Sheets เป็น Date Object
-            attendance = res.data.map(r => ({ ...r, timestamp: new Date(r.timestamp) }));
-            renderDashboard();
-        }
+ // --- ปรับปรุง loadAttendanceDataForDashboard ให้ดัก Error ---
+async function loadAttendanceDataForDashboard() {
+    const res = await apiCall({ action: 'getAttendance' });
+    if (res.success && Array.isArray(res.data)) {
+        attendance = res.data.map(r => {
+            const d = new Date(r.timestamp);
+            return { ...r, timestamp: isNaN(d.getTime()) ? null : d };
+        });
+        renderDashboard();
     }
+}
 
  // แทนที่ฟังก์ชัน renderDashboard เดิมด้วยโค้ดนี้
 function renderDashboard() {
@@ -295,16 +298,20 @@ function renderDashboard() {
     updateCharts(present, late, absent);
 }
 
-    function updateCharts(p, l, a) {
-        const pieCtx = document.getElementById('attendance-pie-chart').getContext('2d');
-        if (pieChart) pieChart.destroy();
-        pieChart = new Chart(pieCtx, { 
-            type: 'pie', 
-            data: { 
-                labels: ['มา', 'สาย', 'ขาด/ลา'], 
-                datasets: [{ data: [p, l, a], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'] }] 
-            } 
+function updateCharts(p, l, a) {
+    const ctx = document.getElementById('attendance-pie-chart');
+    if (!ctx) return; // ดักไว้ก่อนถ้าหา element ไม่เจอ
+    const pieCtx = ctx.getContext('2d');
     
+    if (pieChart) pieChart.destroy();
+    pieChart = new Chart(pieCtx, { 
+        type: 'pie', 
+        data: { 
+            labels: ['มา', 'สาย', 'ขาด/ลา'], 
+            datasets: [{ data: [p, l, a], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'] }] 
+        } 
+    });
+} // <--- ต้องมีวงเล็บปิดฟังก์ชันนี้
 
         // --- UTILS ---
         async function apiCall(payload) {
