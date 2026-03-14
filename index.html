@@ -132,8 +132,8 @@
     <div id="setup-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 sm:p-8 max-w-lg w-full">
             <h2 class="text-2xl font-bold mb-4">ตั้งค่าระบบ</h2>
-            <p class="text-sm text-gray-500 mb-4 italic">https://script.google.com/macros/s/AKfycbyXcIZFBTnRM9iZazEw3bmRLvkSPmXMyfvNRfdTtspVlTDHn5HKA4DvClloRnQUx8Il/exec</p>
-            <input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycbyXcIZFBTnRM9iZazEw3bmRLvkSPmXMyfvNRfdTtspVlTDHn5HKA4DvClloRnQUx8Il/exec" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg p-3">
+            <p class="text-sm text-gray-500 mb-4 italic">https://script.google.com/macros/s/AKfycbwPvJFz0uOA-D9GDacmPhZeUdnVtIrJ-tZ7d5Vl5p9682gNoUxhq6wc0Vayv-bfomoH/exec</p>
+            <input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycbwPvJFz0uOA-D9GDacmPhZeUdnVtIrJ-tZ7d5Vl5p9682gNoUxhq6wc0Vayv-bfomoH/exec" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg p-3">
             <button onclick="saveGasUrl()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-8 hover:bg-blue-700">เริ่มต้นใช้งาน</button>
         </div>
     </div>
@@ -178,444 +178,128 @@
         </div>
     </div>
 
-    <script>
-        // --- CONFIG & STATE ---
-        const GAS_URL_KEY = 'gasWebAppUrl';
-        let gasWebAppUrl = '', faceMatcher = null, pieChart, barChart;
-        let students = [], attendance = [], checkedInToday = new Map();
-        let isScanning = false, captureStream = null, recognitionInterval = null;
-        let currentGeoLocation = null;
+ <script>
+    // --- CONFIG & STATE ---
+    const GAS_URL_KEY = 'gasWebAppUrl';
+    let gasWebAppUrl = '', faceMatcher = null, pieChart;
+    let students = [], attendance = [], checkedInToday = new Map();
+    let isScanning = false, recognitionInterval = null;
+    let currentGeoLocation = null;
 
-        // --- INITIALIZATION ---
-        window.onload = async () => {
-            lucide.createIcons();
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            applyTheme(savedTheme);
-            
-            gasWebAppUrl = localStorage.getItem(GAS_URL_KEY);
-            if (!gasWebAppUrl) {
-                document.getElementById('setup-modal').classList.remove('hidden');
-            } else {
-                await initializeModels();
-                switchTab('dashboard');
-            }
-            
-            getLocation();
-            document.getElementById('dashboard-date').valueAsDate = new Date();
-            document.getElementById('dashboard-date').addEventListener('change', loadAttendanceDataForDashboard);
-            document.getElementById('image-upload-input').addEventListener('change', handleImageUpload);
-        };
-
-        async function initializeModels() {
-            try {
-                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
-                await Promise.all([
-                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-                ]);
-                console.log("Models loaded");
-            } catch (e) {
-                alert("โหลดโมเดล AI ไม่สำเร็จ กรุณารีเฟรชหน้าจอ");
-            }
-        }
-
-        function saveGasUrl() {
-            const url = document.getElementById('gas-url').value.trim();
-            if (url) {
-                localStorage.setItem(GAS_URL_KEY, url);
-                gasWebAppUrl = url;
-                location.reload();
-            }
-        }
-
-        // --- NAVIGATION ---
-        function switchTab(name) {
-            stopAllCameras();
-            ['dashboard', 'attendance', 'manage'].forEach(t => {
-                document.getElementById(`content-${t}`).classList.add('hidden');
-                document.getElementById(`tab-${t}`).className = "px-3 py-1.5 text-sm font-medium rounded-md text-gray-600 dark:text-gray-300";
-            });
-            document.getElementById(`content-${name}`).classList.remove('hidden');
-            document.getElementById(`tab-${name}`).className = "px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white";
-
-            if (name === 'dashboard') { loadStudentRosterForDashboard(); loadAttendanceDataForDashboard(); }
-            if (name === 'manage') loadStudentDataForTable();
-            if (name === 'attendance') loadStudentDataForRecognition();
-        }
-
-        function stopAllCameras() {
-            isScanning = false;
-            if (recognitionInterval) clearInterval(recognitionInterval);
-            const video = document.getElementById('video');
-            const captureVideo = document.getElementById('capture-video');
-            [video, captureVideo].forEach(v => {
-                if (v && v.srcObject) {
-                    v.srcObject.getTracks().forEach(t => t.stop());
-                    v.srcObject = null;
-                }
-            });
-        }
-
-        // --- ATTENDANCE LOGIC ---
-// 1. เพิ่มการแจ้งเตือน Error ให้ละเอียดขึ้น
-async function startScanning() {
-    checkedInToday.clear();
-    
-    // ตรวจสอบว่าโมเดลโหลดเสร็จหรือยัง
-    if (!faceapi.nets.ssdMobilenetv1.params) {
-        alert("โมเดล AI ยังโหลดไม่เสร็จ กรุณารอสักครู่แล้วลองใหม่ครับ");
-        return;
+    // --- UTILS: บังคับรูปแบบ ค.ศ. (ISO format) ---
+    function getStandardDateTime() {
+        return new Date().toISOString().replace('T', ' ').substring(0, 19);
     }
 
-    document.getElementById('start-scan-section').classList.add('hidden');
-    document.getElementById('scanning-section').classList.remove('hidden');
-    document.getElementById('video-loader').style.display = 'flex'; // แสดง Loader
-    
-    try {
-        // เพิ่ม constraints สำหรับมือถือ (เลือกกล้องหน้า)
-        const constraints = { 
-            video: { 
-                facingMode: "user", // บังคับใช้กล้องหน้า
-                width: { ideal: 640 },
-                height: { ideal: 480 }
-            } 
-        };
+    // --- INITIALIZATION ---
+    window.onload = async () => {
+        lucide.createIcons();
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        applyTheme(savedTheme);
         
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        const video = document.getElementById('video');
-        video.srcObject = stream;
-        isScanning = true;
+        gasWebAppUrl = localStorage.getItem(GAS_URL_KEY);
+        if (!gasWebAppUrl) {
+            document.getElementById('setup-modal').classList.remove('hidden');
+        } else {
+            await initializeModels();
+            switchTab('dashboard');
+        }
         
-        // ใช้ event 'loadedmetadata' เพื่อยืนยันว่าวิดีโอมาแล้วก่อนเริ่มสแกน
-        video.onloadedmetadata = () => {
-            video.play();
-            onVideoPlay();
-        };
+        getLocation();
+        // กำหนดวันที่เริ่มต้นเป็น ค.ศ. ปัจจุบัน
+        document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('dashboard-date').addEventListener('change', loadAttendanceDataForDashboard);
+        document.getElementById('image-upload-input').addEventListener('change', handleImageUpload);
+    };
 
-    } catch (e) {
-        console.error("Camera Error:", e);
-        let errorMsg = "ไม่สามารถเปิดกล้องได้: ";
-        if (e.name === 'NotAllowedError') errorMsg += "คุณยังไม่ได้กดยอมรับการเข้าถึงกล้อง";
-        else if (e.name === 'NotFoundError') errorMsg += "ไม่พบอุปกรณ์กล้องบนเครื่องนี้";
-        else errorMsg += e.message;
+    // --- ATTENDANCE LOGIC ---
+    function handleRecognition(student) {
+        const record = { 
+            id: student.studentid, 
+            name: student.name, 
+            class: student.class, 
+            timestamp: getStandardDateTime(), 
+            status: 'มาทำงาน' 
+        };
+        checkedInToday.set(student.studentid, record);
         
-        alert(errorMsg);
-        stopScanning(false);
-    }
-}
-
-        function onVideoPlay() {
-            const video = document.getElementById('video');
-            const overlay = document.getElementById('overlay');
-            document.getElementById('video-loader').style.display = 'none';
-            document.getElementById('video-wrapper').classList.remove('hidden');
-
-            const displaySize = { width: video.offsetWidth, height: video.offsetHeight };
-            faceapi.matchDimensions(overlay, displaySize);
-
-            recognitionInterval = setInterval(async () => {
-                if (!isScanning) return;
-                const detections = await faceapi.detectAllFaces(video).withFaceLandmarks().withFaceDescriptors();
-                const resized = faceapi.resizeResults(detections, displaySize);
-                
-                const ctx = overlay.getContext('2d');
-                ctx.clearRect(0, 0, overlay.width, overlay.height);
-
-                if (faceMatcher && resized.length > 0) {
-                    resized.forEach(det => {
-                        const result = faceMatcher.findBestMatch(det.descriptor);
-                        new faceapi.draw.DrawBox(det.detection.box, { label: result.toString() }).draw(overlay);
-
-                        const student = students.find(s => s.name === result.label);
-                        if (student && !checkedInToday.has(student.studentid) && result.distance < 0.5) {
-                            handleRecognition(student);
-                        }
-                    });
-                }
-            }, 500);
-        }
-
-        function handleRecognition(student) {
-            const record = { id: student.studentid, name: student.name, class: student.class, timestamp: new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }), status: 'มาทำงาน' };
-            checkedInToday.set(student.studentid, record);
-            
-            const overlay = document.getElementById('scan-success-overlay');
-            document.getElementById('scan-success-name').innerText = student.name;
-            overlay.classList.remove('hidden');
-            setTimeout(() => overlay.classList.add('hidden'), 2000);
-        }
-
-        function stopScanning(showList = true) {
-            stopAllCameras();
-            document.getElementById('scanning-section').classList.add('hidden');
-            if (!showList) {
-                document.getElementById('start-scan-section').classList.remove('hidden');
-                return;
-            }
-
-            const listEl = document.getElementById('absent-list');
-            listEl.innerHTML = '';
-            document.getElementById('absence-management-section').classList.remove('hidden');
-
-            students.forEach(s => {
-                const checked = checkedInToday.get(s.studentid);
-                const item = document.createElement('div');
-                item.className = 'flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg';
-                item.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <img src="${s.imagedatabase64 || 'https://placehold.co/40x40'}" class="w-10 h-10 rounded-full object-cover">
-                        <div><p class="font-medium">${s.name}</p></div>
-                    </div>
-                    ${checked ? '<span class="text-green-500 text-sm">✓ มาแล้ว</span>' : `
-                        <div class="flex gap-2" id="btn-group-${s.studentid}">
-                            <button onclick="markManual('${s.studentid}', 'ขาด')" class="px-3 py-1 bg-red-100 text-red-600 rounded-full text-xs">ขาด</button>
-                            <button onclick="markManual('${s.studentid}', 'ลา')" class="px-3 py-1 bg-yellow-100 text-yellow-600 rounded-full text-xs">ลา</button>
-                        </div>
-                    `}
-                `;
-                listEl.appendChild(item);
-            });
-        }
-
-        function markManual(id, status) {
-            const s = students.find(x => x.studentid === id);
-            checkedInToday.set(id, { id: s.studentid, name: s.name, class: s.class, timestamp: new Date().toISOString(), status: status });
-            document.getElementById(`btn-group-${id}`).innerHTML = `<span class="${status === 'ขาด' ? 'text-red-500' : 'text-yellow-500'} text-sm">${status}</span>`;
-        }
-
-async function finishAttendance() {
-    // 1. ตรวจสอบพิกัดก่อนส่ง
-    if (typeof getLocation === "function") getLocation(); 
-
-    const now = new Date();
-    const hr = now.getHours();
-    const min = now.getMinutes();
-
-    // ตรรกะเวลา: สายหลัง 08:30 | สรุปคนขาดหลัง 09:00
-    const isLate = (hr > 8 || (hr === 8 && min >= 31));
-    const isAutoSummary = (hr >= 9);
-
-    const records = students.map(s => {
-        const checked = checkedInToday.get(s.studentid);
-        let status = null;
-
-        if (checked) {
-            status = isLate ? 'สาย' : 'มาทำงาน';
-        } else if (isAutoSummary) {
-            status = 'ขาด';
-        }
-
-        if (!status) return null;
-
-        return {
-            id: s.studentid,
-            name: s.name,
-            class: s.class,
-            timestamp: new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }), 
-            status: status,
-            location: currentGeoLocation ? `${currentGeoLocation.lat}, ${currentGeoLocation.lng}` : 'ไม่พบพิกัด',
-            date: new Date().toLocaleDateString('th-TH') // ส่งไปเพื่อให้ Code.gs เช็คชื่อซ้ำในวันเดียวกัน
-        };
-    }).filter(r => r !== null);
-
-    if (records.length === 0) {
-        alert("ยังไม่มีข้อมูลการสแกนหรือยังไม่ถึงเวลาสรุปผลคนขาด (09:00 น.)");
-        return;
+        const overlay = document.getElementById('scan-success-overlay');
+        document.getElementById('scan-success-name').innerText = student.name;
+        overlay.classList.remove('hidden');
+        setTimeout(() => overlay.classList.add('hidden'), 2000);
     }
 
-    // 2. ส่งข้อมูลไปยัง Google Sheets (ใช้ action ที่เราเพิ่มใน Code.gs)
-    try {
-const response = await fetch(gasWebAppUrl, { // <--- เปลี่ยนจาก scriptURL เป็น gasWebAppUrl
-    method: 'POST',
-    body: JSON.stringify({ action: 'recordAttendanceUpdate', data: records })
-});
-        const res = await response.json();
-        
+    function markManual(id, status) {
+        const s = students.find(x => x.studentid === id);
+        checkedInToday.set(id, { 
+            id: s.studentid, name: s.name, class: s.class, 
+            timestamp: getStandardDateTime(), status: status 
+        });
+        document.getElementById(`btn-group-${id}`).innerHTML = `<span class="${status === 'ขาด' ? 'text-red-500' : 'text-yellow-500'} text-sm">${status}</span>`;
+    }
+
+    async function finishAttendance() {
+        const records = students.map(s => {
+            const checked = checkedInToday.get(s.studentid);
+            if (!checked) return null;
+            return {
+                ...checked,
+                location: currentGeoLocation ? `${currentGeoLocation.lat}, ${currentGeoLocation.lng}` : 'ไม่พบพิกัด'
+            };
+        }).filter(r => r !== null);
+
+        if (records.length === 0) {
+            alert("ยังไม่มีข้อมูลการสแกน");
+            return;
+        }
+
+        const res = await apiCall({ action: 'recordAttendanceUpdate', data: records });
         if (res.success) {
             alert("บันทึกลงระบบสำเร็จ!");
-            location.reload(); // รีเฟรชหน้าเว็บ
+            location.reload();
         } else {
-            alert("เกิดข้อผิดพลาดจากระบบ: " + res.error);
+            alert("เกิดข้อผิดพลาด: " + res.error);
         }
-    } catch (error) {
-        alert("ไม่สามารถติดต่อ Server ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
     }
-}
 
-        // --- MANAGE STUDENTS ---
-        function openStudentModal(student = null) {
-            const form = document.getElementById('student-form');
-            form.reset();
-            document.getElementById('student-image-data').value = '';
-            document.getElementById('image-preview').classList.add('hidden');
-            
-            if (student) {
-                document.getElementById('modal-title').innerText = "แก้ไขพนักงาน";
-                document.getElementById('student-row-index').value = student.rowIndex;
-                document.getElementById('student-id').value = student.studentid;
-                document.getElementById('student-name').value = student.name;
-                document.getElementById('student-class').value = student.class;
-                if (student.imagedatabase64) {
-                    document.getElementById('student-image-data').value = student.imagedatabase64;
-                    document.getElementById('image-preview').src = student.imagedatabase64;
-                    document.getElementById('image-preview').classList.remove('hidden');
-                    switchImageInput('upload');
-                }
-            } else {
-                document.getElementById('modal-title').innerText = "เพิ่มพนักงานใหม่";
-                document.getElementById('student-row-index').value = '';
-                switchImageInput('camera');
-            }
-            document.getElementById('student-modal').classList.remove('hidden');
+    // --- DASHBOARD DATA ---
+    async function loadAttendanceDataForDashboard() {
+        const res = await apiCall({ action: 'getAttendance' });
+        if (res.success) {
+            // แปลง string จาก Sheets เป็น Date Object
+            attendance = res.data.map(r => ({ ...r, timestamp: new Date(r.timestamp) }));
+            renderDashboard();
         }
+    }
 
-        function closeStudentModal() {
-            stopAllCameras();
-            document.getElementById('student-modal').classList.add('hidden');
-        }
-
-        async function switchImageInput(type) {
-            const isCam = type === 'camera';
-            document.getElementById('tab-btn-camera').className = `flex-1 py-2 ${isCam ? 'border-blue-600 text-blue-600 border-b-2' : ''}`;
-            document.getElementById('tab-btn-upload').className = `flex-1 py-2 ${!isCam ? 'border-blue-600 text-blue-600 border-b-2' : ''}`;
-            document.getElementById('input-camera').classList.toggle('hidden', !isCam);
-            document.getElementById('input-upload').classList.toggle('hidden', isCam);
-            
-            if (isCam) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    document.getElementById('capture-video').srcObject = stream;
-                } catch (e) { console.error(e); }
-            } else {
-                stopAllCameras();
-            }
-        }
-
-        function capturePhoto() {
-            const video = document.getElementById('capture-video');
-            const canvas = document.getElementById('capture-canvas');
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            const data = canvas.toDataURL('image/jpeg', 0.8);
-            document.getElementById('student-image-data').value = data;
-            alert("บันทึกภาพถ่ายแล้ว");
-        }
-
-        function handleImageUpload(e) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                document.getElementById('image-preview').src = ev.target.result;
-                document.getElementById('image-preview').classList.remove('hidden');
-                document.getElementById('student-image-data').value = ev.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function handleStudentFormSubmit(e) {
-            e.preventDefault();
-            const btn = document.getElementById('form-submit-btn');
-            btn.disabled = true; btn.innerText = "กำลังบันทึก...";
-            
-            const data = {
-                rowIndex: document.getElementById('student-row-index').value,
-                id: document.getElementById('student-id').value,
-                name: document.getElementById('student-name').value,
-                class: document.getElementById('student-class').value,
-                imageData: document.getElementById('student-image-data').value
-            };
-
-            const action = data.rowIndex ? 'updateStudent' : 'addStudent';
-            const res = await apiCall({ action, data });
-            if (res.success) {
-                closeStudentModal();
-                loadStudentDataForTable();
-            } else {
-                alert("ล้มเหลว: " + res.error);
-            }
-            btn.disabled = false; btn.innerText = "บันทึก";
-        }
-
-        // --- DATA LOADERS ---
-        async function loadStudentRosterForDashboard() {
-            const grid = document.getElementById('student-roster-grid');
-            document.getElementById('roster-loading').style.display = 'block';
-            grid.innerHTML = '';
-            const res = await apiCall({ action: 'getStudents' });
-            if (res.success) {
-                students = res.data;
-                students.forEach(s => {
-                    const div = document.createElement('div');
-                    div.className = "bg-gray-50 dark:bg-gray-800 p-2 rounded text-center text-xs";
-                    div.innerHTML = `<img src="${s.imagedatabase64 || 'https://placehold.co/100x100'}" class="w-16 h-16 rounded-full object-cover mx-auto mb-1 border"><p class="font-bold truncate">${s.name}</p><p class="text-gray-400">${s.studentid}</p>`;
-                    grid.appendChild(div);
-                });
-            }
-            document.getElementById('roster-loading').style.display = 'none';
-        }
-
-        async function loadStudentDataForRecognition() {
-            const res = await apiCall({ action: 'getStudents' });
-            if (res.success && res.data.length > 0) {
-                students = res.data;
-                const descriptors = await Promise.all(students.map(async s => {
-                    if (!s.imagedatabase64) return null;
-                    try {
-                        const img = await faceapi.fetchImage(s.imagedatabase64);
-                        const det = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-                        return det ? new faceapi.LabeledFaceDescriptors(s.name, [det.descriptor]) : null;
-                    } catch { return null; }
-                }));
-                const valid = descriptors.filter(Boolean);
-                if (valid.length) faceMatcher = new faceapi.FaceMatcher(valid, 0.6);
-            }
-        }
-
-        async function loadStudentDataForTable() {
-            const res = await apiCall({ action: 'getStudents' });
-            const tbody = document.getElementById('student-table-body');
-            tbody.innerHTML = '';
-            if (res.success) {
-                students = res.data;
-                students.forEach(s => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `<td class="p-3">${s.studentid}</td><td class="p-3">${s.name}</td><td class="p-3">${s.class}</td><td class="p-3 text-center"><button onclick='editStudent(${JSON.stringify(s)})' class="text-blue-500 mr-2">แก้ไข</button></td>`;
-                    tbody.appendChild(tr);
-                });
-            }
-        }
+    function renderDashboard() {
+        const dateStr = document.getElementById('dashboard-date').value; // YYYY-MM-DD
         
-        function editStudent(s) { openStudentModal(s); }
+        // เปรียบเทียบโดยตัดเหลือแค่วันที่แบบ YYYY-MM-DD
+        const filtered = attendance.filter(r => r.timestamp.toISOString().split('T')[0] === dateStr);
+        
+        const present = filtered.filter(r => r.status === 'มาทำงาน').length;
+        const late = filtered.filter(r => r.status === 'สาย' || (r.status === 'มาทำงาน' && r.timestamp.getHours() >= 9)).length;
+        const absent = filtered.filter(r => r.status === 'ขาด' || r.status === 'ลา').length;
 
-        async function loadAttendanceDataForDashboard() {
-            const res = await apiCall({ action: 'getAttendance' });
-            if (res.success) {
-                attendance = res.data.map(r => ({ ...r, timestamp: new Date(r.timestamp) }));
-                renderDashboard();
-            }
-        }
+        document.getElementById('stat-present').innerText = present;
+        document.getElementById('stat-late').innerText = late;
+        document.getElementById('stat-absent').innerText = absent;
 
-        function renderDashboard() {
-            const dateStr = document.getElementById('dashboard-date').value;
-            const filtered = attendance.filter(r => new Date(r.timestamp).toDateString() === new Date(dateStr).toDateString());
-            
-            const present = filtered.filter(r => r.status === 'มาทำงาน').length;
-            const late = filtered.filter(r => r.status === 'มาทำงาน' && new Date(r.timestamp).getHours() >= 9).length; // สมมติสายหลัง 9 โมง
-            const absent = filtered.filter(r => r.status === 'ขาด' || r.status === 'ลา').length;
+        updateCharts(present, late, absent);
+    }
 
-            document.getElementById('stat-present').innerText = present;
-            document.getElementById('stat-late').innerText = late;
-            document.getElementById('stat-absent').innerText = absent;
-
-            updateCharts(present, late, absent, filtered);
-        }
-
-        function updateCharts(p, l, a, data) {
-            const pieCtx = document.getElementById('attendance-pie-chart').getContext('2d');
-            if (pieChart) pieChart.destroy();
-            pieChart = new Chart(pieCtx, { type: 'pie', data: { labels: ['มา', 'สาย', 'ขาด/ลา'], datasets: [{ data: [p, l, a], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'] }] } });
-        }
+    function updateCharts(p, l, a) {
+        const pieCtx = document.getElementById('attendance-pie-chart').getContext('2d');
+        if (pieChart) pieChart.destroy();
+        pieChart = new Chart(pieCtx, { 
+            type: 'pie', 
+            data: { 
+                labels: ['มา', 'สาย', 'ขาด/ลา'], 
+                datasets: [{ data: [p, l, a], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'] }] 
+            } 
+        });
+    }
 
         // --- UTILS ---
         async function apiCall(payload) {
