@@ -77,8 +77,7 @@
 
             <div class="pt-6">
                 <h3 class="text-gray-700 font-semibold mb-4">รายชื่อพนักงานทั้งหมดในระบบ</h3>
-                <div id="student-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    </div>
+                <div id="student-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
             </div>
         </div>
 
@@ -88,7 +87,7 @@
                     <video id="video" class="w-full h-full object-cover" autoplay muted playsinline></video>
                     <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
                 </div>
-                <div id="scan-result" class="bg-white p-6 rounded-2xl shadow-md flex items-center space-x-6">
+                <div id="scan-result" class="bg-white p-6 rounded-2xl shadow-md flex items-center space-x-6 border-l-8 border-blue-500">
                     <img id="result-img" class="w-20 h-20 rounded-full object-cover border-2 border-gray-100 hidden">
                     <div id="result-placeholder" class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
                         <i data-lucide="user" class="w-10 h-10 text-gray-300"></i>
@@ -116,7 +115,6 @@
                             <th class="px-6 py-3">รูปภาพ</th>
                             <th class="px-6 py-3">รหัส</th>
                             <th class="px-6 py-3">ชื่อ-นามสกุล</th>
-                            <th class="px-6 py-3">แผนก</th>
                             <th class="px-6 py-3 text-center">จัดการ</th>
                         </tr>
                     </thead>
@@ -127,7 +125,7 @@
     </main>
 
     <div id="student-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 hidden">
-        <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <h3 id="modal-title" class="text-xl font-bold mb-4">ข้อมูลพนักงาน</h3>
             <div class="space-y-4 text-center">
                 <div class="relative w-32 h-32 bg-gray-100 rounded-full overflow-hidden mx-auto border-4 border-blue-50">
@@ -138,20 +136,20 @@
                     <button id="btn-start-camera" onclick="startCaptureCamera()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs">เปิดกล้อง</button>
                     <button id="btn-snap" onclick="snapPhoto()" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs hidden">ถ่ายรูป</button>
                 </div>
-                <input type="text" id="modal-studentid" placeholder="รหัสพนักงาน" class="w-full border p-3 rounded-xl outline-none">
-                <input type="text" id="modal-name" placeholder="ชื่อ-นามสกุล" class="w-full border p-3 rounded-xl outline-none">
-                <input type="text" id="modal-class" placeholder="แผนก/ห้อง" class="w-full border p-3 rounded-xl outline-none">
-                <button id="btn-save-student" onclick="saveStudent()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold">บันทึกข้อมูล</button>
+                <input type="text" id="modal-studentid" placeholder="รหัสพนักงาน" class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="modal-name" placeholder="ชื่อ-นามสกุล" class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="modal-class" placeholder="แผนก/ห้อง" class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                <button id="btn-save-student" onclick="saveStudent()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg">บันทึกข้อมูล</button>
                 <button onclick="closeStudentModal()" class="w-full text-gray-400 text-sm mt-2">ยกเลิก</button>
             </div>
         </div>
     </div>
 
     <div id="setup-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 hidden">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center">
-            <h3 class="text-2xl font-bold mb-4">ตั้งค่าระบบ</h3>
-            <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycbw1xy_kOGYuO4waWFIYJY_flJanEARXYdLFqaYS7ytSFi4XdxIm6rPIJ01EPpf9X_eh/exec" class="w-full border p-3 rounded-xl mb-4">
-            <button onclick="saveGasUrl()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold">บันทึกและเริ่มใช้งาน</button>
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center shadow-2xl">
+            <h3 class="text-2xl font-bold mb-4 text-gray-800">ตั้งค่าระบบ</h3>
+            <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycbw1xy_kOGYuO4waWFIYJY_flJanEARXYdLFqaYS7ytSFi4XdxIm6rPIJ01EPpf9X_eh/exec" class="w-full border-2 p-3 rounded-xl mb-4 text-sm focus:border-blue-500 outline-none">
+            <button onclick="saveGasUrl()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg">บันทึกและเริ่มใช้งาน</button>
         </div>
     </div>
 
@@ -174,7 +172,7 @@
             const resS = await apiCall({ action: 'getStudents' });
             if (resS.success) {
                 students = resS.data;
-                renderStudentGrid(); // ดึง Grid กลับมา
+                renderStudentGrid(); 
                 renderStudentTable();
                 await initializeFaceAPI();
             }
@@ -210,16 +208,23 @@
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-            isVideoRunning = (tabId === 'scan');
-            if (tabId === 'scan') startCamera();
-            else stopCamera('video');
+            
+            if (tabId === 'scan') {
+                isVideoRunning = true;
+                startCamera();
+            } else {
+                isVideoRunning = false;
+                stopCamera('video');
+            }
         }
 
         async function startCamera() {
             const video = document.getElementById('video');
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-            video.srcObject = stream;
-            detectFaceLoop();
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                video.srcObject = stream;
+                detectFaceLoop();
+            } catch (e) { alert("ไม่สามารถเข้าถึงกล้องได้"); }
         }
 
         async function detectFaceLoop() {
@@ -253,8 +258,9 @@
             resImg.classList.remove('hidden');
             resImg.src = student.imagedatabase64;
             document.getElementById('result-name').innerText = student.name;
+            document.getElementById('result-name').classList.add('text-blue-600');
             document.getElementById('result-id').innerText = `ID: ${student.studentid}`;
-            window.speechSynthesis.speak(new SpeechSynthesisUtterance(`${student.name} เช็คชื่อแล้ว`));
+            window.speechSynthesis.speak(new SpeechSynthesisUtterance(`${student.name} เช็คชื่อเรียบร้อย`));
         }
 
         function renderStudentGrid() {
@@ -311,9 +317,10 @@
                 id: document.getElementById('modal-studentid').value,
                 name: document.getElementById('modal-name').value,
                 class: document.getElementById('modal-class').value,
-                imagedata: capturedImageData || (currentEditingStudent ? currentEditingStudent.imagedatabase64 : '')
+                // แก้ชื่อคีย์เป็น ImageDataBase64 ให้ตรงกับ Code.gs
+                ImageDataBase64: capturedImageData || (currentEditingStudent ? currentEditingStudent.imagedatabase64 : '')
             };
-            if (!data.id || !data.name || !data.imagedata) return alert("ข้อมูลไม่ครบ");
+            if (!data.id || !data.name || !data.ImageDataBase64) return alert("ข้อมูลไม่ครบกรุณาถ่ายรูปพนักงาน");
 
             btn.disabled = true; btn.innerText = "กำลังบันทึก...";
             const res = await apiCall({ action: currentEditingStudent ? 'updateStudent' : 'addStudent', data });
@@ -358,7 +365,7 @@
                 };
             }).filter(r => r !== null);
 
-            if (records.length === 0) return alert("ไม่มีข้อมูลสรุป");
+            if (records.length === 0) return alert("ไม่มีข้อมูลสรุป (รวบรวมคนขาดหลัง 09:00)");
             const res = await apiCall({ action: 'recordAttendanceUpdate', data: records });
             if (res.success) { alert("บันทึกสำเร็จ"); location.reload(); }
         }
@@ -369,14 +376,15 @@
                 <td class="px-6 py-3"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-full object-cover"></td>
                 <td class="px-6 py-3">${s.studentid}</td>
                 <td class="px-6 py-3">${s.name}</td>
-                <td class="px-6 py-3">${s.class}</td>
-                <td class="px-6 py-3 text-center"><button onclick="deleteStudent(${s.rowIndex})" class="text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                <td class="px-6 py-3 text-center">
+                    <button onclick="deleteStudent(${s.rowIndex})" class="text-red-600 hover:bg-red-50 p-2 rounded-full"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </td>
             </tr>`).join('');
             lucide.createIcons();
         }
 
         async function deleteStudent(rowIndex) {
-            if (confirm("ลบพนักงาน?")) {
+            if (confirm("ยืนยันลบพนักงานคนนี้?")) {
                 const res = await apiCall({ action: 'deleteStudent', data: { rowIndex } });
                 if (res.success) location.reload();
             }
@@ -396,7 +404,10 @@
 
         function saveGasUrl() {
             const url = document.getElementById('gas-url').value;
-            if (url.includes('google.com')) { localStorage.setItem(GAS_URL_KEY, url); location.reload(); }
+            if (url.includes('google.com')) { 
+                localStorage.setItem(GAS_URL_KEY, url); 
+                location.reload(); 
+            }
         }
 
         function openStudentModal() {
