@@ -627,7 +627,7 @@ timestamp: new Intl.DateTimeFormat('sv-SE', {
             const filtered = attendance.filter(r => new Date(r.timestamp).toDateString() === new Date(dateStr).toDateString());
 
             const present = filtered.filter(r => r.status === 'มาทำงาน').length;
-            const late = filtered.filter(r => r.status === 'มาทำงาน' && new Date(r.timestamp).getHours() >= 9).length; // สมมติสายหลัง 9 โมง
+            const late = filtered.filter(r => r.status === 'สาย' && new Date(r.timestamp).getHours() >= 9).length; // สมมติสายหลัง 9 โมง
             const absent = filtered.filter(r => r.status === 'ขาด' || r.status === 'ลา').length;
 
             document.getElementById('stat-present').innerText = present;
