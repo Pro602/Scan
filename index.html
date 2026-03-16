@@ -11,8 +11,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Kanit', sans-serif; }
-        .loader { border-top-color: #3b82f6; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -25,7 +23,7 @@
                 <div class="bg-blue-600 p-2 rounded-lg text-white">
                     <i data-lucide="scan-face" class="w-6 h-6"></i>
                 </div>
-                <h1 class="text-xl font-bold text-gray-800">ระบบเช็คชื่อพนักงานอัจฉริยะ</h1>
+                <h1 class="text-xl font-bold text-gray-800">ระบบเช็คชื่อพนักงาน</h1>
             </div>
             <div class="flex items-center space-x-4">
                 <div class="flex bg-gray-100 p-1 rounded-lg">
@@ -33,10 +31,6 @@
                     <button onclick="switchTab('scan')" id="btn-scan" class="px-4 py-1.5 rounded-md text-sm font-medium transition-all">เช็คชื่อ</button>
                     <button onclick="switchTab('manage')" id="btn-manage" class="px-4 py-1.5 rounded-md text-sm font-medium transition-all">จัดการข้อมูล</button>
                 </div>
-                <button onclick="toggleTheme()" class="p-2 hover:bg-gray-200 rounded-full">
-                    <i data-lucide="sun" id="theme-icon-sun" class="w-5 h-5 hidden"></i>
-                    <i data-lucide="moon" id="theme-icon-moon" class="w-5 h-5"></i>
-                </button>
             </div>
         </div>
     </nav>
@@ -49,88 +43,57 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-blue-50 p-6 rounded-xl border border-blue-100 shadow-sm text-center">
-                    <p class="text-blue-600 text-sm font-medium mb-1">มาทำงาน</p>
+                <div class="bg-blue-50 p-6 rounded-xl border border-blue-100 text-center">
+                    <p class="text-blue-600 text-sm font-medium">มาทำงาน</p>
                     <p id="stat-present" class="text-3xl font-bold text-blue-700">0</p>
                 </div>
-                <div class="bg-yellow-50 p-6 rounded-xl border border-yellow-100 shadow-sm text-center">
-                    <p class="text-yellow-600 text-sm font-medium mb-1">มาสาย</p>
+                <div class="bg-yellow-50 p-6 rounded-xl border border-yellow-100 text-center">
+                    <p class="text-yellow-600 text-sm font-medium">มาสาย</p>
                     <p id="stat-late" class="text-3xl font-bold text-yellow-700">0</p>
                 </div>
-                <div class="bg-red-50 p-6 rounded-xl border border-red-100 shadow-sm text-center">
-                    <p class="text-red-600 text-sm font-medium mb-1">ขาด/ลา</p>
+                <div class="bg-red-50 p-6 rounded-xl border border-red-100 text-center">
+                    <p class="text-red-600 text-sm font-medium">ขาดงาน</p>
                     <p id="stat-absent" class="text-3xl font-bold text-red-700">0</p>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-[350px] flex flex-col items-center justify-center">
-                    <h3 class="text-gray-700 font-semibold mb-4 w-full text-center">สรุปสัดส่วน</h3>
+                <div class="bg-white p-6 rounded-xl shadow-sm border h-[350px] flex flex-col items-center">
+                    <h3 class="text-gray-700 font-semibold mb-4">สรุปสัดส่วน</h3>
                     <canvas id="attendance-pie-chart" class="max-h-[250px]"></canvas>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-[350px] flex flex-col">
+                <div class="bg-white p-6 rounded-xl shadow-sm border h-[350px] flex flex-col">
                     <h3 class="text-gray-700 font-semibold mb-4 border-b pb-2">รายละเอียดพนักงานประจำวัน</h3>
                     <div class="grid grid-cols-2 gap-4 flex-grow overflow-hidden">
                         <div class="flex flex-col">
-                            <h4 class="text-orange-600 text-sm font-bold mb-2 flex items-center">
-                                <i data-lucide="clock" class="w-4 h-4 mr-1"></i> มาสาย
-                            </h4>
-                            <ul id="late-list" class="space-y-2 overflow-y-auto custom-scrollbar pr-2">
-                                </ul>
+                            <h4 class="text-orange-600 text-sm font-bold mb-2">มาสาย</h4>
+                            <ul id="late-list" class="space-y-2 overflow-y-auto custom-scrollbar"></ul>
                         </div>
                         <div class="flex flex-col border-l pl-4">
-                            <h4 class="text-red-600 text-sm font-bold mb-2 flex items-center">
-                                <i data-lucide="user-x" class="w-4 h-4 mr-1"></i> ขาดงาน
-                            </h4>
-                            <ul id="absent-list" class="space-y-2 overflow-y-auto custom-scrollbar pr-2">
-                                </ul>
+                            <h4 class="text-red-600 text-sm font-bold mb-2">ขาดงาน</h4>
+                            <ul id="absent-list" class="space-y-2 overflow-y-auto custom-scrollbar"></ul>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <div class="pt-6">
-                <h3 class="text-gray-700 font-semibold mb-4">รายชื่อพนักงานในระบบ</h3>
-                <div id="student-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    </div>
-            </div>
         </div>
 
-        <div id="tab-scan" class="tab-content hidden space-y-6">
-            <div class="max-w-2xl mx-auto">
-                <div class="bg-white p-6 rounded-2xl shadow-lg border-2 border-blue-100 relative overflow-hidden">
-                    <div id="scan-status" class="absolute top-4 right-4 z-10 flex items-center">
-                        <span class="flex h-3 w-3 relative mr-2">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                        </span>
-                        <span class="text-xs font-semibold text-green-600">กล้องพร้อมใช้งาน</span>
+        <div id="tab-scan" class="tab-content hidden">
+            <div class="max-w-2xl mx-auto space-y-4">
+                <div class="relative aspect-video bg-black rounded-2xl overflow-hidden shadow-xl border-4 border-white">
+                    <video id="video" class="w-full h-full object-cover" autoplay muted playsinline></video>
+                    <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
+                </div>
+                <div id="scan-result" class="bg-white p-6 rounded-2xl shadow-md flex items-center space-x-6 border-l-8 border-gray-200">
+                    <img id="result-img" class="w-20 h-20 rounded-full object-cover border-2 border-gray-100 hidden">
+                    <div id="result-placeholder" class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
+                        <i data-lucide="user" class="w-10 h-10 text-gray-300"></i>
                     </div>
-                    
-                    <div class="relative aspect-video bg-black rounded-xl overflow-hidden shadow-inner border border-gray-200">
-                        <video id="video" class="w-full h-full object-cover" autoplay muted playsinline></video>
-                        <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
-                        <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-                            <div class="w-64 h-64 border-2 border-white/30 rounded-3xl border-dashed"></div>
-                        </div>
+                    <div class="flex-grow">
+                        <p id="result-name" class="text-xl font-bold text-gray-800">กรุณายืนหน้ากล้อง</p>
+                        <p id="result-id" class="text-sm text-gray-500">ID: ----</p>
                     </div>
-
-                    <div class="mt-6 flex flex-col sm:flex-row gap-4 items-center">
-                        <div id="scan-result" class="flex-grow flex items-center space-x-4 p-4 bg-gray-50 rounded-xl border border-gray-100 w-full">
-                            <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                                <i data-lucide="user" id="result-icon" class="w-6 h-6 text-gray-400"></i>
-                                <img id="result-img" class="w-full h-full object-cover hidden">
-                            </div>
-                            <div>
-                                <p id="result-name" class="font-bold text-gray-800">กรุณายืนหน้ากล้อง</p>
-                                <p id="result-id" class="text-xs text-gray-500">ID: ----</p>
-                            </div>
-                        </div>
-                        <button onclick="finishAttendance()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center">
-                            <i data-lucide="save" class="w-5 h-5 mr-2"></i>
-                            สรุปข้อมูล
-                        </button>
-                    </div>
+                    <button onclick="finishAttendance()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg">สรุปข้อมูล</button>
                 </div>
             </div>
         </div>
@@ -138,139 +101,84 @@
         <div id="tab-manage" class="tab-content hidden space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="text-lg font-semibold">จัดการข้อมูลพนักงาน</h2>
-                <button onclick="openStudentModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center">
+                <button onclick="openStudentModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm flex items-center">
                     <i data-lucide="user-plus" class="w-4 h-4 mr-2"></i> เพิ่มพนักงาน
                 </button>
             </div>
-            <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+            <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
                 <table class="w-full text-left">
-                    <thead class="bg-gray-50 border-b">
+                    <thead class="bg-gray-50 border-b text-xs uppercase font-bold text-gray-500">
                         <tr>
-                            <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase">รูปภาพ</th>
-                            <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase">รหัส</th>
-                            <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase">ชื่อ-นามสกุล</th>
-                            <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase">แผนก/ห้อง</th>
-                            <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase text-center">จัดการ</th>
+                            <th class="px-6 py-3">รูปภาพ</th>
+                            <th class="px-6 py-3">รหัส</th>
+                            <th class="px-6 py-3">ชื่อ-นามสกุล</th>
+                            <th class="px-6 py-3 text-center">จัดการ</th>
                         </tr>
                     </thead>
-                    <tbody id="student-table-body" class="divide-y divide-gray-100">
-                        </tbody>
+                    <tbody id="student-table-body" class="divide-y divide-gray-100"></tbody>
                 </table>
             </div>
         </div>
     </main>
 
-    <div id="setup-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl mx-4">
-            <div class="text-center mb-6">
-                <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i data-lucide="settings" class="w-8 h-8 text-blue-600"></i>
-                </div>
-                <h3 class="text-2xl font-bold">ตั้งค่าระบบ</h3>
-                <p class="text-gray-500 text-sm mt-1">https://script.google.com/macros/s/AKfycbyv41uPkUeYIcYwNOBda1QSjdJp4_CbyXf-9-7WoK4ZTXXkpckOXNlxx1olJCJ5oOHF/exec</p>
-            </div>
-            <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycbyv41uPkUeYIcYwNOBda1QSjdJp4_CbyXf-9-7WoK4ZTXXkpckOXNlxx1olJCJ5oOHF/exec" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none mb-4 transition-all text-sm">
-            <button onclick="saveGasUrl()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold transition-all shadow-lg">เริ่มต้นใช้งาน</button>
-        </div>
-    </div>
-
-    <div id="student-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden">
-        <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-6">
-                <h3 id="modal-title" class="text-xl font-bold">เพิ่มพนักงาน</h3>
-                <button onclick="closeStudentModal()" class="text-gray-400 hover:text-gray-600"><i data-lucide="x"></i></button>
-            </div>
+    <div id="student-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 hidden">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 id="modal-title" class="text-xl font-bold mb-4">เพิ่มพนักงาน</h3>
             <div class="space-y-4">
                 <div class="flex flex-col items-center">
-                    <div class="relative w-32 h-32 bg-gray-100 rounded-full overflow-hidden border-4 border-white shadow-md">
+                    <div class="relative w-32 h-32 bg-gray-100 rounded-full overflow-hidden border-4 border-blue-50 shadow-inner">
                         <video id="modal-video" class="w-full h-full object-cover hidden" autoplay muted playsinline></video>
-                        <canvas id="capture-canvas" class="hidden"></canvas>
                         <img id="preview-img" class="w-full h-full object-cover">
-                        <div id="capture-placeholder" class="absolute inset-0 flex items-center justify-center text-gray-400">
-                            <i data-lucide="camera" class="w-10 h-10"></i>
-                        </div>
                     </div>
-                    <div class="flex space-x-2 mt-4">
-                        <button id="btn-start-camera" onclick="startCaptureCamera()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm">เปิดกล้อง</button>
-                        <button id="btn-snap" onclick="snapPhoto()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm hidden">ถ่ายรูป</button>
+                    <div class="flex space-x-2 mt-3">
+                        <button id="btn-start-camera" onclick="startCaptureCamera()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">เปิดกล้อง</button>
+                        <button id="btn-snap" onclick="snapPhoto()" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hidden">ถ่ายรูป</button>
                     </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">รหัสพนักงาน</label>
-                    <input type="text" id="modal-studentid" class="w-full border p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ชื่อ-นามสกุล</label>
-                    <input type="text" id="modal-name" class="w-full border p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">แผนก / ห้อง</label>
-                    <input type="text" id="modal-class" class="w-full border p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                </div>
-                <button id="btn-save-student" onclick="saveStudent()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold mt-4 shadow-lg hover:bg-blue-700 transition-all">บันทึกข้อมูล</button>
+                <input type="text" id="modal-studentid" placeholder="รหัสพนักงาน" class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="modal-name" placeholder="ชื่อ-นามสกุล" class="w-full border p-3 rounded-xl outline-none">
+                <input type="text" id="modal-class" placeholder="แผนก/ห้อง" class="w-full border p-3 rounded-xl outline-none">
+                <button id="btn-save-student" onclick="saveStudent()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg">บันทึกข้อมูล</button>
+                <button onclick="closeStudentModal()" class="w-full text-gray-400 text-sm">ยกเลิก</button>
             </div>
         </div>
     </div>
 
+    <div id="setup-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl text-center">
+            <h3 class="text-2xl font-bold mb-4">ตั้งค่าระบบ</h3>
+            <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycbyv41uPkUeYIcYwNOBda1QSjdJp4_CbyXf-9-7WoK4ZTXXkpckOXNlxx1olJCJ5oOHF/exec" class="w-full border-2 p-3 rounded-xl mb-4 text-sm">
+            <button onclick="saveGasUrl()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg">บันทึกและเริ่มใช้งาน</button>
+        </div>
+    </div>
+
+    <canvas id="capture-canvas" class="hidden"></canvas>
+
     <script>
-        // --- CONFIG & STATE ---
         const GAS_URL_KEY = 'gasWebAppUrl';
         let gasWebAppUrl = localStorage.getItem(GAS_URL_KEY);
-        let students = [];
-        let attendance = [];
-        let checkedInToday = new Map();
-        let pieChart = null;
-        let labeledDescriptors = [];
-        let faceMatcher = null;
-        let isVideoRunning = false;
-        let currentGeoLocation = null;
-        let currentEditingStudent = null;
-        let capturedImageData = null;
+        let students = [], attendance = [], faceMatcher = null, isVideoRunning = false;
+        let currentEditingStudent = null, capturedImageData = null, checkedInToday = new Map();
 
-        // --- INIT ---
         window.onload = async () => {
             lucide.createIcons();
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            applyTheme(savedTheme);
-            
-            // ตั้งค่าวันที่เริ่มต้นใน Dashboard เป็นวันนี้
-            const today = new Date();
-            const dateStr = today.toISOString().split('T')[0];
-            document.getElementById('dashboard-date').value = dateStr;
-
-            if (!gasWebAppUrl) {
-                document.getElementById('setup-modal').classList.remove('hidden');
-            } else {
-                await loadAllData();
-                switchTab('dashboard');
-                // เรียกใช้พิกัดเริ่มต้น
-                getLocation();
-            }
+            document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
+            if (!gasWebAppUrl) document.getElementById('setup-modal').classList.remove('hidden');
+            else loadAllData();
         };
 
         async function loadAllData() {
-            try {
-                // โหลดพนักงาน
-                const resS = await apiCall({ action: 'getStudents' });
-                if (resS.success) {
-                    students = resS.data;
-                    renderStudentGrid();
-                    renderStudentTable();
-                    await initializeFaceAPI();
-                }
-                
-                // โหลดประวัติการมาทำงาน
-                const resA = await apiCall({ action: 'getAttendance' });
-                if (resA.success) {
-                    attendance = resA.data;
-                    renderDashboard();
-                }
-            } catch (e) {
-                console.error("Load Error:", e);
+            const resS = await apiCall({ action: 'getStudents' });
+            if (resS.success) {
+                students = resS.data;
+                renderStudentTable();
+                await initializeFaceAPI();
             }
+            const resA = await apiCall({ action: 'getAttendance' });
+            if (resA.success) { attendance = resA.data; renderDashboard(); }
+            switchTab('dashboard');
         }
 
-        // --- FACE API LOGIC ---
         async function initializeFaceAPI() {
             const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models';
             await Promise.all([
@@ -279,19 +187,25 @@
                 faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
             ]);
 
-            labeledDescriptors = await Promise.all(
+            const labeledDescriptors = await Promise.all(
                 students.filter(s => s.imagedatabase64).map(async s => {
-                    const img = await faceapi.fetchImage(s.imagedatabase64);
-                    const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-                    if (detection) return new faceapi.LabeledFaceDescriptors(s.studentid, [detection.descriptor]);
-                    return null;
+                    try {
+                        const img = await faceapi.fetchImage(s.imagedatabase64);
+                        const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                        return detection ? new faceapi.LabeledFaceDescriptors(s.studentid, [detection.descriptor]) : null;
+                    } catch (e) { return null; }
                 })
             );
-            
-            const validDescriptors = labeledDescriptors.filter(d => d !== null);
-            if (validDescriptors.length > 0) {
-                faceMatcher = new faceapi.FaceMatcher(validDescriptors, 0.6);
-            }
+            const valid = labeledDescriptors.filter(d => d !== null);
+            if (valid.length > 0) faceMatcher = new faceapi.FaceMatcher(valid, 0.6);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            isVideoRunning = (tabId === 'scan');
+            if (tabId === 'scan') startCamera();
+            else stopCamera('video');
         }
 
         async function startCamera() {
@@ -299,387 +213,196 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
                 video.srcObject = stream;
-                isVideoRunning = true;
-                detectFace();
-            } catch (err) {
-                alert("ไม่สามารถเข้าถึงกล้องได้: " + err.message);
-            }
+                detectFaceLoop();
+            } catch (e) { alert("กล้องขัดข้อง: " + e.message); }
         }
 
-        async function detectFace() {
-            if (!isVideoRunning) return;
+        async function detectFaceLoop() {
             const video = document.getElementById('video');
             const overlay = document.getElementById('overlay');
             const displaySize = { width: video.clientWidth, height: video.clientHeight };
             faceapi.matchDimensions(overlay, displaySize);
 
-            const timer = setInterval(async () => {
-                if (!isVideoRunning) { clearInterval(timer); return; }
+            const interval = setInterval(async () => {
+                if (!isVideoRunning) { clearInterval(interval); return; }
                 const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
-                const resizedDetections = faceapi.resizeResults(detections, displaySize);
-                
-                const ctx = overlay.getContext('2d');
-                ctx.clearRect(0, 0, overlay.width, overlay.height);
+                const resized = faceapi.resizeResults(detections, displaySize);
+                overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
 
                 if (faceMatcher && detections.length > 0) {
                     detections.forEach(d => {
                         const result = faceMatcher.findBestMatch(d.descriptor);
                         const student = students.find(s => s.studentid === result.label);
-                        if (student && result.distance < 0.5) {
-                            markCheckIn(student);
-                        }
+                        if (student && result.distance < 0.5) markCheckIn(student);
                     });
                 }
-                faceapi.draw.drawDetections(overlay, resizedDetections);
+                faceapi.draw.drawDetections(overlay, resized);
             }, 500);
         }
 
         function markCheckIn(student) {
             if (checkedInToday.has(student.studentid)) return;
-            
             checkedInToday.set(student.studentid, true);
-            
-            const resIcon = document.getElementById('result-icon');
-            const resImg = document.getElementById('result-img');
-            const resName = document.getElementById('result-name');
-            const resId = document.getElementById('result-id');
-
-            resIcon.classList.add('hidden');
-            resImg.classList.remove('hidden');
-            resImg.src = student.imagedatabase64;
-            resName.innerText = student.name;
-            resName.classList.add('text-green-600');
-            resId.innerText = `ID: ${student.studentid} | แผนก: ${student.class}`;
-
-            // เสียงแจ้งเตือน
-            const msg = new SpeechSynthesisUtterance(`${student.name} เช็คชื่อสำเร็จ`);
-            msg.lang = 'th-TH';
-            window.speechSynthesis.speak(msg);
-        }
-
-        // --- DASHBOARD RENDER ---
-        function renderDashboard() {
-            const dateInput = document.getElementById('dashboard-date').value;
-            if (!dateInput || !attendance) return;
-
-            const filtered = attendance.filter(r => {
-                const d = new Date(r.timestamp);
-                return !isNaN(d.getTime()) && d.toISOString().split('T')[0] === dateInput;
-            });
-
-            const p = filtered.filter(r => r.status === 'มาทำงาน').length;
-            const l = filtered.filter(r => r.status === 'สาย').length;
-            const a = filtered.filter(r => r.status === 'ขาด' || r.status === 'ลา').length;
-
-            document.getElementById('stat-present').innerText = p;
-            document.getElementById('stat-late').innerText = l;
-            document.getElementById('stat-absent').innerText = a;
-
-            updateCharts(p, l, a);
-            updateDashboardLists(filtered);
-        }
-
-        function updateDashboardLists(filtered) {
-            const lateList = document.getElementById('late-list');
-            const absentList = document.getElementById('absent-list');
-            lateList.innerHTML = '';
-            absentList.innerHTML = '';
-
-            filtered.forEach(record => {
-                const li = document.createElement('li');
-                li.className = 'p-2 bg-gray-50 rounded border-l-4 shadow-sm animate-fade-in';
-                
-                if (record.status === 'สาย') {
-                    li.classList.add('border-orange-500');
-                    const timeStr = new Date(record.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-                    li.innerHTML = `<div class="font-semibold text-gray-800">${record.name}</div><div class="text-[10px] text-orange-600">${timeStr} น.</div>`;
-                    lateList.appendChild(li);
-                } else if (record.status === 'ขาด') {
-                    li.classList.add('border-red-500');
-                    li.innerHTML = `<div class="font-semibold text-gray-800">${record.name}</div><div class="text-[10px] text-red-500">${record.class}</div>`;
-                    absentList.appendChild(li);
-                }
-            });
-
-            if (lateList.innerHTML === '') lateList.innerHTML = '<li class="text-gray-400 italic text-xs text-center py-4">ไม่มีข้อมูล</li>';
-            if (absentList.innerHTML === '') absentList.innerHTML = '<li class="text-gray-400 italic text-xs text-center py-4">ไม่มีข้อมูล</li>';
-        }
-
-        function updateCharts(p, l, a) {
-            const ctx = document.getElementById('attendance-pie-chart').getContext('2d');
-            if (pieChart) pieChart.destroy();
-            pieChart = new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    labels: ['มาทำงาน', 'สาย', 'ขาด/ลา'],
-                    datasets: [{
-                        data: [p, l, a],
-                        backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { font: { family: 'Kanit' } } } }
-                }
-            });
-        }
-
-        // --- ATTENDANCE SUBMISSION ---
-        async function finishAttendance() {
-            if (typeof getLocation === "function") getLocation(); 
-
-            const now = new Date();
-            const hr = now.getHours();
-            const min = now.getMinutes();
-
-            // ตรรกะเวลา: สายหลัง 08:30 | สรุปคนขาดหลัง 09:00
-            const isLate = (hr > 8 || (hr === 8 && min >= 31));
-            const isAutoSummary = (hr >= 9);
-
-            const records = students.map(s => {
-                const checked = checkedInToday.get(s.studentid);
-                let status = null;
-
-                if (checked) {
-                    status = isLate ? 'สาย' : 'มาทำงาน';
-                } else if (isAutoSummary) {
-                    status = 'ขาด';
-                }
-
-                if (!status) return null;
-
-                // แก้ไข Timezone ให้เป็นประเทศไทย (+7)
-                const bangkokTime = new Intl.DateTimeFormat('sv-SE', {
-                    timeZone: 'Asia/Bangkok',
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                }).format(new Date()).replace(' ', 'T') + '.000Z';
-
-                return {
-                    id: s.studentid,
-                    name: s.name,
-                    class: s.class,
-                    timestamp: bangkokTime, 
-                    status: status,
-                    location: currentGeoLocation ? `${currentGeoLocation.lat}, ${currentGeoLocation.lng}` : 'ไม่พบพิกัด'
-                };
-            }).filter(r => r !== null);
-
-            if (records.length === 0) {
-                alert("ยังไม่มีข้อมูลการสแกนหรือยังไม่ถึงเวลาสรุปผลคนขาด (09:00 น.)");
-                return;
-            }
-
-            try {
-                const res = await apiCall({ action: 'recordAttendanceUpdate', data: records });
-                if (res.success) {
-                    alert("บันทึกลงระบบสำเร็จ!");
-                    location.reload();
-                } else {
-                    alert("Error: " + res.error);
-                }
-            } catch (e) {
-                alert("ไม่สามารถติดต่อ Server ได้ กรุณาตรวจสอบการเชื่อมต่อ");
-            }
-        }
-
-        // --- STUDENT MANAGEMENT ---
-        function renderStudentGrid() {
-            const grid = document.getElementById('student-grid');
-            grid.innerHTML = students.map(s => `
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
-                    <img src="${s.imagedatabase64 || 'https://via.placeholder.com/100'}" class="w-16 h-16 rounded-full object-cover mb-2 border-2 border-blue-50">
-                    <p class="text-[10px] font-bold text-gray-800 text-center truncate w-full">${s.name}</p>
-                    <p class="text-[8px] text-gray-500 uppercase">${s.studentid}</p>
-                </div>
-            `).join('');
-        }
-
-        function renderStudentTable() {
-            const body = document.getElementById('student-table-body');
-            body.innerHTML = students.map(s => `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-3"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-full object-cover shadow-sm"></td>
-                    <td class="px-6 py-3 text-sm font-medium">${s.studentid}</td>
-                    <td class="px-6 py-3 text-sm">${s.name}</td>
-                    <td class="px-6 py-3 text-sm text-gray-500">${s.class}</td>
-                    <td class="px-6 py-3 text-center">
-                        <button onclick='editStudent(${JSON.stringify(s)})' class="text-blue-600 hover:bg-blue-50 p-2 rounded-full"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-                        <button onclick="deleteStudent(${s.rowIndex})" class="text-red-600 hover:bg-red-50 p-2 rounded-full"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-            lucide.createIcons();
-        }
-
-        // --- MODAL & CAMERA ---
-        function openStudentModal() {
-            currentEditingStudent = null;
-            capturedImageData = null;
-            document.getElementById('modal-title').innerText = "เพิ่มพนักงานใหม่";
-            document.getElementById('modal-studentid').value = "";
-            document.getElementById('modal-name').value = "";
-            document.getElementById('modal-class').value = "";
-            document.getElementById('preview-img').src = "";
-            document.getElementById('preview-img').classList.add('hidden');
-            document.getElementById('capture-placeholder').classList.remove('hidden');
-            document.getElementById('student-modal').classList.remove('hidden');
+            document.getElementById('result-placeholder').classList.add('hidden');
+            document.getElementById('result-img').classList.remove('hidden');
+            document.getElementById('result-img').src = student.imagedatabase64;
+            document.getElementById('result-name').innerText = student.name;
+            document.getElementById('result-name').classList.add('text-green-600');
+            document.getElementById('result-id').innerText = `ID: ${student.studentid}`;
+            window.speechSynthesis.speak(new SpeechSynthesisUtterance(`${student.name} เช็คชื่อแล้ว`));
         }
 
         async function startCaptureCamera() {
             const video = document.getElementById('modal-video');
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-                video.classList.remove('hidden');
-                document.getElementById('preview-img').classList.add('hidden');
-                document.getElementById('capture-placeholder').classList.add('hidden');
-                document.getElementById('btn-start-camera').classList.add('hidden');
-                document.getElementById('btn-snap').classList.remove('hidden');
-            } catch (e) { alert("Error: " + e.message); }
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            video.classList.remove('hidden');
+            document.getElementById('preview-img').classList.add('hidden');
+            document.getElementById('btn-start-camera').classList.add('hidden');
+            document.getElementById('btn-snap').classList.remove('hidden');
         }
 
         function snapPhoto() {
             const video = document.getElementById('modal-video');
             const canvas = document.getElementById('capture-canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
-            
-            // ย่อภาพก่อนบันทึก
-            const thumbCanvas = document.createElement('canvas');
-            thumbCanvas.width = 300;
-            thumbCanvas.height = 300;
-            thumbCanvas.getContext('2d').drawImage(canvas, 0,0, 300, 300);
-            
-            capturedImageData = thumbCanvas.toDataURL('image/jpeg', 0.8);
-            
-            video.srcObject.getTracks().forEach(t => t.stop());
-            video.classList.add('hidden');
+            canvas.width = 300; canvas.height = 300;
+            canvas.getContext('2d').drawImage(video, 0, 0, 300, 300);
+            capturedImageData = canvas.toDataURL('image/jpeg', 0.7); // ย่อขนาดเพื่อประหยัดพื้นที่
+            stopCamera('modal-video');
             document.getElementById('preview-img').src = capturedImageData;
             document.getElementById('preview-img').classList.remove('hidden');
+            document.getElementById('modal-video').classList.add('hidden');
             document.getElementById('btn-snap').classList.add('hidden');
             document.getElementById('btn-start-camera').classList.remove('hidden');
         }
 
-async function saveStudent() {
-    const btn = document.getElementById('btn-save-student');
-    const data = {
-        id: document.getElementById('modal-studentid').value,
-        name: document.getElementById('modal-name').value,
-        class: document.getElementById('modal-class').value,
-        // ปรับชื่อคีย์ให้ตรงกับที่ Code.gs และจัดการเคสไม่มีการถ่ายใหม่
-        imagedata: capturedImageData || (currentEditingStudent ? currentEditingStudent.imagedatabase64 : '')
-    };
+        async function saveStudent() {
+            const btn = document.getElementById('btn-save-student');
+            const data = {
+                id: document.getElementById('modal-studentid').value,
+                name: document.getElementById('modal-name').value,
+                class: document.getElementById('modal-class').value,
+                // แก้ไขชื่อคีย์ให้ตรงกับ Code.gs (ImageDataBase64)
+                imagedata: capturedImageData || (currentEditingStudent ? currentEditingStudent.imagedatabase64 : '')
+            };
+            if (!data.id || !data.name || !data.imagedata) return alert("กรุณากรอกข้อมูลและถ่ายรูปให้ครบ");
+            
+            btn.disabled = true; btn.innerText = "กำลังบันทึก...";
+            const action = currentEditingStudent ? 'updateStudent' : 'addStudent';
+            if (currentEditingStudent) data.rowIndex = currentEditingStudent.rowIndex;
 
-    if(!data.id || !data.name) return alert("กรุณากรอกข้อมูลให้ครบ");
-    if(!data.imagedata) return alert("กรุณาถ่ายรูปพนักงานก่อนบันทึก");
+            const res = await apiCall({ action, data });
+            if (res.success) { alert("สำเร็จ!"); location.reload(); }
+            else { alert("ล้มเหลว: " + res.error); btn.disabled = false; btn.innerText = "บันทึกข้อมูล"; }
+        }
 
-    btn.disabled = true;
-    btn.innerText = "กำลังบันทึก...";
+        async function finishAttendance() {
+            const hr = new Date().getHours(), min = new Date().getMinutes();
+            const isLate = (hr > 8 || (hr === 8 && min >= 31));
+            const isAutoSummary = (hr >= 9);
 
-    const action = currentEditingStudent ? 'updateStudent' : 'addStudent';
-    if(currentEditingStudent) data.rowIndex = currentEditingStudent.rowIndex;
+            const records = students.map(s => {
+                const checked = checkedInToday.get(s.studentid);
+                let status = checked ? (isLate ? 'สาย' : 'มาทำงาน') : (isAutoSummary ? 'ขาด' : null);
+                if (!status) return null;
 
-    const res = await apiCall({ action, data });
-    if(res.success) {
-        alert("บันทึกสำเร็จ!");
-        location.reload();
-    } else {
-        alert("ล้มเหลว: " + res.error);
-        btn.disabled = false;
-        btn.innerText = "บันทึกข้อมูล";
-    }
-}
-        function editStudent(s) {
-            currentEditingStudent = s;
-            document.getElementById('modal-title').innerText = "แก้ไขข้อมูล";
-            document.getElementById('modal-studentid').value = s.studentid;
-            document.getElementById('modal-name').value = s.name;
-            document.getElementById('modal-class').value = s.class;
-            document.getElementById('preview-img').src = s.imagedatabase64;
-            document.getElementById('preview-img').classList.remove('hidden');
-            document.getElementById('capture-placeholder').classList.add('hidden');
-            document.getElementById('student-modal').classList.remove('hidden');
+                return {
+                    id: s.studentid, name: s.name, class: s.class, status: status,
+                    timestamp: new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Bangkok' }).format(new Date()).replace(' ', 'T') + '.000Z',
+                    location: 'พิกัดอัตโนมัติ'
+                };
+            }).filter(r => r !== null);
+
+            if (records.length === 0) return alert("ไม่มีข้อมูลสรุป (สรุปคนขาดหลัง 09:00 น.)");
+            const res = await apiCall({ action: 'recordAttendanceUpdate', data: records });
+            if (res.success) { alert("บันทึกสำเร็จ!"); location.reload(); }
+        }
+
+        function renderDashboard() {
+            const dateInput = document.getElementById('dashboard-date').value;
+            const filtered = attendance.filter(r => new Date(r.timestamp).toISOString().split('T')[0] === dateInput);
+            
+            const p = filtered.filter(r => r.status === 'มาทำงาน').length;
+            const l = filtered.filter(r => r.status === 'สาย').length;
+            const a = filtered.filter(r => r.status === 'ขาด').length;
+
+            document.getElementById('stat-present').innerText = p;
+            document.getElementById('stat-late').innerText = l;
+            document.getElementById('stat-absent').innerText = a;
+
+            const lateList = document.getElementById('late-list');
+            const absentList = document.getElementById('absent-list');
+            lateList.innerHTML = ''; absentList.innerHTML = '';
+
+            filtered.forEach(r => {
+                const li = `<li class="p-2 bg-gray-50 rounded border-l-4 ${r.status === 'สาย' ? 'border-orange-500' : 'border-red-500'} text-xs font-bold">
+                    ${r.name} ${r.status === 'สาย' ? `(${new Date(r.timestamp).toLocaleTimeString('th-TH', {hour:'2-digit',minute:'2-digit'})} น.)` : ''}
+                </li>`;
+                if (r.status === 'สาย') lateList.innerHTML += li;
+                else if (r.status === 'ขาด') absentList.innerHTML += li;
+            });
+            updateChart(p, l, a);
+        }
+
+        let pieChart = null;
+        function updateChart(p, l, a) {
+            const ctx = document.getElementById('attendance-pie-chart').getContext('2d');
+            if (pieChart) pieChart.destroy();
+            pieChart = new Chart(ctx, {
+                type: 'pie',
+                data: { labels: ['มาทำงาน', 'สาย', 'ขาด'], datasets: [{ data: [p, l, a], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'] }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        function renderStudentTable() {
+            const body = document.getElementById('student-table-body');
+            body.innerHTML = students.map(s => `<tr>
+                <td class="px-6 py-3"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-full object-cover"></td>
+                <td class="px-6 py-3 text-sm">${s.studentid}</td>
+                <td class="px-6 py-3 text-sm">${s.name}</td>
+                <td class="px-6 py-3 text-center">
+                    <button onclick="deleteStudent(${s.rowIndex})" class="text-red-600 p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </td>
+            </tr>`).join('');
+            lucide.createIcons();
         }
 
         async function deleteStudent(rowIndex) {
-            if(!confirm("ต้องการลบพนักงานคนนี้ใช่หรือไม่?")) return;
-            const res = await apiCall({ action: 'deleteStudent', data: { rowIndex } });
-            if(res.success) location.reload();
+            if (confirm("ลบพนักงานคนนี้?")) {
+                const res = await apiCall({ action: 'deleteStudent', data: { rowIndex } });
+                if (res.success) location.reload();
+            }
         }
 
-        function closeStudentModal() {
-            document.getElementById('student-modal').classList.add('hidden');
-            const video = document.getElementById('modal-video');
-            if(video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+        function stopCamera(id) {
+            const v = document.getElementById(id);
+            if (v && v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
         }
-
-        // --- UTILS ---
-function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-    document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-    
-    if(tabId === 'scan') {
-        // มั่นใจว่าเปิดกล้องและเริ่มตรวจจับใบหน้า
-        startCamera().then(() => {
-            isVideoRunning = true;
-            detectFace(); 
-        });
-    } else {
-        // ปิดกล้องเมื่อย้ายไปแท็บอื่น
-        isVideoRunning = false;
-        const video = document.getElementById('video');
-        if(video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
-    }
-
-    document.querySelectorAll('nav button').forEach(b => b.classList.remove('bg-white', 'text-blue-600', 'shadow-sm'));
-    document.getElementById(`btn-${tabId}`).classList.add('bg-white', 'text-blue-600', 'shadow-sm');
-}
 
         async function apiCall(payload) {
             try {
-                const res = await fetch(gasWebAppUrl, { method: 'POST', body: JSON.stringify(payload) });
-                return await res.json();
+                const r = await fetch(gasWebAppUrl, { method: 'POST', body: JSON.stringify(payload) });
+                return await r.json();
             } catch (e) { return { success: false, error: e.message }; }
         }
 
         function saveGasUrl() {
             const url = document.getElementById('gas-url').value;
-            if (url.startsWith('https://')) {
+            if (url.includes('script.google.com')) {
                 localStorage.setItem(GAS_URL_KEY, url);
                 location.reload();
             }
         }
 
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    currentGeoLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                });
-            }
+        function openStudentModal() {
+            currentEditingStudent = null; capturedImageData = null;
+            document.getElementById('student-modal').classList.remove('hidden');
         }
 
-        function toggleTheme() {
-            const isDark = document.documentElement.classList.toggle('dark');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            applyTheme(isDark ? 'dark' : 'light');
-        }
-
-        function applyTheme(theme) {
-            const isDark = theme === 'dark';
-            document.documentElement.classList.toggle('dark', isDark);
-            document.getElementById('theme-icon-sun').classList.toggle('hidden', !isDark);
-            document.getElementById('theme-icon-moon').classList.toggle('hidden', isDark);
-            if(isDark) document.body.classList.replace('bg-gray-50', 'bg-gray-900');
-            else document.body.classList.replace('bg-gray-900', 'bg-gray-50');
+        function closeStudentModal() {
+            stopCamera('modal-video');
+            document.getElementById('student-modal').classList.add('hidden');
         }
     </script>
 </body>
