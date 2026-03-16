@@ -569,34 +569,35 @@
             document.getElementById('btn-start-camera').classList.remove('hidden');
         }
 
-        async function saveStudent() {
-            const btn = document.getElementById('btn-save-student');
-            const data = {
-                id: document.getElementById('modal-studentid').value,
-                name: document.getElementById('modal-name').value,
-                class: document.getElementById('modal-class').value,
-                imagedata: capturedImageData || (currentEditingStudent ? currentEditingStudent.imagedatabase64 : '')
-            };
+async function saveStudent() {
+    const btn = document.getElementById('btn-save-student');
+    const data = {
+        id: document.getElementById('modal-studentid').value,
+        name: document.getElementById('modal-name').value,
+        class: document.getElementById('modal-class').value,
+        // ปรับชื่อคีย์ให้ตรงกับที่ Code.gs และจัดการเคสไม่มีการถ่ายใหม่
+        imagedata: capturedImageData || (currentEditingStudent ? currentEditingStudent.imagedatabase64 : '')
+    };
 
-            if(!data.id || !data.name) return alert("กรุณากรอกข้อมูลให้ครบ");
+    if(!data.id || !data.name) return alert("กรุณากรอกข้อมูลให้ครบ");
+    if(!data.imagedata) return alert("กรุณาถ่ายรูปพนักงานก่อนบันทึก");
 
-            btn.disabled = true;
-            btn.innerText = "กำลังบันทึก...";
+    btn.disabled = true;
+    btn.innerText = "กำลังบันทึก...";
 
-            const action = currentEditingStudent ? 'updateStudent' : 'addStudent';
-            if(currentEditingStudent) data.rowIndex = currentEditingStudent.rowIndex;
+    const action = currentEditingStudent ? 'updateStudent' : 'addStudent';
+    if(currentEditingStudent) data.rowIndex = currentEditingStudent.rowIndex;
 
-            const res = await apiCall({ action, data });
-            if(res.success) {
-                alert("บันทึกสำเร็จ!");
-                location.reload();
-            } else {
-                alert("ล้มเหลว: " + res.error);
-                btn.disabled = false;
-                btn.innerText = "บันทึกข้อมูล";
-            }
-        }
-
+    const res = await apiCall({ action, data });
+    if(res.success) {
+        alert("บันทึกสำเร็จ!");
+        location.reload();
+    } else {
+        alert("ล้มเหลว: " + res.error);
+        btn.disabled = false;
+        btn.innerText = "บันทึกข้อมูล";
+    }
+}
         function editStudent(s) {
             currentEditingStudent = s;
             document.getElementById('modal-title').innerText = "แก้ไขข้อมูล";
@@ -622,22 +623,26 @@
         }
 
         // --- UTILS ---
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-            
-            // ปิดกล้องถ้าไม่ได้อยู่ที่หน้าสแกน
-            if(tabId !== 'scan') {
-                isVideoRunning = false;
-                const video = document.getElementById('video');
-                if(video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
-            } else {
-                startCamera();
-            }
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+    document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+    
+    if(tabId === 'scan') {
+        // มั่นใจว่าเปิดกล้องและเริ่มตรวจจับใบหน้า
+        startCamera().then(() => {
+            isVideoRunning = true;
+            detectFace(); 
+        });
+    } else {
+        // ปิดกล้องเมื่อย้ายไปแท็บอื่น
+        isVideoRunning = false;
+        const video = document.getElementById('video');
+        if(video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+    }
 
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('bg-white', 'text-blue-600', 'shadow-sm'));
-            document.getElementById(`btn-${tabId}`).classList.add('bg-white', 'text-blue-600', 'shadow-sm');
-        }
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('bg-white', 'text-blue-600', 'shadow-sm'));
+    document.getElementById(`btn-${tabId}`).classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+}
 
         async function apiCall(payload) {
             try {
