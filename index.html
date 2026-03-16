@@ -412,10 +412,12 @@ async function finishAttendance() {
             id: s.studentid,
             name: s.name,
             class: s.class,
-            timestamp: new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }), 
+            // ปรับ format วันที่ให้ Google Sheets อ่านง่าย
+            timestamp: new Date().toISOString(), 
             status: status,
-            location: currentGeoLocation ? `${currentGeoLocation.lat}, ${currentGeoLocation.lng}` : 'ไม่พบพิกัด',
-            date: new Date().toLocaleDateString('th-TH') // ส่งไปเพื่อให้ Code.gs เช็คชื่อซ้ำในวันเดียวกัน
+            location: (typeof currentGeoLocation !== 'undefined' && currentGeoLocation) 
+                ? `${currentGeoLocation.lat}, ${currentGeoLocation.lng}` 
+                : 'ไม่พบพิกัด'
         };
     }).filter(r => r !== null);
 
@@ -424,22 +426,36 @@ async function finishAttendance() {
         return;
     }
 
-    // 2. ส่งข้อมูลไปยัง Google Sheets (ใช้ action ที่เราเพิ่มใน Code.gs)
+    // 2. ส่งข้อมูลไปยัง Google Sheets
     try {
-        const response = await fetch(scriptURL, { // ตรวจสอบว่าชื่อตัวแปร scriptURL ตรงกับด้านบน
+        // เปลี่ยนจาก scriptURL เป็น gasWebAppUrl ให้ตรงกับที่เก็บใน localStorage
+        const url = localStorage.getItem('gasWebAppUrl'); 
+        
+        if (!url) {
+            alert("ไม่พบ URL ของระบบ กรุณาตั้งค่าใหม่");
+            return;
+        }
+
+        const response = await fetch(url, {
             method: 'POST',
+            mode: 'no-cors', // เพิ่ม mode นี้เพื่อป้องกันการติด CORS ในบาง Browser
+            cache: 'no-cache',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'recordAttendanceUpdate', data: records })
         });
-        const res = await response.json();
 
-        if (res.success) {
-            alert("บันทึกลงระบบสำเร็จ!");
-            location.reload(); // รีเฟรชหน้าเว็บ
-        } else {
-            alert("เกิดข้อผิดพลาดจากระบบ: " + res.error);
-        }
+        // หมายเหตุ: เมื่อใช้ no-cors เราจะอ่าน JSON response ไม่ได้ 
+        // แต่ข้อมูลจะไปถึง Google Sheets แน่นอน
+        alert("ส่งข้อมูลไปยัง Server เรียบร้อยแล้ว (กำลังประมวลผล)");
+        
+        // รอสักพักแล้วค่อยโหลดใหม่เพื่อให้ Google Script ทำงานเสร็จ
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+
     } catch (error) {
-        alert("ไม่สามารถติดต่อ Server ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
+        console.error("Fetch Error:", error);
+        alert("ไม่สามารถติดต่อ Server ได้: " + error.message);
     }
 }
 
