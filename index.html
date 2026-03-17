@@ -229,44 +229,57 @@
         }
 
         // --- Dashboard พร้อมรูปภาพ ---
-        function renderDashboard() {
-            const dateInput = document.getElementById('dashboard-date').value; // ค.ศ. จาก input
-            const daily = attendance.filter(a => a.timestamp && a.timestamp.includes(dateInput));
-            const checkedIds = new Set(daily.map(a => String(a.id)));
+function renderDashboard() {
+        const dateInput = document.getElementById('dashboard-date').value; 
+        // กรองข้อมูล: รองรับทั้งรูปแบบ 2026-03-17 และรูปแบบวันที่ภาษาไทยที่อาจค้างอยู่ในระบบ
+        const daily = attendance.filter(a => {
+            if (!a.timestamp) return false;
+            return a.timestamp.includes(dateInput) || a.timestamp.includes(new Date(dateInput).toLocaleDateString('th-TH'));
+        });
 
-            document.getElementById('stat-present').innerText = daily.filter(a => a.status === 'มา').length;
-            document.getElementById('stat-late').innerText = daily.filter(a => a.status === 'สาย').length;
-            document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedIds.size);
+        const checkedIds = new Set(daily.map(a => String(a.id)));
 
-            const lateL = document.getElementById('late-list'), absL = document.getElementById('absent-list');
-            lateL.innerHTML = ''; absL.innerHTML = '';
+        document.getElementById('stat-present').innerText = daily.filter(a => a.status === 'มา').length;
+        document.getElementById('stat-late').innerText = daily.filter(a => a.status === 'สาย').length;
+        document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedIds.size);
 
-            // รายการคนสาย (พร้อมรูป)
-            daily.filter(a => a.status === 'สาย').forEach(a => {
-                const s = students.find(x => String(x.studentid) === String(a.id));
-                lateL.innerHTML += createDashItem(a.name, `เวลา: ${a.timestamp.split(' ')[1]}`, s?.imagedatabase64, 'amber');
-            });
+        const lateL = document.getElementById('late-list'), absL = document.getElementById('absent-list');
+        lateL.innerHTML = ''; absL.innerHTML = '';
 
-            // รายการคนขาด (พร้อมรูป)
-            students.forEach(s => {
-                if(!checkedIds.has(String(s.studentid))) {
-                    absL.innerHTML += createDashItem(s.name, 'ยังไม่มีข้อมูลการสแกน', s.imagedatabase64, 'rose');
-                }
-            });
-            lucide.createIcons();
-        }
+        // 1. รายการคนสาย: ดึงเวลาจาก Timestamp มาแสดง
+        daily.filter(a => a.status === 'สาย').forEach(a => {
+            const s = students.find(x => String(x.studentid) === String(a.id));
+            // แยกเอาเฉพาะเวลา HH:mm:ss จาก 2026-03-17 08:45:10
+            const timeOnly = a.timestamp.includes(' ') ? a.timestamp.split(' ')[1] : a.timestamp;
+            lateL.innerHTML += createDashItem(a.name, `เวลาบันทึก: ${timeOnly}`, s?.imagedatabase64, 'amber');
+        });
 
-        function createDashItem(name, sub, img, color) {
-            const imgTag = img ? `<img src="${img}" class="w-12 h-12 rounded-xl object-cover shadow-sm">` : `<div class="w-12 h-12 bg-slate-200 rounded-xl flex items-center justify-center"><i data-lucide="user" class="text-slate-400"></i></div>`;
-            return `
-                <li class="flex items-center p-3 bg-white rounded-2xl border border-slate-100 shadow-sm border-l-4 border-${color}-500 transition-all hover:translate-x-1">
-                    <div class="mr-4 flex-shrink-0">${imgTag}</div>
-                    <div class="flex-grow min-w-0">
-                        <p class="font-bold text-slate-700 truncate">${name}</p>
-                        <p class="text-xs text-slate-400 italic">${sub}</p>
-                    </div>
-                </li>`;
-        }
+        // 2. รายการคนปกติ (ถ้าต้องการแสดงใน Dashboard ด้วย สามารถเพิ่ม List ได้)
+        // ในที่นี้ผมเน้น "คนสาย" และ "คนขาด" ตามโครงสร้างเดิมของคุณครับ
+
+        // 3. รายการคนขาด: แสดงรูปคู่ชื่อเหมือนเดิม
+        students.forEach(s => {
+            if(!checkedIds.has(String(s.studentid))) {
+                absL.innerHTML += createDashItem(s.name, 'ยังไม่มีข้อมูลการสแกน', s.imagedatabase64, 'rose');
+            }
+        });
+        lucide.createIcons();
+    }
+
+    // ฟังก์ชันสร้าง Item ใน Dashboard ให้มีรูปและเวลา
+    function createDashItem(name, subText, img, color) {
+        const imgTag = img ? `<img src="${img}" class="w-12 h-12 rounded-xl object-cover shadow-sm border border-slate-200">` 
+                           : `<div class="w-12 h-12 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400"><i data-lucide="user"></i></div>`;
+        
+        return `
+            <li class="flex items-center p-3 bg-white rounded-2xl border border-slate-100 shadow-sm border-l-4 border-${color}-500 transition-all hover:translate-x-1">
+                <div class="mr-4 flex-shrink-0">${imgTag}</div>
+                <div class="flex-grow min-w-0">
+                    <p class="font-bold text-slate-700 truncate text-sm md:text-base">${name}</p>
+                    <p class="text-xs text-${color}-600 font-medium italic">${subText}</p>
+                </div>
+            </li>`;
+    }
 
         function switchTab(tab) {
             document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
