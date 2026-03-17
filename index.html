@@ -22,7 +22,7 @@
         <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center space-x-3">
                 <div class="bg-blue-600 p-2 rounded-lg text-white"><i data-lucide="layout-dashboard"></i></div>
-                <span class="text-xl font-bold text-gray-800">2PS-Attendance</span>
+                <span class="text-xl font-bold text-gray-800">THAISIAM-Attendance</span>
             </div>
             <div class="flex bg-gray-100 p-1 rounded-xl">
                 <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-6 py-2 rounded-lg text-sm font-medium transition-all">Dashboard</button>
@@ -35,13 +35,13 @@
     <main class="max-w-7xl mx-auto p-4 md:p-8">
         <div id="tab-dashboard" class="tab-content space-y-8">
             <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-bold text-gray-800">รายงานประจำวัน</h2>
+                <h2 class="text-2xl font-bold text-gray-800">รายงานสรุป</h2>
                 <input type="date" id="dashboard-date" onchange="renderDashboard()" class="border-2 rounded-xl px-4 py-2 shadow-sm focus:border-blue-500 outline-none">
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-emerald-500 text-center">
-                    <p class="text-gray-500 text-sm">มาทำงานปกติ</p>
+                    <p class="text-gray-500 text-sm">มาปกติ</p>
                     <p id="stat-present" class="text-4xl font-bold text-emerald-600">0</p>
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-amber-500 text-center">
@@ -56,21 +56,21 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div class="bg-white p-8 rounded-2xl shadow-sm border flex flex-col items-center">
-                    <h3 class="font-bold text-gray-700 mb-6">กราฟสัดส่วนการมาทำงาน</h3>
-                    <div class="w-full max-w-[280px] aspect-square">
+                    <h3 class="font-bold text-gray-700 mb-6">กราฟสัดส่วน (%)</h3>
+                    <div class="w-full max-w-[250px] aspect-square">
                         <canvas id="attendance-pie-chart"></canvas>
                     </div>
                 </div>
                 <div class="bg-white p-8 rounded-2xl shadow-sm border flex flex-col h-[400px]">
-                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-4">รายชื่อพนักงานที่ สาย/ขาด</h3>
+                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-4">พนักงาน สาย/ขาด</h3>
                     <div class="grid grid-cols-2 gap-6 overflow-hidden flex-grow">
                         <div>
-                            <span class="text-amber-600 font-bold text-xs block mb-2 underline">🕒 รายชื่อมาสาย</span>
-                            <ul id="late-list" class="space-y-1 overflow-y-auto custom-scrollbar h-full text-sm"></ul>
+                            <span class="text-amber-600 font-bold text-xs block mb-2">🕒 มาสาย</span>
+                            <ul id="late-list" class="space-y-1 overflow-y-auto custom-scrollbar h-full"></ul>
                         </div>
                         <div class="border-l pl-4">
-                            <span class="text-rose-600 font-bold text-xs block mb-2 underline">❌ รายชื่อขาดงาน</span>
-                            <ul id="absent-list" class="space-y-1 overflow-y-auto custom-scrollbar h-full text-sm"></ul>
+                            <span class="text-rose-600 font-bold text-xs block mb-2">❌ ขาด/ลา</span>
+                            <ul id="absent-list" class="space-y-1 overflow-y-auto custom-scrollbar h-full"></ul>
                         </div>
                     </div>
                 </div>
@@ -84,37 +84,37 @@
                     <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
                     <div id="loading-overlay" class="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center text-white space-y-4">
                         <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                        <p class="font-medium">กำลังโหลดฐานข้อมูลใบหน้า...</p>
+                        <p class="font-medium">กำลังเตรียมระบบวิเคราะห์ใบหน้า...</p>
                     </div>
                 </div>
-                <div class="bg-white p-8 rounded-3xl shadow-lg flex items-center space-x-8 border border-gray-100">
-                    <img id="result-img" class="w-24 h-24 rounded-2xl object-cover border-4 border-blue-50 hidden">
+                <div class="bg-white p-8 rounded-3xl shadow-lg flex items-center space-x-8">
+                    <img id="result-img" class="w-24 h-24 rounded-2xl object-cover border-4 border-blue-50 hidden shadow-md">
                     <div id="result-placeholder" class="w-24 h-24 bg-slate-100 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-300">
                         <i data-lucide="user-search" class="w-10 h-10 text-slate-300"></i>
                     </div>
                     <div class="flex-grow">
-                        <h3 id="result-name" class="text-2xl font-bold text-slate-800">กรุณายืนหน้ากล้อง</h3>
-                        <p id="result-id" class="text-slate-400 font-medium">รอการสแกน...</p>
+                        <h3 id="result-name" class="text-2xl font-bold text-slate-800">พร้อมสแกน...</h3>
+                        <p id="result-id" class="text-slate-400 font-medium tracking-widest">WAITING</p>
                     </div>
-                    <button onclick="finishAttendance()" class="bg-slate-800 text-white px-8 py-4 rounded-2xl font-bold hover:bg-black transition-all shadow-xl">บันทึกสรุปวัน</button>
+                    <button onclick="finishAttendance()" class="bg-slate-800 text-white px-8 py-4 rounded-2xl font-bold shadow-xl hover:bg-black">บันทึกวันนี้</button>
                 </div>
             </div>
         </div>
 
         <div id="tab-manage" class="tab-content hidden space-y-6">
             <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold">จัดการฐานข้อมูล</h2>
+                <h2 class="text-xl font-bold">จัดการพนักงาน</h2>
                 <button onclick="openStudentModal()" class="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg flex items-center">
-                    <i data-lucide="user-plus" class="w-4 h-4 mr-2"></i> เพิ่มพนักงาน
+                    <i data-lucide="plus" class="w-4 h-4 mr-2"></i> เพิ่มพนักงาน
                 </button>
             </div>
             <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
                 <table class="w-full text-left">
-                    <thead class="bg-slate-50 border-b text-slate-500 text-sm">
+                    <thead class="bg-slate-50 border-b">
                         <tr>
-                            <th class="px-8 py-4">รูปถ่าย</th>
-                            <th class="px-8 py-4">รหัสพนักงาน</th>
-                            <th class="px-8 py-4">ชื่อ-นามสกุล</th>
+                            <th class="px-8 py-4">รูป</th>
+                            <th class="px-8 py-4">รหัส</th>
+                            <th class="px-8 py-4">ชื่อ</th>
                             <th class="px-8 py-4 text-center">จัดการ</th>
                         </tr>
                     </thead>
@@ -126,21 +126,21 @@
 
     <div id="student-modal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 hidden">
         <div class="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
-            <h3 class="text-2xl font-bold mb-6 text-center text-slate-800">ข้อมูลพนักงานใหม่</h3>
+            <h3 class="text-2xl font-bold mb-6 text-center">เพิ่มข้อมูลพนักงาน</h3>
             <div class="space-y-4">
-                <div class="relative w-40 h-40 bg-slate-100 rounded-3xl overflow-hidden mx-auto border-4 border-white shadow-md">
+                <div class="relative w-40 h-40 bg-slate-100 rounded-3xl overflow-hidden mx-auto border-4 border-slate-50 shadow-inner">
                     <video id="modal-video" class="w-full h-full object-cover hidden" autoplay muted playsinline></video>
                     <img id="preview-img" class="w-full h-full object-cover">
                 </div>
-                <div class="flex justify-center space-x-2">
-                    <button id="btn-start-camera" onclick="startCaptureCamera()" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold">เปิดกล้อง</button>
-                    <button id="btn-snap" onclick="snapPhoto()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold hidden">ถ่ายรูปภาพ</button>
+                <div class="flex justify-center space-x-3">
+                    <button id="btn-start-camera" onclick="startCaptureCamera()" class="bg-slate-800 text-white px-5 py-2 rounded-xl text-xs font-bold">เปิดกล้อง</button>
+                    <button id="btn-snap" onclick="snapPhoto()" class="bg-blue-600 text-white px-5 py-2 rounded-xl text-xs font-bold hidden">ถ่ายรูปภาพ</button>
                 </div>
                 <input type="text" id="modal-studentid" placeholder="รหัสพนักงาน" class="w-full border-2 p-4 rounded-2xl outline-none focus:border-blue-500">
                 <input type="text" id="modal-name" placeholder="ชื่อ-นามสกุล" class="w-full border-2 p-4 rounded-2xl outline-none focus:border-blue-500">
                 <input type="text" id="modal-class" placeholder="แผนก" class="w-full border-2 p-4 rounded-2xl outline-none focus:border-blue-500">
-                <button id="btn-save-student" onclick="saveStudent()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg mt-4">บันทึกลงฐานข้อมูล</button>
-                <button onclick="closeStudentModal()" class="w-full text-slate-400 text-sm">ยกเลิก</button>
+                <button id="btn-save-student" onclick="saveStudent()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg">บันทึกลงระบบ</button>
+                <button onclick="closeStudentModal()" class="w-full text-slate-400 font-medium text-sm mt-2">ปิดหน้าต่าง</button>
             </div>
         </div>
     </div>
@@ -150,7 +150,7 @@
             <h3 class="text-3xl font-bold mb-4">เชื่อมต่อระบบ</h3>
             <p class="text-slate-500 mb-8 italic">https://script.google.com/macros/s/AKfycbwq-_KmIoAGm-0mWV-vAEhbqN_zT10S2IMje3dn7X-5QoHLfcL322Z9ZIUqDSM1gV9m/exec</p>
             <input type="text" id="gas-url" placeholder="https://script.google.com/..." class="w-full border-2 p-4 rounded-2xl mb-6 text-center outline-none focus:border-blue-500 shadow-sm">
-            <button onclick="saveGasUrl()" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-bold shadow-xl hover:scale-[1.02] transition-transform">บันทึกและเริ่มต้น</button>
+            <button onclick="saveGasUrl()" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-bold shadow-xl">บันทึกและเริ่มงาน</button>
         </div>
     </div>
 
@@ -169,29 +169,21 @@
                 document.getElementById('setup-modal').classList.remove('hidden');
             } else {
                 await loadAllData();
-                setTimeout(initializeFaceAPI, 500); // หน่วงเวลาให้ข้อมูลโหลดเสร็จก่อนเริ่ม Face API
+                setTimeout(initializeFaceAPI, 500);
             }
         };
 
-        // --- DATA FLOW ---
         async function loadAllData() {
             const resS = await apiCall({ action: 'getStudents' });
-            if (resS.success) {
-                students = resS.data;
-                renderStudentTable();
-            }
+            if (resS.success) { students = resS.data; renderStudentTable(); }
             const resA = await apiCall({ action: 'getAttendance' });
-            if (resA.success) { 
-                attendance = resA.data; 
-                renderDashboard(); 
-            }
+            if (resA.success) { attendance = resA.data; renderDashboard(); }
             switchTab('dashboard');
         }
 
         async function initializeFaceAPI() {
             const loader = document.getElementById('loading-overlay');
             try {
-                if (typeof faceapi === 'undefined') throw new Error("Library not loaded");
                 const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models';
                 await Promise.all([
                     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
@@ -209,7 +201,6 @@
                         } catch (e) { console.warn("Skip image:", s.name); }
                     }
                 }
-
                 if (labeledDescriptors.length > 0) faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.55);
                 if (loader) loader.classList.add('hidden');
             } catch (err) {
@@ -218,29 +209,17 @@
             }
         }
 
-        // --- TAB CONTROL ---
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-            document.querySelectorAll('nav button').forEach(b => {
-                b.className = 'px-6 py-2 rounded-lg text-sm font-medium transition-all text-slate-500 hover:bg-white';
-            });
+            document.querySelectorAll('nav button').forEach(b => b.className = 'px-6 py-2 rounded-lg text-sm font-medium transition-all text-slate-500 hover:bg-white');
             
-            const target = document.getElementById(`tab-${tabId}`);
-            if(target) target.classList.remove('hidden');
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabId}`).className = 'px-6 py-2 rounded-lg text-sm font-bold bg-white text-blue-600 shadow-sm';
             
-            const btn = document.getElementById(`nav-${tabId}`);
-            if(btn) btn.className = 'px-6 py-2 rounded-lg text-sm font-bold bg-white text-blue-600 shadow-sm';
-            
-            if (tabId === 'scan') {
-                isVideoRunning = true;
-                startCamera();
-            } else {
-                isVideoRunning = false;
-                stopCamera('video');
-            }
+            if (tabId === 'scan') { isVideoRunning = true; startCamera(); }
+            else { isVideoRunning = false; stopCamera('video'); }
         }
 
-        // --- CAMERA & SCAN ---
         async function startCamera() {
             const video = document.getElementById('video');
             try {
@@ -254,16 +233,13 @@
             const video = document.getElementById('video');
             const overlay = document.getElementById('overlay');
             if (!video || !overlay) return;
-
             const displaySize = { width: video.clientWidth, height: video.clientHeight };
             faceapi.matchDimensions(overlay, displaySize);
-
             const interval = setInterval(async () => {
                 if (!isVideoRunning) { clearInterval(interval); return; }
                 const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
                 const resized = faceapi.resizeResults(detections, displaySize);
                 overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
-
                 if (faceMatcher && detections.length > 0) {
                     detections.forEach(d => {
                         const match = faceMatcher.findBestMatch(d.descriptor);
@@ -274,70 +250,21 @@
                 faceapi.draw.drawDetections(overlay, resized);
             }, 600);
         }
-        // --- ฟังก์ชันบันทึกพนักงานใหม่ (เพิ่มเข้าไปท้ายไฟล์ ก่อนปิด </script>) ---
-        async function saveStudent() {
-            const btn = document.getElementById('btn-save-student');
-            
-            // 1. ดึงค่าจากช่องกรอกข้อมูล
-            const sId = document.getElementById('modal-studentid').value;
-            const sName = document.getElementById('modal-name').value;
-            const sClass = document.getElementById('modal-class').value;
-
-            // 2. ตรวจสอบว่าข้อมูลครบหรือไม่ (ต้องถ่ายรูปก่อนด้วย)
-            if (!sId || !sName || !capturedImageData) {
-                return alert("กรุณากรอกรหัสพนักงาน ชื่อ และถ่ายรูปให้เรียบร้อยก่อนบันทึกครับ");
-            }
-
-            // 3. เตรียมข้อมูลส่งไปที่ Code.gs (ต้องตรงกับชื่อตัวแปรใน Apps Script)
-            const payload = {
-                action: 'addStudent',
-                data: {
-                    id: sId,
-                    name: sName,
-                    class: sClass,
-                    imageData: capturedImageData // ข้อมูลรูปภาพ base64 ที่ได้จากการกดปุ่ม Snap
-                }
-            };
-
-            // แสดงสถานะการบันทึก
-            btn.disabled = true;
-            btn.innerText = "กำลังบันทึก...";
-
-            try {
-                const res = await apiCall(payload); 
-                if (res.success) {
-                    alert("บันทึกพนักงานเรียบร้อยแล้ว!");
-                    location.reload(); // รีโหลดหน้าเพื่ออัปเดตรายชื่อพนักงาน
-                } else {
-                    alert("เกิดข้อผิดพลาด: " + res.error);
-                    btn.disabled = false;
-                    btn.innerText = "บันทึกลงฐานข้อมูล";
-                }
-            } catch (err) {
-                alert("การเชื่อมต่อล้มเหลว: " + err.message);
-                btn.disabled = false;
-                btn.innerText = "บันทึกลงฐานข้อมูล";
-            }
-        }
 
         function markAttendance(student) {
             if (checkedInToday.has(student.studentid)) return;
             checkedInToday.set(student.studentid, true);
-
             document.getElementById('result-placeholder').classList.add('hidden');
             const resImg = document.getElementById('result-img');
             resImg.src = student.imagedatabase64;
             resImg.classList.remove('hidden');
-            
             document.getElementById('result-name').innerText = student.name;
-            document.getElementById('result-id').innerText = `รหัส: ${student.studentid}`;
-            
-            const msg = new SpeechSynthesisUtterance(`${student.name} เช็คชื่อเรียบร้อยค่ะ`);
-            msg.lang = 'th-TH';
-            window.speechSynthesis.speak(msg);
+            document.getElementById('result-id').innerText = `ID: ${student.studentid}`;
+            const msg = new SpeechSynthesisUtterance(`${student.name} เช็คชื่อแล้ว`);
+            msg.lang = 'th-TH'; window.speechSynthesis.speak(msg);
         }
 
-        // --- MANAGE & ADD ---
+        // --- เพิ่มพนักงาน (จุดที่แก้ใหม่) ---
         async function saveStudent() {
             const btn = document.getElementById('btn-save-student');
             const sId = document.getElementById('modal-studentid').value;
@@ -353,8 +280,8 @@
 
             btn.disabled = true; btn.innerText = "กำลังบันทึก...";
             const res = await apiCall(payload);
-            if (res.success) location.reload();
-            else { alert(res.error); btn.disabled = false; }
+            if (res.success) { alert("บันทึกพนักงานเรียบร้อย!"); location.reload(); }
+            else { alert(res.error); btn.disabled = false; btn.innerText = "บันทึกลงระบบ"; }
         }
 
         async function startCaptureCamera() {
@@ -384,51 +311,47 @@
         function renderStudentTable() {
             const body = document.getElementById('student-table-body');
             body.innerHTML = students.map(s => `<tr>
-                <td class="px-8 py-4"><img src="${s.imagedatabase64}" class="w-12 h-12 rounded-xl object-cover shadow-sm"></td>
+                <td class="px-8 py-4"><img src="${s.imagedatabase64}" class="w-12 h-12 rounded-xl object-cover"></td>
                 <td class="px-8 py-4 font-bold text-slate-700">${s.studentid}</td>
                 <td class="px-8 py-4 text-slate-600">${s.name}</td>
                 <td class="px-8 py-4 text-center">
-                    <button onclick="deleteStudent(${s.rowIndex})" class="text-rose-500 hover:text-rose-700 p-2"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                    <button onclick="deleteStudent(${s.rowIndex})" class="text-rose-500 p-2"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
                 </td>
             </tr>`).join('');
             lucide.createIcons();
         }
 
         async function deleteStudent(rowIndex) {
-            if (!confirm("ลบข้อมูลพนักงานคนนี้?")) return;
+            if (!confirm("ลบพนักงาน?")) return;
             const res = await apiCall({ action: 'deleteStudent', data: { rowIndex } });
             if (res.success) location.reload();
         }
 
-        // --- DASHBOARD RENDER ---
         function renderDashboard() {
             const date = document.getElementById('dashboard-date').value;
             const daily = attendance.filter(a => a.timestamp.includes(date));
-            
-            const presentCount = daily.filter(a => a.status === 'มาทำงาน').length;
-            const lateCount = daily.filter(a => a.status === 'สาย').length;
-            const absentCount = Math.max(0, students.length - (presentCount + lateCount));
+            const present = daily.filter(a => a.status === 'มาทำงาน').length;
+            const late = daily.filter(a => a.status === 'สาย').length;
+            const absent = Math.max(0, students.length - (present + late));
 
-            document.getElementById('stat-present').innerText = presentCount;
-            document.getElementById('stat-late').innerText = lateCount;
-            document.getElementById('stat-absent').innerText = absentCount;
+            document.getElementById('stat-present').innerText = present;
+            document.getElementById('stat-late').innerText = late;
+            document.getElementById('stat-absent').innerText = absent;
 
             const lateL = document.getElementById('late-list');
             const absL = document.getElementById('absent-list');
             lateL.innerHTML = ''; absL.innerHTML = '';
-
+            
             daily.filter(a => a.status === 'สาย').forEach(a => {
-                lateL.innerHTML += `<li class="p-2 bg-amber-50 rounded-lg text-amber-700 text-xs font-bold border-l-4 border-amber-500 mb-1">${a.name}</li>`;
+                lateL.innerHTML += `<li class="p-2 bg-amber-50 rounded-lg text-amber-700 text-xs mb-1 border-l-4 border-amber-500">${a.name}</li>`;
             });
-
             const checkedIds = new Set(daily.map(a => a.id.toString()));
             students.forEach(s => {
                 if (!checkedIds.has(s.studentid.toString())) {
-                    absL.innerHTML += `<li class="p-2 bg-rose-50 rounded-lg text-rose-700 text-xs font-bold border-l-4 border-rose-500 mb-1">${s.name}</li>`;
+                    absL.innerHTML += `<li class="p-2 bg-rose-50 rounded-lg text-rose-700 text-xs mb-1 border-l-4 border-rose-500">${s.name}</li>`;
                 }
             });
-
-            updateChart(presentCount, lateCount, absentCount);
+            updateChart(present, late, absent);
         }
 
         function updateChart(p, l, a) {
@@ -437,7 +360,7 @@
             pieChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['ปกติ', 'สาย', 'ขาด/ลา'],
+                    labels: ['ปกติ', 'สาย', 'ขาด'],
                     datasets: [{ data: [p, l, a], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'], borderWidth: 0 }]
                 },
                 options: { cutout: '75%', plugins: { legend: { position: 'bottom' } } }
@@ -451,17 +374,15 @@
                 if(!checkedInToday.has(s.studentid)) return null;
                 return { id: s.studentid, name: s.name, class: s.class, status: status, timestamp: now.toISOString(), location: 'Office' };
             }).filter(r => r !== null);
-
-            if (records.length === 0) return alert("ไม่มีข้อมูลเช็คชื่อ");
+            if (records.length === 0) return alert("ไม่มีข้อมูลสแกน");
             const res = await apiCall({ action: 'recordAttendanceUpdate', data: records });
             if (res.success) { alert("บันทึกสำเร็จ"); location.reload(); }
         }
 
-        // --- UTILS ---
         async function apiCall(payload) {
             try {
                 const res = await fetch(gasWebAppUrl, { method: 'POST', body: JSON.stringify(payload) });
-                return await res.json();
+                return await r = await res.json();
             } catch (e) { return { success: false, error: "Connection Error" }; }
         }
 
