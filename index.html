@@ -15,15 +15,13 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .tab-content { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
-<body class="bg-slate-50 transition-colors duration-300">
+<body class="bg-slate-50">
 
     <nav class="bg-white shadow-md sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-3 text-blue-600 font-bold text-xl uppercase tracking-wider">
+            <div class="flex items-center space-x-3 text-blue-600 font-bold text-xl uppercase">
                 <i data-lucide="shield-check"></i>
                 <span>2PS-ENGINEERING</span>
             </div>
@@ -37,49 +35,40 @@
 
     <main class="max-w-7xl mx-auto p-4 md:p-8">
         
-        <div id="content-dashboard" class="tab-content space-y-6">
+        <div id="content-dashboard" class="space-y-6">
             <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-bold text-slate-800 italic">รายงานการเข้างานประจำวัน</h2>
-                <input type="date" id="dashboard-date" onchange="renderDashboard()" class="border rounded-xl px-4 py-2 shadow-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <h2 class="text-2xl font-bold text-slate-800 italic">รายงานการเข้างาน</h2>
+                <input type="date" id="dashboard-date" onchange="renderDashboard()" class="border rounded-xl px-4 py-2 shadow-sm">
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-emerald-500">
-                    <p class="text-slate-400 text-sm font-medium">มาปกติ</p>
+                    <p class="text-slate-400 text-sm">มาปกติ</p>
                     <p id="stat-present" class="text-4xl font-bold text-emerald-600">0</p>
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-amber-500">
-                    <p class="text-slate-400 text-sm font-medium">มาสาย</p>
+                    <p class="text-slate-400 text-sm">มาสาย</p>
                     <p id="stat-late" class="text-4xl font-bold text-amber-600">0</p>
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-rose-500">
-                    <p class="text-slate-400 text-sm font-medium">ขาด / ยังไม่เช็คชื่อ</p>
+                    <p class="text-slate-400 text-sm">ยังไม่เช็คชื่อ</p>
                     <p id="stat-absent" class="text-4xl font-bold text-rose-600">0</p>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border flex flex-col items-center justify-center">
-                    <h3 class="font-bold mb-4">สัดส่วนวันนี้</h3>
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border flex flex-col items-center">
+                    <h3 class="font-bold mb-4 italic">สัดส่วนวันนี้</h3>
                     <div class="w-full max-w-[220px]"><canvas id="attendance-pie-chart"></canvas></div>
                 </div>
-                
-                <div class="lg:col-span-3 bg-white p-6 rounded-2xl shadow-sm border flex flex-col h-[450px]">
-                    <h3 class="font-bold mb-4 border-b pb-2 flex justify-between">
-                        <span>รายชื่อพนักงาน (วันนี้)</span>
-                        <span class="text-xs text-slate-400 font-normal">เรียงตามเวลาเช็คชื่อ</span>
-                    </h3>
-                    <div class="grid grid-cols-2 gap-4 h-full overflow-hidden">
-                        <div class="flex flex-col h-full bg-amber-50/50 rounded-xl p-3 border border-amber-100">
-                            <span class="text-amber-700 font-bold text-xs mb-2 block tracking-wider flex items-center">
-                                <i data-lucide="clock" class="w-3 h-3 mr-1"></i> มาสาย
-                            </span>
+                <div class="lg:col-span-3 bg-white p-6 rounded-2xl shadow-sm border h-[450px] flex flex-col">
+                    <div class="grid grid-cols-2 gap-4 h-full">
+                        <div class="flex flex-col h-full bg-amber-50/50 rounded-xl p-3 border">
+                            <span class="text-amber-700 font-bold text-xs mb-2 block">🕒 มาสาย</span>
                             <ul id="late-list" class="space-y-2 overflow-y-auto custom-scrollbar flex-grow"></ul>
                         </div>
-                        <div class="flex flex-col h-full bg-rose-50/50 rounded-xl p-3 border border-rose-100">
-                            <span class="text-rose-700 font-bold text-xs mb-2 block tracking-wider flex items-center">
-                                <i data-lucide="user-x" class="w-3 h-3 mr-1"></i> ยังไม่มา / ขาด
-                            </span>
+                        <div class="flex flex-col h-full bg-rose-50/50 rounded-xl p-3 border">
+                            <span class="text-rose-700 font-bold text-xs mb-2 block">❌ ยังไม่มา</span>
                             <ul id="absent-list" class="space-y-2 overflow-y-auto custom-scrollbar flex-grow"></ul>
                         </div>
                     </div>
@@ -87,54 +76,51 @@
             </div>
         </div>
 
-        <div id="content-scan" class="tab-content hidden space-y-6">
-            <div class="max-w-xl mx-auto bg-white p-6 rounded-3xl shadow-lg border relative overflow-hidden">
+        <div id="content-scan" class="hidden">
+            <div class="max-w-xl mx-auto bg-white p-6 rounded-3xl shadow-lg border relative">
                 <div class="relative aspect-[4/3] bg-black rounded-2xl overflow-hidden shadow-inner">
                     <video id="video" class="w-full h-full object-cover" autoplay muted playsinline></video>
                     <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
                     <div id="loading-overlay" class="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center text-white">
                         <div class="loader w-12 h-12 border-4 border-blue-500 rounded-full mb-4"></div>
-                        <p class="text-sm font-light">กำลังเตรียมระบบสแกนใบหน้า...</p>
+                        <p class="text-sm font-light italic">กำลังโหลด AI...</p>
                     </div>
                 </div>
                 <div class="mt-6 flex items-center space-x-6 bg-slate-50 p-4 rounded-2xl border">
+                    <img id="res-img" class="w-20 h-20 rounded-xl object-cover border-4 border-blue-400 hidden shadow-md">
                     <div id="res-img-placeholder" class="w-20 h-20 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400">
                         <i data-lucide="user" class="w-10 h-10"></i>
                     </div>
-                    <img id="res-img" class="w-20 h-20 rounded-xl object-cover border-4 border-blue-400 hidden shadow-md">
                     <div class="flex-grow">
-                        <h3 id="res-name" class="text-xl font-bold text-slate-800 italic">กรุณาวางหน้าในกรอบ</h3>
-                        <p id="res-id" class="text-slate-400 text-sm">READY TO SCAN</p>
+                        <h3 id="res-name" class="text-xl font-bold text-slate-800 italic">พร้อมสแกน...</h3>
+                        <p id="res-id" class="text-slate-400 text-sm font-mono tracking-widest uppercase">Standing By</p>
                     </div>
                 </div>
-                <button id="btn-submit" onclick="finishAttendance()" class="w-full mt-6 bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all flex justify-center items-center">
-                    <i data-lucide="save" class="mr-2"></i> ส่งข้อมูลไปที่ Google Sheets
+                <button id="btn-submit" onclick="finishAttendance()" class="w-full mt-6 bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition-all flex justify-center items-center">
+                    <i data-lucide="map-pin" class="mr-2 w-5 h-5"></i> บันทึกเวลาและพิกัดลงระบบ
                 </button>
             </div>
         </div>
 
-        <div id="content-manage" class="tab-content hidden space-y-4">
+        <div id="content-manage" class="hidden space-y-4">
             <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold text-slate-800">จัดการรายชื่อพนักงาน</h2>
+                <h2 class="text-xl font-bold">จัดการพนักงาน</h2>
                 <button onclick="openStudentModal()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center shadow-md">
-                    <i data-lucide="plus" class="w-4 h-4 mr-2"></i> เพิ่มพนักงานใหม่
+                    <i data-lucide="plus" class="mr-2"></i> เพิ่มพนักงาน
                 </button>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-50 text-slate-500 text-sm uppercase">
-                            <tr>
-                                <th class="p-4">รูป</th>
-                                <th class="p-4">รหัสพนักงาน</th>
-                                <th class="p-4">ชื่อ-นามสกุล</th>
-                                <th class="p-4">แผนก</th>
-                                <th class="p-4 text-center">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="student-table-body" class="divide-y text-slate-600"></tbody>
-                    </table>
-                </div>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-slate-500 text-sm uppercase">
+                        <tr>
+                            <th class="p-4">รูป</th>
+                            <th class="p-4">ID</th>
+                            <th class="p-4">ชื่อ</th>
+                            <th class="p-4 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-table-body" class="divide-y"></tbody>
+                </table>
             </div>
         </div>
     </main>
@@ -143,18 +129,18 @@
         <div class="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
             <h3 class="text-xl font-bold mb-6 text-center underline">ข้อมูลพนักงานใหม่</h3>
             <div class="space-y-4 text-center">
-                <div class="relative w-32 h-32 bg-slate-100 rounded-2xl mx-auto overflow-hidden border-2 border-dashed border-slate-300">
+                <div class="relative w-32 h-32 bg-slate-100 rounded-2xl mx-auto overflow-hidden border-2 border-dashed">
                     <video id="modal-video" class="w-full h-full object-cover hidden" autoplay muted playsinline></video>
                     <img id="preview-img" class="w-full h-full object-cover">
                 </div>
                 <div class="flex justify-center space-x-2">
                     <button id="btn-start-camera" onclick="startCaptureCamera()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-xs font-bold">เปิดกล้อง</button>
-                    <button id="btn-snap" onclick="snapPhoto()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hidden">ถ่ายรูปเดี๋ยวนี้</button>
+                    <button id="btn-snap" onclick="snapPhoto()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hidden">ถ่ายรูป</button>
                 </div>
-                <input type="text" id="modal-studentid" placeholder="รหัสพนักงาน" class="w-full border p-4 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="text" id="modal-name" placeholder="ชื่อ-นามสกุล" class="w-full border p-4 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="text" id="modal-class" placeholder="แผนก" class="w-full border p-4 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
-                <button onclick="saveStudent()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg">บันทึกพนักงาน</button>
+                <input type="text" id="modal-studentid" placeholder="รหัสพนักงาน" class="w-full border p-4 rounded-xl outline-none">
+                <input type="text" id="modal-name" placeholder="ชื่อ-นามสกุล" class="w-full border p-4 rounded-xl outline-none">
+                <input type="text" id="modal-class" placeholder="แผนก (เช่น ผลิต, บัญชี)" class="w-full border p-4 rounded-xl outline-none">
+                <button onclick="saveStudent()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg">บันทึกข้อมูล</button>
                 <button onclick="closeStudentModal()" class="w-full text-slate-400 text-sm mt-2">ยกเลิก</button>
             </div>
         </div>
@@ -163,8 +149,8 @@
     <div id="setup-modal" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center hidden">
         <div class="bg-white p-10 rounded-3xl max-w-sm w-full text-center">
             <h3 class="text-2xl font-bold mb-4">https://script.google.com/macros/s/AKfycbz12Xbujoil8N9_KUtlHneflD1errN4W5d_eR3eNh4odhyEoEJ95Sa1rMJPHBt0djkb/exec</h3>
-            <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycbz12Xbujoil8N9_KUtlHneflD1errN4W5d_eR3eNh4odhyEoEJ95Sa1rMJPHBt0djkb/exec" class="w-full border-2 p-4 rounded-2xl mb-4 text-center outline-none focus:border-blue-500">
-            <button onclick="saveGasUrl()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold">บันทึกและเริ่มระบบ</button>
+            <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycbz12Xbujoil8N9_KUtlHneflD1errN4W5d_eR3eNh4odhyEoEJ95Sa1rMJPHBt0djkb/exec" class="w-full border-2 p-4 rounded-2xl mb-4 text-center">
+            <button onclick="saveGasUrl()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold">บันทึก</button>
         </div>
     </div>
 
@@ -174,11 +160,11 @@
         const GAS_URL_KEY = 'gasWebAppUrl_v3';
         let gasWebAppUrl = localStorage.getItem(GAS_URL_KEY);
         let students = [], attendance = [], faceMatcher = null, isVideoRunning = false;
-        let checkedInToday = new Map(), capturedImageData = null, pieChart = null;
+        let scannedSet = new Map(), capturedImageData = null, pieChart = null;
 
         window.onload = async () => {
             lucide.createIcons();
-            document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('dashboard-date').value = new Date().toLocaleDateString('en-CA');
             if (!gasWebAppUrl) {
                 document.getElementById('setup-modal').classList.remove('hidden');
             } else {
@@ -208,59 +194,33 @@
                 const labeled = [];
                 for (const s of students) {
                     if (s.imagedatabase64 && s.imagedatabase64.length > 100) {
-                        try {
-                            const img = await faceapi.fetchImage(s.imagedatabase64);
-                            const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-                            if (det) labeled.push(new faceapi.LabeledFaceDescriptors(s.studentid.toString(), [det.descriptor]));
-                        } catch(e) { console.warn("Image fail:", s.studentid); }
+                        const img = await faceapi.fetchImage(s.imagedatabase64);
+                        const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                        if (det) labeled.push(new faceapi.LabeledFaceDescriptors(String(s.studentid), [det.descriptor]));
                     }
                 }
-                if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.55);
+                if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.45);
                 document.getElementById('loading-overlay').classList.add('hidden');
-            } catch (e) {
-                console.error("AI Error:", e);
-                document.getElementById('loading-overlay').classList.add('hidden');
-            }
+            } catch (e) { console.error(e); }
         }
 
         function switchTab(tabId) {
-            ['content-dashboard', 'content-scan', 'content-manage'].forEach(id => {
-                document.getElementById(id).classList.add('hidden');
-            });
+            ['dashboard', 'scan', 'manage'].forEach(id => document.getElementById(`content-${id}`).classList.add('hidden'));
             document.getElementById(`content-${tabId}`).classList.remove('hidden');
-
-            ['tab-dashboard', 'tab-scan', 'tab-manage'].forEach(id => {
-                const btn = document.getElementById(id);
-                if (id === `tab-${tabId}`) {
-                    btn.classList.add('bg-blue-600', 'text-white');
-                    btn.classList.remove('text-slate-600');
-                } else {
-                    btn.classList.remove('bg-blue-600', 'text-white');
-                    btn.classList.add('text-slate-600');
-                }
-            });
-
-            if (tabId === 'scan') {
-                isVideoRunning = true;
-                startMainCamera();
-            } else {
-                isVideoRunning = false;
-                stopCamera('video');
-            }
+            isVideoRunning = (tabId === 'scan');
+            if (isVideoRunning) startMainCamera(); else stopCamera('video');
         }
 
         async function startMainCamera() {
             const v = document.getElementById('video');
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-                v.srcObject = stream;
+                v.srcObject = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
                 v.onloadedmetadata = () => detectFaceLoop();
-            } catch (e) { alert("เข้าถึงกล้องไม่ได้"); }
+            } catch (e) { alert("กล้องขัดข้อง"); }
         }
 
         async function detectFaceLoop() {
             const v = document.getElementById('video'), o = document.getElementById('overlay');
-            if(!v || !o) return;
             const dim = { width: v.clientWidth, height: v.clientHeight };
             faceapi.matchDimensions(o, dim);
 
@@ -273,120 +233,167 @@
                 if (faceMatcher && dets.length > 0) {
                     dets.forEach(d => {
                         const match = faceMatcher.findBestMatch(d.descriptor);
-                        const s = students.find(x => x.studentid.toString() === match.label);
-                        if (s && match.distance < 0.45) markAttendance(s);
+                        const s = students.find(x => String(x.studentid) === match.label);
+                        if (s && match.distance < 0.4) showFound(s);
                     });
                 }
                 faceapi.draw.drawDetections(o, resized);
             }, 500);
         }
 
-        function markAttendance(s) {
-            if (checkedInToday.has(s.studentid)) return;
-            checkedInToday.set(s.studentid, s);
-            
+        function showFound(s) {
+            if (scannedSet.has(s.studentid)) return;
+            scannedSet.set(s.studentid, s);
             document.getElementById('res-name').innerText = s.name;
-            document.getElementById('res-id').innerText = `ID: ${s.studentid} - สำเร็จ!`;
-            const img = document.getElementById('res-img');
-            img.src = s.imagedatabase64;
-            img.classList.remove('hidden');
+            document.getElementById('res-id').innerText = `ID: ${s.studentid} - สแกนพบแล้ว`;
+            document.getElementById('res-img').src = s.imagedatabase64;
+            document.getElementById('res-img').classList.remove('hidden');
             document.getElementById('res-img-placeholder').classList.add('hidden');
             
-            const msg = new SpeechSynthesisUtterance(`สวัสดีคุณ ${s.name}`);
+            const msg = new SpeechSynthesisUtterance(`สแกนผ่านแล้วค่ะ คุณ${s.name}`);
             msg.lang = 'th-TH'; window.speechSynthesis.speak(msg);
         }
 
+        // --- แก้ไขจุดสำคัญ: Timestamp, Class และ Location ---
         async function finishAttendance() {
-            if(checkedInToday.size === 0) return alert("ยังไม่ได้สแกนหน้าใครเลย");
+            if(scannedSet.size === 0) return alert("กรุณาสแกนใบหน้าก่อนบันทึก");
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true; btn.innerText = "กำลังดึงพิกัดและบันทึก...";
+
+            // 1. ดึง Location
+            let locationStr = "ไม่ทราบพิกัด";
+            try {
+                const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout: 5000}));
+                locationStr = `${pos.coords.latitude}, ${pos.coords.longitude}`;
+            } catch (e) { console.warn("Location error:", e); }
+
+            // 2. สร้าง Timestamp ภาษาไทย (HH:mm:ss)
             const now = new Date();
+            const timeStr = now.toLocaleTimeString('th-TH', { hour12: false }); 
+            const dateStr = now.toLocaleDateString('th-TH');
+            const fullStamp = `${dateStr} ${timeStr}`;
+
             const h = now.getHours(), m = now.getMinutes();
             const status = (h > 8 || (h === 8 && m > 30)) ? 'สาย' : 'มา';
-            
-            const records = Array.from(checkedInToday.values()).map(s => {
-                return { id: s.studentid, name: s.name, status: status, timestamp: now.toISOString() };
-            });
+
+            const records = Array.from(scannedSet.values()).map(s => ({
+                id: s.studentid,
+                name: s.name,
+                class: s.class || "ทั่วไป", // ส่ง Class ไปด้วย
+                status: status,
+                timestamp: fullStamp,      // ส่งเวลาที่แก้ไขแล้ว
+                location: locationStr      // ส่งพิกัด
+            }));
 
             const res = await apiCall({ action: 'recordAttendanceUpdate', data: records });
             if (res && res.success) {
-                alert("บันทึกเข้าระบบเรียบร้อย!");
+                alert("✅ บันทึกข้อมูลเรียบร้อยแล้ว!");
                 location.reload();
+            } else {
+                alert("❌ บันทึกไม่สำเร็จ กรุณาลองใหม่");
+                btn.disabled = false; btn.innerText = "บันทึกข้อมูลลงระบบ";
             }
         }
 
         function renderDashboard() {
-            const date = document.getElementById('dashboard-date').value;
-            const daily = attendance.filter(a => a.timestamp && a.timestamp.includes(date));
+            const dateInput = document.getElementById('dashboard-date').value;
+            // กรองข้อมูลให้ตรงกับวันที่เลือก (ตรวจสอบทั้งรูปแบบ ISO และ Local)
+            const daily = attendance.filter(a => a.timestamp && (a.timestamp.includes(dateInput) || a.timestamp.includes(new Date(dateInput).toLocaleDateString('th-TH'))));
+            
             const present = daily.filter(a => a.status === 'มา').length;
             const late = daily.filter(a => a.status === 'สาย').length;
-            const absent = Math.max(0, students.length - (present + late));
+            const checkedIds = new Set(daily.map(a => String(a.id)));
+            const absent = Math.max(0, students.length - checkedIds.size);
 
             document.getElementById('stat-present').innerText = present;
             document.getElementById('stat-late').innerText = late;
             document.getElementById('stat-absent').innerText = absent;
 
-            const lateL = document.getElementById('late-list');
-            const absL = document.getElementById('absent-list');
+            const lateL = document.getElementById('late-list'), absL = document.getElementById('absent-list');
             lateL.innerHTML = ''; absL.innerHTML = '';
 
-            // แสดงคนสาย
             daily.filter(a => a.status === 'สาย').forEach(a => {
-                const s = students.find(x => x.studentid.toString() === a.id.toString());
-                lateL.innerHTML += createDashboardItem(a.name, a.timestamp.split('T')[1].substring(0,5) + " น.", s?.imagedatabase64, 'amber');
+                const s = students.find(x => String(x.studentid) === String(a.id));
+                lateL.innerHTML += createItem(a.name, a.timestamp.split(' ')[1] || 'สาย', s?.imagedatabase64, 'amber');
             });
 
-            // แสดงคนขาด
-            const checkedIds = new Set(daily.map(a => a.id.toString()));
             students.forEach(s => {
-                if (!checkedIds.has(s.studentid.toString())) {
-                    absL.innerHTML += createDashboardItem(s.name, 'ยังไม่เช็คชื่อ', s.imagedatabase64, 'rose');
+                if (!checkedIds.has(String(s.studentid))) {
+                    absL.innerHTML += createItem(s.name, 'ยังไม่เช็คชื่อ', s.imagedatabase64, 'rose');
                 }
             });
 
-            updatePieChart(present, late, absent);
+            updateChart(present, late, absent);
             lucide.createIcons();
         }
 
-        function createDashboardItem(name, info, img, color) {
-            const imgTag = img ? `<img src="${img}" class="w-10 h-10 rounded-lg object-cover">` : `<div class="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center"><i data-lucide="user" class="w-5 h-5 text-slate-400"></i></div>`;
-            return `<li class="flex items-center p-2 bg-white rounded-lg shadow-sm border-l-4 border-${color}-500">
-                <div class="mr-3">${imgTag}</div>
+        function createItem(name, info, img, color) {
+            const imgHtml = img ? `<img src="${img}" class="w-10 h-10 rounded-lg object-cover">` : `<div class="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center"><i data-lucide="user" class="w-5 h-5 text-slate-400"></i></div>`;
+            return `<li class="flex items-center p-2 bg-white rounded-lg shadow-sm border-l-4 border-${color}-500 transition-all hover:translate-x-1">
+                <div class="mr-3 flex-shrink-0">${imgHtml}</div>
                 <div class="min-w-0 flex-grow">
                     <p class="text-xs font-bold text-slate-700 truncate">${name}</p>
-                    <p class="text-[10px] text-slate-400">${info}</p>
+                    <p class="text-[10px] text-slate-400 italic">${info}</p>
                 </div>
             </li>`;
+        }
+
+        function updateChart(p, l, a) {
+            const ctx = document.getElementById('attendance-pie-chart')?.getContext('2d');
+            if (pieChart) pieChart.destroy();
+            pieChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ปกติ', 'สาย', 'ขาด'],
+                    datasets: [{ data: [p, l, a], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'], borderWidth: 0 }]
+                },
+                options: { cutout: '70%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
+            });
+        }
+
+        async function saveStudent() {
+            const id = document.getElementById('modal-studentid').value;
+            const name = document.getElementById('modal-name').value;
+            const cls = document.getElementById('modal-class').value;
+            if (!id || !name || !capturedImageData) return alert("กรุณากรอกข้อมูลและถ่ายรูป");
+            
+            const res = await apiCall({ action: 'addStudent', data: { id, name, class: cls, imageData: capturedImageData } });
+            if (res && res.success) { alert("เพิ่มสำเร็จ!"); location.reload(); }
         }
 
         function renderStudentTable() {
             const body = document.getElementById('student-table-body');
             body.innerHTML = students.map(s => `
-                <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover bg-slate-100"></td>
-                    <td class="p-4 font-bold text-slate-700">${s.studentid}</td>
-                    <td class="p-4 text-slate-600">${s.name}</td>
-                    <td class="p-4 text-slate-500">${s.class || '-'}</td>
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover"></td>
+                    <td class="p-4 font-bold text-sm text-slate-700">${s.studentid}</td>
+                    <td class="p-4 text-sm">${s.name} <br> <span class="text-[10px] text-slate-400">${s.class || '-'}</span></td>
                     <td class="p-4 text-center">
-                        <button onclick="deleteStudent(${s.rowIndex})" class="text-rose-400 hover:text-rose-600 p-2"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                        <button onclick="deleteStudent(${s.rowIndex})" class="text-rose-400 p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </td>
                 </tr>`).join('');
             lucide.createIcons();
         }
 
+        async function apiCall(payload) {
+            try {
+                const res = await fetch(gasWebAppUrl, { method: 'POST', body: JSON.stringify(payload) });
+                return await res.json();
+            } catch (e) { return { success: false }; }
+        }
+
+        // Camera Logic
         async function startCaptureCamera() {
             const v = document.getElementById('modal-video');
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                v.srcObject = stream;
-                v.classList.remove('hidden');
-                document.getElementById('preview-img').classList.add('hidden');
-                document.getElementById('btn-start-camera').classList.add('hidden');
-                document.getElementById('btn-snap').classList.remove('hidden');
-            } catch(e) { alert("กล้องถูกบล็อก"); }
+            v.srcObject = await navigator.mediaDevices.getUserMedia({ video: true });
+            v.classList.remove('hidden');
+            document.getElementById('preview-img').classList.add('hidden');
+            document.getElementById('btn-start-camera').classList.add('hidden');
+            document.getElementById('btn-snap').classList.remove('hidden');
         }
 
         function snapPhoto() {
-            const v = document.getElementById('modal-video');
-            const c = document.getElementById('capture-canvas');
+            const v = document.getElementById('modal-video'), c = document.getElementById('capture-canvas');
             c.width = 400; c.height = 400;
             c.getContext('2d').drawImage(v, 0, 0, 400, 400);
             capturedImageData = c.toDataURL('image/jpeg', 0.8);
@@ -398,53 +405,14 @@
             document.getElementById('btn-start-camera').classList.remove('hidden');
         }
 
-        async function saveStudent() {
-            const id = document.getElementById('modal-studentid').value;
-            const name = document.getElementById('modal-name').value;
-            const cls = document.getElementById('modal-class').value;
-            if (!id || !name || !capturedImageData) return alert("กรุณากรอกข้อมูลและถ่ายรูป");
-            
-            const res = await apiCall({ action: 'addStudent', data: { id, name, class: cls, imageData: capturedImageData } });
-            if (res && res.success) { alert("เพิ่มพนักงานสำเร็จ!"); location.reload(); }
-        }
-
-        async function deleteStudent(idx) {
-            if(confirm("ต้องการลบพนักงานคนนี้ใช่ไหม?")) {
-                const res = await apiCall({ action: 'deleteStudent', data: { rowIndex: idx } });
-                if(res && res.success) location.reload();
-            }
-        }
-
-        function updatePieChart(p, l, a) {
-            const ctx = document.getElementById('attendance-pie-chart')?.getContext('2d');
-            if (!ctx) return;
-            if (pieChart) pieChart.destroy();
-            pieChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['ปกติ', 'สาย', 'ขาด'],
-                    datasets: [{ data: [p, l, a], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'], borderWidth: 0 }]
-                },
-                options: { cutout: '75%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
-            });
-        }
-
-        async function apiCall(payload) {
-            if (!gasWebAppUrl) return null;
-            try {
-                const res = await fetch(gasWebAppUrl, { method: 'POST', body: JSON.stringify(payload) });
-                return await res.json();
-            } catch (e) { return { success: false }; }
+        function stopCamera(id) {
+            const v = document.getElementById(id);
+            if (v && v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
         }
 
         function saveGasUrl() {
             const url = document.getElementById('gas-url').value;
             if (url.includes('google.com')) { localStorage.setItem(GAS_URL_KEY, url); location.reload(); }
-        }
-
-        function stopCamera(id) {
-            const v = document.getElementById(id);
-            if (v && v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
         }
 
         function openStudentModal() { document.getElementById('student-modal').classList.remove('hidden'); }
