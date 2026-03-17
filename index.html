@@ -243,19 +243,51 @@
         }
 
         // --- NAVIGATION ---
-        function switchTab(name) {
-            stopAllCameras();
-            ['dashboard', 'attendance', 'manage'].forEach(t => {
-                document.getElementById(`content-${t}`).classList.add('hidden');
-                document.getElementById(`tab-${t}`).className = "px-3 py-1.5 text-sm font-medium rounded-md text-gray-600 dark:text-gray-300";
-            });
-            document.getElementById(`content-${name}`).classList.remove('hidden');
-            document.getElementById(`tab-${name}`).className = "px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white";
-
-            if (name === 'dashboard') { loadStudentRosterForDashboard(); loadAttendanceDataForDashboard(); }
-            if (name === 'manage') loadStudentDataForTable();
-            if (name === 'attendance') loadStudentDataForRecognition();
+function switchTab(tabId) {
+    // รายการ ID ของเนื้อหาแต่ละส่วนในไฟล์ Index02.txt ของคุณ
+    const tabs = ['content-dashboard', 'content-attendance', 'content-manage'];
+    
+    tabs.forEach(id => {
+        const content = document.getElementById(id);
+        if (content) {
+            // ถ้า tabId ตรงกับชื่อส่วนนั้น ให้แสดงผล (ลบ hidden) ถ้าไม่ตรงให้ซ่อน (ใส่ hidden)
+            if (id === `content-${tabId}`) {
+                content.classList.remove('hidden');
+            } else {
+                content.classList.add('hidden');
+            }
         }
+    });
+
+    // ปรับสีปุ่มเมนูให้รู้ว่ากำลังกดหน้าไหนอยู่
+    const navButtons = {
+        'dashboard': 'tab-dashboard',
+        'attendance': 'tab-attendance',
+        'manage': 'tab-manage'
+    };
+
+    Object.keys(navButtons).forEach(key => {
+        const btn = document.getElementById(navButtons[key]);
+        if (btn) {
+            if (key === tabId) {
+                btn.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+                btn.classList.remove('text-gray-600', 'dark:text-gray-300');
+            } else {
+                btn.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+                btn.classList.add('text-gray-600', 'dark:text-gray-300');
+            }
+        }
+    });
+
+    // จัดการกล้อง (ถ้าสลับไปหน้าเช็คชื่อให้เปิดกล้อง ถ้าไปหน้าอื่นให้ปิด)
+    if (tabId === 'attendance') {
+        isVideoRunning = true;
+        startCamera();
+    } else {
+        isVideoRunning = false;
+        stopCamera('video');
+    }
+}
 
         function stopAllCameras() {
             isScanning = false;
