@@ -635,20 +635,41 @@ timestamp: new Intl.DateTimeFormat('sv-SE', {
             }
         }
 
-        function renderDashboard() {
-            const dateStr = document.getElementById('dashboard-date').value;
-            const filtered = attendance.filter(r => new Date(r.timestamp).toDateString() === new Date(dateStr).toDateString());
+function renderDashboard() {
+    const selectedDate = document.getElementById('dashboard-date').value;
+    const dailyRecords = attendance.filter(a => a.timestamp && a.timestamp.includes(selectedDate));
+    
+    const present = dailyRecords.filter(a => a.status === 'มาทำงาน').length;
+    const late = dailyRecords.filter(a => a.status === 'สาย').length;
+    const totalPresent = present + late;
+    const absent = Math.max(0, students.length - totalPresent);
 
-            const present = filtered.filter(r => r.status === 'มาทำงาน').length;
-            const late = filtered.filter(r => r.status === 'สาย' && new Date(r.timestamp).getHours() >= 9).length; // สมมติสายหลัง 9 โมง
-            const absent = filtered.filter(r => r.status === 'ขาด' || r.status === 'ลา').length;
+    // อัปเดตตัวเลข
+    document.getElementById('stat-present').innerText = present;
+    document.getElementById('stat-late').innerText = late;
+    document.getElementById('stat-absent').innerText = absent;
 
-            document.getElementById('stat-present').innerText = present;
-            document.getElementById('stat-late').innerText = late;
-            document.getElementById('stat-absent').innerText = absent;
+    // --- แสดงรายชื่อคนสาย ---
+    const lateList = document.getElementById('late-list');
+    lateList.innerHTML = '';
+    const lateStaff = dailyRecords.filter(a => a.status === 'สาย');
+    if (lateStaff.length === 0) lateList.innerHTML = '<li class="text-gray-400 italic text-[11px]">ไม่มีคนสาย</li>';
+    lateStaff.forEach(a => {
+        lateList.innerHTML += `<li class="p-1.5 bg-amber-50 dark:bg-amber-900/20 rounded text-amber-700 dark:text-amber-400 border-l-2 border-amber-500 mb-1">${a.name}</li>`;
+    });
 
-            updateCharts(present, late, absent, filtered);
-        }
+    // --- แสดงรายชื่อคนขาด ---
+    const absentList = document.getElementById('absent-list');
+    absentList.innerHTML = '';
+    const checkedInIds = new Set(dailyRecords.map(a => a.id.toString()));
+    const absentStaff = students.filter(s => !checkedInIds.has(s.studentid.toString()));
+    if (absentStaff.length === 0) absentList.innerHTML = '<li class="text-gray-400 italic text-[11px]">ครบทุกคน</li>';
+    absentStaff.forEach(s => {
+        absentList.innerHTML += `<li class="p-1.5 bg-rose-50 dark:bg-rose-900/20 rounded text-rose-700 dark:text-rose-400 border-l-2 border-rose-500 mb-1">${s.name}</li>`;
+    });
+
+    updateChart(present, late, absent);
+}
 
         function updateCharts(p, l, a, data) {
             const pieCtx = document.getElementById('attendance-pie-chart').getContext('2d');
