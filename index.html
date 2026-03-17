@@ -151,14 +151,25 @@
         let students = [], attendance = [], faceMatcher = null, isVideoRunning = false;
         let checkedInToday = new Map(), capturedImageData = null, pieChart = null;
 
+  // 1. แก้ไข window.onload ให้โหลดข้อมูลพนักงานให้จบก่อนเริ่ม Face API
         window.onload = async () => {
             lucide.createIcons();
             document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
+            
             if (!gasWebAppUrl) {
                 document.getElementById('setup-modal').classList.remove('hidden');
             } else {
-                await loadAllData();
-                setTimeout(initializeFaceAPI, 500);
+                // โหลดข้อมูลจาก Google Sheets
+                await loadAllData(); 
+                
+                // เริ่มโหลดโมเดลสแกนหน้า (เฉพาะเมื่อมีพนักงานในระบบ)
+                if (students && students.length > 0) {
+                    await initializeFaceAPI();
+                } else {
+                    console.log("ยังไม่มีข้อมูลพนักงานในระบบ");
+                    const loader = document.getElementById('loading-overlay');
+                    if (loader) loader.classList.add('hidden');
+                }
             }
         };
 
@@ -176,6 +187,7 @@
             switchTab('dashboard');
         }
 
+// 2. ปรับปรุงการสร้าง FaceMatcher ให้เสถียรขึ้น
         async function initializeFaceAPI() {
             const loader = document.getElementById('loading-overlay');
             try {
@@ -188,18 +200,25 @@
                 
                 const labeledDescriptors = [];
                 for (const s of students) {
-                    if (s.imagedatabase64 && s.imagedatabase64.startsWith('data:image')) {
+                    // ตรวจสอบว่ามีข้อมูลรูปภาพในรูปแบบ Base64 หรือไม่
+                    if (s.imagedatabase64 && s.imagedatabase64.includes('base64')) {
                         try {
                             const img = await faceapi.fetchImage(s.imagedatabase64);
                             const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-                            if (det) labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(s.studentid.toString(), [det.descriptor]));
-                        } catch (e) { console.warn("Skip invalid student image:", s.name); }
+                            if (det) {
+                                labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(s.studentid.toString(), [det.descriptor]));
+                            }
+                        } catch (e) { console.error("ไม่สามารถประมวลผลรูปของ:", s.name); }
                     }
                 }
-                if (labeledDescriptors.length > 0) faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.55);
+
+                if (labeledDescriptors.length > 0) {
+                    faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.55);
+                    console.log("Face Matcher Ready!");
+                }
                 if (loader) loader.classList.add('hidden');
             } catch (err) {
-                console.error("FaceAPI Init Error:", err);
+                console.error("FaceAPI Error:", err);
                 if (loader) loader.classList.add('hidden');
             }
         }
@@ -342,30 +361,39 @@
             if (res.success) location.reload();
         }
 
+// 3. ปรับฟังก์ชันแสดง Dashboard ให้ดึงรายชื่อพนักงานที่ 'ขาด' มาโชว์
         function renderDashboard() {
-            const date = document.getElementById('dashboard-date').value;
-            const daily = attendance.filter(a => a.timestamp.includes(date));
-            const present = daily.filter(a => a.status === 'มาทำงาน').length;
-            const late = daily.filter(a => a.status === 'สาย').length;
-            const absent = Math.max(0, students.length - (present + late));
+            const selectedDate = document.getElementById('dashboard-date').value;
+            // กรองข้อมูลการเช็คชื่อของวันที่เลือก
+            const dailyAttendance = attendance.filter(a => a.timestamp && a.timestamp.includes(selectedDate));
+            
+            const present = dailyAttendance.filter(a => a.status === 'มาทำงาน').length;
+            const late = dailyAttendance.filter(a => a.status === 'สาย').length;
+            const totalPresent = present + late;
+            const absent = Math.max(0, students.length - totalPresent);
 
             document.getElementById('stat-present').innerText = present;
             document.getElementById('stat-late').innerText = late;
             document.getElementById('stat-absent').innerText = absent;
 
-            const lateL = document.getElementById('late-list');
-            const absL = document.getElementById('absent-list');
-            lateL.innerHTML = ''; absL.innerHTML = '';
-            
-            daily.filter(a => a.status === 'สาย').forEach(a => {
-                lateL.innerHTML += `<li class="p-2 bg-amber-50 rounded-lg text-amber-700 text-xs border-l-4 border-amber-500">${a.name} (สาย)</li>`;
+            // รายชื่อคนมาสาย
+            const lateList = document.getElementById('late-list');
+            lateList.innerHTML = '<span class="text-amber-600 font-bold text-xs block mb-2 underline">รายชื่อมาสาย</span>';
+            dailyAttendance.filter(a => a.status === 'สาย').forEach(a => {
+                lateList.innerHTML += `<li class="p-2 bg-amber-50 rounded-lg text-amber-700 text-xs mb-1 border-l-4 border-amber-500">${a.name}</li>`;
             });
-            const checkedIds = new Set(daily.map(a => a.id.toString()));
+
+            // รายชื่อคนขาด (มีชื่อในระบบแต่ไม่มีประวัติเช็คชื่อวันนี้)
+            const absentList = document.getElementById('absent-list');
+            absentList.innerHTML = '<span class="text-rose-600 font-bold text-xs block mb-2 underline">รายชื่อขาด/ลา</span>';
+            const checkedIds = new Set(dailyAttendance.map(a => a.id.toString()));
+            
             students.forEach(s => {
                 if (!checkedIds.has(s.studentid.toString())) {
-                    absL.innerHTML += `<li class="p-2 bg-rose-50 rounded-lg text-rose-700 text-xs border-l-4 border-rose-500">${s.name} (ขาด)</li>`;
+                    absentList.innerHTML += `<li class="p-2 bg-rose-50 rounded-lg text-rose-700 text-xs mb-1 border-l-4 border-rose-500">${s.name}</li>`;
                 }
             });
+
             updateChart(present, late, absent);
         }
 
