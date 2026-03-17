@@ -148,7 +148,7 @@
     <div id="setup-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900 hidden">
         <div class="bg-white rounded-3xl p-10 max-w-lg w-full mx-4 text-center shadow-2xl">
             <h3 class="text-3xl font-bold mb-4">เชื่อมต่อระบบ</h3>
-            <p class="text-slate-500 mb-8 italic">https://script.google.com/macros/s/AKfycbwq-_KmIoAGm-0mWV-vAEhbqN_zT10S2IMje3dn7X-5QoHLfcL322Z9ZIUqDSM1gV9m/exec</p>
+            <p class="text-slate-500 mb-8 italic">https://script.google.com/macros/s/AKfycbwexeF0KTZIlf83KGdtsMUG_QSqIuM56PsH1I-e2oieDDNGlKd-brbpa3SDiEaxNJ_R/exec</p>
             <input type="text" id="gas-url" placeholder="https://script.google.com/..." class="w-full border-2 p-4 rounded-2xl mb-6 text-center outline-none focus:border-blue-500 shadow-sm">
             <button onclick="saveGasUrl()" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-bold shadow-xl">บันทึกและเริ่มงาน</button>
         </div>
@@ -379,25 +379,49 @@
             if (res.success) { alert("บันทึกสำเร็จ"); location.reload(); }
         }
 
+// --- UTILS (แก้ไขจุดที่ทำให้ปุ่มค้าง) ---
         async function apiCall(payload) {
             try {
-                const res = await fetch(gasWebAppUrl, { method: 'POST', body: JSON.stringify(payload) });
-                return await r = await res.json();
-            } catch (e) { return { success: false, error: "Connection Error" }; }
+                const res = await fetch(gasWebAppUrl, { 
+                    method: 'POST', 
+                    body: JSON.stringify(payload) 
+                });
+                const data = await res.json(); // แก้ไขบรรทัดนี้
+                return data;
+            } catch (e) { 
+                console.error("API Error:", e);
+                return { success: false, error: "Connection Error" }; 
+            }
         }
 
         function saveGasUrl() {
             const url = document.getElementById('gas-url').value;
-            if (url.includes('google.com')) { localStorage.setItem(GAS_URL_KEY, url); location.reload(); }
+            if (url && url.includes('google.com')) { 
+                localStorage.setItem(GAS_URL_KEY, url); 
+                location.reload(); 
+            } else {
+                alert("กรุณาใส่ URL ของ Google Script ให้ถูกต้อง");
+            }
         }
 
         function stopCamera(id) {
             const v = document.getElementById(id);
-            if (v && v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
+            if (v && v.srcObject) {
+                v.srcObject.getTracks().forEach(t => t.stop());
+                v.srcObject = null;
+            }
         }
 
-        function openStudentModal() { capturedImageData = null; document.getElementById('student-modal').classList.remove('hidden'); }
-        function closeStudentModal() { stopCamera('modal-video'); document.getElementById('student-modal').classList.add('hidden'); }
+        function openStudentModal() { 
+            capturedImageData = null; 
+            document.getElementById('preview-img').src = '';
+            document.getElementById('student-modal').classList.remove('hidden'); 
+        }
+        
+        function closeStudentModal() { 
+            stopCamera('modal-video'); 
+            document.getElementById('student-modal').classList.add('hidden'); 
+        }
     </script>
 </body>
 </html>
