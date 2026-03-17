@@ -84,7 +84,8 @@
         <div id="content-manage" class="hidden space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="text-xl font-bold">จัดการพนักงาน</h2>
-                <button onclick="document.getElementById('student-modal').classList.remove('hidden')" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-md">+ เพิ่มพนักงาน</button>
+                // <button onclick="document.getElementById('student-modal').classList.remove('hidden')" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-md">+ เพิ่มพนักงาน</button>
+                <button onclick="openAddModal()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-md">+ เพิ่มพนักงาน</button>
             </div>
             <div class="bg-white rounded-2xl shadow-sm border overflow-hidden overflow-x-auto">
                 <table class="w-full text-left">
@@ -362,24 +363,23 @@ async function finishAttendance() {
         function closeStudentModal() { stopCamera('modal-video'); document.getElementById('student-modal').classList.add('hidden'); }
         function saveGasUrl() { const u = document.getElementById('gas-url').value; localStorage.setItem(GAS_URL_KEY, u); location.reload(); }
         ///async function deleteStudent(i) { if(confirm("ยืนยันการลบ?")) { await apiCall({action:'deleteStudent', data:{rowIndex:i}}); location.reload(); } }
+// 4. ฟังก์ชันลบพนักงาน (เช็ครหัสผ่าน)
 async function deleteStudent(i) {
     if (!isLoggedIn) {
-        alert("คุณไม่มีสิทธิ์ลบข้อมูล กรุณา Login ก่อน");
+        pendingAction = 'delete';
+        pendingDeleteIndex = i;
+        document.getElementById('login-modal').classList.remove('hidden');
         return;
     }
-    if (confirm("คุณแน่ใจหรือไม่ที่จะลบรายชื่อพนักงานนี้?")) {
+    executeDelete(i);
+}
+// 5. ฟังก์ชันลบจริง (เรียกใช้หลังจาก Login ผ่านแล้ว)
+async function executeDelete(i) {
+    if (confirm("ยืนยันการลบรายชื่อพนักงาน?")) {
         await apiCall({action: 'deleteStudent', data: {rowIndex: i}});
         location.reload();
     }
 }
-        // 1. ข้อมูลผู้มีสิทธิ์ (วางไว้บนสุดของ script หรือที่ว่างๆ)
-const AUTHORIZED_USERS = {
-    "Weera": "TS001",
-    "Jang": "TS002"
-};
-
-let isLoggedIn = false; 
-
 // 2. ฟังก์ชันตรวจสอบการ Login
 function checkLogin() {
     const user = document.getElementById('login-user').value;
@@ -391,26 +391,52 @@ function checkLogin() {
         document.getElementById('login-user').value = '';
         document.getElementById('login-pass').value = '';
         
-        // เมื่อ Login ผ่าน ให้เปลี่ยนหน้าไป Manage ทันที
-        actualSwitchTab('manage'); 
-        alert(`สวัสดีคุณ ${user} เข้าสู่ระบบสำเร็จ`);
+        // เมื่อ Login ผ่าน ให้ทำงานที่ค้างไว้
+        if (pendingAction === 'add') {
+            document.getElementById('student-modal').classList.remove('hidden');
+        } else if (pendingAction === 'delete') {
+            executeDelete(pendingDeleteIndex);
+        }
+        pendingAction = null; 
     } else {
         alert("Username หรือ Password ไม่ถูกต้อง!");
+    }
+}
+// 3. ฟังก์ชันเปิดหน้าต่างเพิ่มพนักงาน (เช็ครหัสผ่าน)
+function openAddModal() {
+    if (!isLoggedIn) {
+        pendingAction = 'add';
+        document.getElementById('login-modal').classList.remove('hidden');
+    } else {
+        document.getElementById('student-modal').classList.remove('hidden');
     }
 }
 
 function closeLoginModal() {
     document.getElementById('login-modal').classList.add('hidden');
-    switchTab('dashboard'); // ยกเลิกแล้วกลับไปหน้า Dashboard
+    pendingAction = null;
 }
 
 // 3. ฟังก์ชัน switchTab ตัวใหม่ (ตัวควบคุมประตู)
+// 1. ฟังก์ชันสลับหน้า (แบบไม่ต้องใช้รหัสผ่าน - ดูได้ทุกคน)
 function switchTab(tab) {
-    if (tab === 'manage' && !isLoggedIn) {
-        document.getElementById('login-modal').classList.remove('hidden');
-        return; 
+    document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
+    document.getElementById(`content-${tab}`).classList.remove('hidden');
+    
+    document.querySelectorAll('nav button').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white');
+        btn.classList.add('text-sm', 'font-medium');
+    });
+    
+    const activeTab = document.getElementById(`tab-${tab}`);
+    if(activeTab) activeTab.classList.add('bg-blue-600', 'text-white');
+
+    if (tab === 'scan') {
+        startCamera('video');
+        setTimeout(startDetector, 1000);
+    } else {
+        stopCamera('video');
     }
-    actualSwitchTab(tab);
 }
 
 // 4. ฟังก์ชันทำงานการสลับหน้าจริง (แยกออกมาเพื่อไม่ให้งง)
