@@ -52,17 +52,30 @@
                         <div class="bg-yellow-100 dark:bg-yellow-900/50 p-4 rounded-lg"><h3 class="text-gray-600 dark:text-gray-400">มาสาย</h3><p id="stat-late" class="text-3xl font-bold text-yellow-700 dark:text-yellow-400">0</p></div>
                         <div class="bg-red-100 dark:bg-red-900/50 p-4 rounded-lg"><h3 class="text-gray-600 dark:text-gray-400">ขาด/ลา</h3><p id="stat-absent" class="text-3xl font-bold text-red-700 dark:text-red-400">0</p></div>
                     </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-6">
-                        <div class="lg:col-span-2 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-                            <h3 class="font-semibold mb-2 text-center">สรุปสัดส่วน</h3>
-                            <div class="max-w-[250px] mx-auto"><canvas id="attendance-pie-chart"></canvas></div>
-                        </div>
-                        <div class="lg:col-span-3 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-                            <h3 class="font-semibold mb-2 text-center">สถิติรายชั่วโมง</h3>
-                            <div><canvas id="attendance-bar-chart"></canvas></div>
-                        </div>
-                    </div>
-                </div>
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-6">
+    <div class="lg:col-span-2 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg flex flex-col items-center">
+        <h3 class="font-semibold mb-2 text-center text-gray-700 dark:text-gray-200">สรุปสัดส่วน</h3>
+        <div class="max-w-[200px] mx-auto">
+            <canvas id="attendance-pie-chart"></canvas>
+        </div>
+    </div>
+
+    <div class="lg:col-span-3 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg flex flex-col h-[350px]">
+        <h3 class="font-semibold mb-4 text-center text-gray-700 dark:text-gray-200 border-b pb-2">รายชื่อพนักงาน สาย/ขาด</h3>
+        <div class="grid grid-cols-2 gap-4 overflow-hidden flex-grow">
+            <div class="flex flex-col h-full">
+                <span class="text-amber-600 font-bold text-xs block mb-2 underline">🕒 มาสาย</span>
+                <ul id="late-list" class="space-y-1 overflow-y-auto custom-scrollbar flex-grow text-[13px]">
+                    </ul>
+            </div>
+            <div class="flex flex-col h-full border-l border-gray-300 dark:border-gray-600 pl-3">
+                <span class="text-rose-600 font-bold text-xs block mb-2 underline">❌ ขาด/ลา</span>
+                <ul id="absent-list" class="space-y-1 overflow-y-auto custom-scrollbar flex-grow text-[13px]">
+                    </ul>
+            </div>
+        </div>
+    </div>
+</div>
                 <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md">
                     <h3 class="font-semibold mb-4">รายชื่อพนักงานในระบบ</h3>
                     <div id="student-roster-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2"></div>
