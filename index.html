@@ -162,218 +162,107 @@
     <canvas id="capture-canvas" class="hidden"></canvas>
 
     <script>
-        const GAS_URL_KEY = 'gasWebAppUrl';
+       const GAS_URL_KEY = 'gasWebAppUrl';
         let gasWebAppUrl = localStorage.getItem(GAS_URL_KEY);
         let students = [], attendance = [], faceMatcher = null, isVideoRunning = false;
         let checkedInToday = new Map(), capturedImageData = null;
         let pieChart = null;
 
         window.onload = async () => {
-            lucide.createIcons();
-            document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            const dateInput = document.getElementById('dashboard-date');
+            if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+            
             if (!gasWebAppUrl) {
-                document.getElementById('setup-modal').classList.remove('hidden');
+                const setupM = document.getElementById('setup-modal');
+                if (setupM) setupM.classList.remove('hidden');
             } else {
                 await loadAllData();
-                initializeFaceAPI();
+                // รอให้หน้าจอโหลดเสร็จค่อยเริ่มโหลด Face API
+                setTimeout(initializeFaceAPI, 1000);
             }
         };
 
-        async function loadAllData() {
-            const resS = await apiCall({ action: 'getStudents' });
-            if (resS.success) {
-                students = resS.data;
-                renderStudentGrid();
-                renderStudentTable();
-            }
-            const resA = await apiCall({ action: 'getAttendance' });
-            if (resA.success) { 
-                attendance = resA.data; 
-                renderDashboard(); 
-            }
-            switchTab('dashboard');
-        }
-
-async function initializeFaceAPI() {
+        async function initializeFaceAPI() {
+            const loader = document.getElementById('loading-overlay');
             try {
+                // ตรวจสอบว่าโหลด library สำเร็จหรือไม่
+                if (typeof faceapi === 'undefined') {
+                    console.error("FaceAPI library not loaded");
+                    if (loader) loader.innerHTML = "<p class='text-red-500'>โหลดระบบสแกนหน้าไม่สำเร็จ (Check Internet)</p>";
+                    return;
+                }
+
                 const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models';
-                // มั่นใจว่าโหลด Model ครบถ้วน
-                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+                ]);
                 
-                console.log("Models Loaded, processing students...");
+                console.log("Models Loaded");
 
                 const labeledDescriptors = [];
-
                 for (const s of students) {
-                    // ตรวจสอบว่ามีข้อมูลรูปภาพ และเป็นรูปแบบ base64 ที่ถูกต้อง
                     if (s.imagedatabase64 && s.imagedatabase64.startsWith('data:image')) {
                         try {
                             const img = await faceapi.fetchImage(s.imagedatabase64);
                             const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
                             if (det) {
                                 labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(s.studentid.toString(), [det.descriptor]));
-                                console.log(`Loaded face for: ${s.name}`);
                             }
-                        } catch (err) {
-                            console.warn(`Skip student ${s.name}: Image error`);
-                            continue; // ถ้าคนไหนรูปเสีย ให้ข้ามไปคนถัดไป ไม่ให้ระบบค้าง
-                        }
+                        } catch (e) { console.warn("Skip invalid image for student:", s.name); }
                     }
                 }
 
                 if (labeledDescriptors.length > 0) {
                     faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.55);
-                    console.log("FaceMatcher ready!");
-                } else {
-                    console.warn("No valid faces found in database");
                 }
-                
-                // ซ่อนตัวหมุน (Loading) ทันทีที่ประมวลผลเสร็จ
-                const loader = document.getElementById('loading-overlay');
-                if(loader) loader.classList.add('hidden');
+
+                // บังคับปิดหน้าจอโหลด แม้จะมี Error บางจุด
+                if (loader) loader.classList.add('hidden');
+                console.log("Face System Ready");
 
             } catch (err) {
-                console.error("Critical Face API Error:", err);
-                alert("ระบบวิเคราะห์ใบหน้าขัดข้อง กรุณารีเฟรชหน้าเว็บ");
+                console.error("Init Error:", err);
+                if (loader) loader.classList.add('hidden');
             }
         }
 
         function switchTab(tabId) {
+            // ซ่อนทุกหน้า
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-            document.querySelectorAll('nav button').forEach(b => b.className = 'px-6 py-2 rounded-lg text-sm font-medium transition-all text-slate-500 hover:bg-white');
+            
+            // ปรับสีเมนู (เช็คความปลอดภัยเผื่อหา Element ไม่เจอ)
+            document.querySelectorAll('nav button').forEach(b => {
+                b.classList.remove('bg-white', 'text-blue-600', 'shadow-sm', 'font-bold');
+                b.classList.add('text-slate-500');
+            });
             
             const targetTab = document.getElementById(`tab-${tabId}`);
-            if(targetTab) targetTab.classList.remove('hidden');
+            if (targetTab) targetTab.classList.remove('hidden');
 
-            const navBtn = document.getElementById(`nav-${tabId}`);
-            if(navBtn) navBtn.className = 'px-6 py-2 rounded-lg text-sm font-bold bg-white text-blue-600 shadow-sm';
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-white', 'text-blue-600', 'shadow-sm', 'font-bold');
+                activeBtn.classList.remove('text-slate-500');
+            }
             
             if (tabId === 'scan') {
                 isVideoRunning = true;
-                // หน่วงเวลาเล็กน้อยให้กล้องพร้อม
-                setTimeout(() => {
-                    startCamera();
-                }, 300);
+                startCamera();
             } else {
                 isVideoRunning = false;
                 stopCamera('video');
             }
         }
 
-        async function startCamera() {
-            const video = document.getElementById('video');
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-                video.srcObject = stream;
-                video.onloadedmetadata = detectFaceLoop;
-            } catch (e) { alert("ไม่สามารถเปิดกล้องได้"); }
-        }
-
-        async function detectFaceLoop() {
-            const video = document.getElementById('video');
-            const overlay = document.getElementById('overlay');
-            if (!video || !overlay) return;
-
-            const displaySize = { width: video.clientWidth, height: video.clientHeight };
-            faceapi.matchDimensions(overlay, displaySize);
-
-            const interval = setInterval(async () => {
-                if (!isVideoRunning) { clearInterval(interval); return; }
-                
-                const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
-                const resized = faceapi.resizeResults(detections, displaySize);
-                
-                overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
-
-                if (faceMatcher && detections.length > 0) {
-                    detections.forEach(d => {
-                        const match = faceMatcher.findBestMatch(d.descriptor);
-                        const student = students.find(s => s.studentid.toString() === match.label);
-                        if (student && match.distance < 0.5) {
-                            markAttendance(student);
-                        }
-                    });
-                }
-                faceapi.draw.drawDetections(overlay, resized);
-            }, 500);
-        }
-
-        function markAttendance(student) {
-            if (checkedInToday.has(student.studentid)) return;
-            checkedInToday.set(student.studentid, true);
-
-            document.getElementById('result-placeholder').classList.add('hidden');
-            const resImg = document.getElementById('result-img');
-            resImg.src = student.imagedatabase64;
-            resImg.classList.remove('hidden');
-            
-            document.getElementById('result-name').innerText = student.name;
-            document.getElementById('result-id').innerText = `ID: ${student.studentid}`;
-            
-            const msg = new SpeechSynthesisUtterance(`${student.name} เช็คชื่อเรียบร้อยค่ะ`);
-            msg.lang = 'th-TH';
-            window.speechSynthesis.speak(msg);
-        }
-
-        async function saveStudent() {
-            const btn = document.getElementById('btn-save-student');
-            const data = {
-                id: document.getElementById('modal-studentid').value,
-                name: document.getElementById('modal-name').value,
-                class: document.getElementById('modal-class').value,
-                imageData: capturedImageData // ตรงกับ Code.gs ของคุณ
-            };
-
-            if (!data.id || !data.name || !data.imageData) return alert("ข้อมูลไม่ครบ!");
-
-            btn.disabled = true;
-            btn.innerText = "กำลังบันทึก...";
-            const res = await apiCall({ action: 'addStudent', data });
-            if (res.success) location.reload();
-            else { alert(res.error); btn.disabled = false; }
-        }
-
-        function renderDashboard() {
-            const selectedDate = document.getElementById('dashboard-date').value;
-            const filtered = attendance.filter(a => {
-                const ts = new Date(a.timestamp);
-                const localDate = ts.toLocaleDateString('en-CA'); // รูปแบบ YYYY-MM-DD
-                return localDate === selectedDate;
-            });
-
-            // ตรรกะ สาย/ปกติ (สมมติว่าหลัง 08:31 คือสาย)
-            const present = filtered.filter(a => a.status === 'มาทำงาน').length;
-            const late = filtered.filter(a => a.status === 'สาย').length;
-            const absent = students.length - (present + late);
-
-            document.getElementById('stat-present').innerText = present;
-            document.getElementById('stat-late').innerText = late;
-            document.getElementById('stat-absent').innerText = Math.max(0, absent);
-
-            const lateL = document.getElementById('late-list');
-            const absL = document.getElementById('absent-list');
-            lateL.innerHTML = ''; absL.innerHTML = '';
-
-            // แสดงรายชื่อคนสาย
-            filtered.filter(a => a.status === 'สาย').forEach(a => {
-                lateL.innerHTML += `<li class="p-3 bg-amber-50 rounded-xl border-l-4 border-amber-500 text-xs font-bold text-amber-800 shadow-sm">${a.name}</li>`;
-            });
-
-            // แสดงรายชื่อคนขาด (คนที่ไม่มี record ใน filtered)
-            const checkedIds = new Set(filtered.map(a => a.id.toString()));
-            students.forEach(s => {
-                if (!checkedIds.has(s.studentid.toString())) {
-                    absL.innerHTML += `<li class="p-3 bg-rose-50 rounded-xl border-l-4 border-rose-500 text-xs font-bold text-rose-800 shadow-sm">${s.name}</li>`;
-                }
-            });
-
-            updateChart(present, late, Math.max(0, absent));
-        }
-
+        // เพิ่มการตรวจสอบความปลอดภัยในฟังก์ชันแสดงกราฟ
         function updateChart(p, l, a) {
-            const ctx = document.getElementById('attendance-pie-chart').getContext('2d');
+            const chartCanvas = document.getElementById('attendance-pie-chart');
+            if (!chartCanvas) return;
+            
+            const ctx = chartCanvas.getContext('2d');
             if (pieChart) pieChart.destroy();
             pieChart = new Chart(ctx, {
                 type: 'doughnut',
@@ -382,114 +271,11 @@ async function initializeFaceAPI() {
                     datasets: [{
                         data: [p, l, a],
                         backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
-                        borderWidth: 0,
-                        hoverOffset: 10
+                        borderWidth: 0
                     }]
                 },
                 options: { cutout: '70%', plugins: { legend: { position: 'bottom' } } }
             });
-        }
-
-        async function finishAttendance() {
-            const now = new Date();
-            const hr = now.getHours(), min = now.getMinutes();
-            const status = (hr > 8 || (hr === 8 && min >= 31)) ? 'สาย' : 'มาทำงาน';
-
-            const records = students.map(s => {
-                if(!checkedInToday.has(s.studentid)) return null;
-                return {
-                    id: s.studentid, name: s.name, class: s.class, status: status,
-                    timestamp: now.toISOString(), location: 'Office'
-                };
-            }).filter(r => r !== null);
-
-            if (records.length === 0) return alert("ยังไม่มีใครสแกนหน้า");
-            
-            const res = await apiCall({ action: 'recordAttendanceUpdate', data: records });
-            if (res.success) { alert("บันทึกเข้าระบบเรียบร้อย!"); location.reload(); }
-        }
-
-        async function startCaptureCamera() {
-            const v = document.getElementById('modal-video');
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            v.srcObject = stream;
-            v.classList.remove('hidden');
-            document.getElementById('preview-img').classList.add('hidden');
-            document.getElementById('btn-start-camera').classList.add('hidden');
-            document.getElementById('btn-snap').classList.remove('hidden');
-        }
-
-        function snapPhoto() {
-            const v = document.getElementById('modal-video');
-            const c = document.getElementById('capture-canvas');
-            c.width = 400; c.height = 400;
-            c.getContext('2d').drawImage(v, 0, 0, 400, 400);
-            capturedImageData = c.toDataURL('image/jpeg', 0.8);
-            stopCamera('modal-video');
-            document.getElementById('preview-img').src = capturedImageData;
-            document.getElementById('preview-img').classList.remove('hidden');
-            v.classList.add('hidden');
-            document.getElementById('btn-snap').classList.add('hidden');
-            document.getElementById('btn-start-camera').classList.remove('hidden');
-        }
-
-        function renderStudentGrid() {
-            const grid = document.getElementById('student-grid');
-            grid.innerHTML = students.map(s => `
-                <div class="bg-white p-2 rounded-xl border flex flex-col items-center">
-                    <img src="${s.imagedatabase64}" class="w-12 h-12 rounded-full object-cover border-2 border-blue-50">
-                    <p class="text-[8px] font-bold mt-1 truncate w-full text-center">${s.name}</p>
-                </div>
-            `).join('');
-        }
-
-        function renderStudentTable() {
-            const body = document.getElementById('student-table-body');
-            body.innerHTML = students.map(s => `<tr class="hover:bg-slate-50 transition-colors">
-                <td class="px-8 py-4"><img src="${s.imagedatabase64}" class="w-12 h-12 rounded-xl object-cover shadow-sm"></td>
-                <td class="px-8 py-4 font-bold text-slate-700">${s.studentid}</td>
-                <td class="px-8 py-4 text-slate-600">${s.name}</td>
-                <td class="px-8 py-4 text-center">
-                    <button onclick="deleteStudent(${s.rowIndex})" class="bg-rose-50 text-rose-600 p-2 rounded-lg hover:bg-rose-600 hover:text-white transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                </td>
-            </tr>`).join('');
-            lucide.createIcons();
-        }
-
-        async function deleteStudent(rowIndex) {
-            if (!confirm("ลบพนักงาน?")) return;
-            const res = await apiCall({ action: 'deleteStudent', data: { rowIndex } });
-            if (res.success) location.reload();
-        }
-
-        async function apiCall(p) {
-            try {
-                const r = await fetch(gasWebAppUrl, { method: 'POST', body: JSON.stringify(p) });
-                return await r.json();
-            } catch (e) { return { success: false, error: "Connection Error" }; }
-        }
-
-        function saveGasUrl() {
-            const url = document.getElementById('gas-url').value;
-            if (url.includes('google.com')) {
-                localStorage.setItem(GAS_URL_KEY, url);
-                location.reload();
-            }
-        }
-
-        function stopCamera(id) {
-            const v = document.getElementById(id);
-            if (v && v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
-        }
-
-        function openStudentModal() {
-            capturedImageData = null;
-            document.getElementById('student-modal').classList.remove('hidden');
-        }
-
-        function closeStudentModal() {
-            stopCamera('modal-video');
-            document.getElementById('student-modal').classList.add('hidden');
         }
     </script>
 </body>
