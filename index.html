@@ -196,37 +196,39 @@
         }
 
         // --- แก้ไขจุดสำคัญ: Timestamp ค.ศ. 100% ---
-        async function finishAttendance() {
-            if(scanned.size === 0) return alert("กรุณาสแกนใบหน้าก่อน");
-            
-            let loc = "0,0";
-            try {
-                const p = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej));
-                loc = `${p.coords.latitude},${p.coords.longitude}`;
-            } catch(e){}
+async function finishAttendance() {
+        if(scanned.size === 0) return alert("กรุณาสแกนใบหน้าก่อน");
+        
+        let loc = "ไม่ทราบพิกัด";
+        try {
+            const p = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:5000}));
+            loc = `${p.coords.latitude},${p.coords.longitude}`;
+        } catch(e){}
 
-            const now = new Date();
-            // รูปแบบ YYYY-MM-DD HH:mm:ss (ค.ศ. เสมอ)
-            const yyyy = now.getFullYear();
-            const mm = String(now.getMonth() + 1).padStart(2, '0');
-            const dd = String(now.getDate()).padStart(2, '0');
-            const timeStr = now.toTimeString().split(' ')[0];
-            const stamp = `${yyyy}-${mm}-${dd} ${timeStr}`;
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const timeStr = now.toTimeString().split(' ')[0]; // ได้ HH:mm:ss
+        const stamp = `${yyyy}-${mm}-${dd} ${timeStr}`;
 
-            const status = (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30)) ? 'สาย' : 'มา';
+        const status = (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30)) ? 'สาย' : 'มา';
 
-            const data = Array.from(scanned.values()).map(s => ({
-                id: s.studentid,
-                name: s.name,
-                class: s.class || '-',
-                timestamp: stamp,
-                location: loc,
-                status: status
-            }));
+        const data = Array.from(scanned.values()).map(s => ({
+            id: s.studentid,
+            name: s.name,
+            class: s.class || '-',
+            timestamp: stamp,
+            location: loc,
+            status: status
+        }));
 
-            const res = await apiCall({action:'recordAttendanceUpdate', data: data});
-            if(res.success) { alert("บันทึกสำเร็จ!"); location.reload(); }
+        const res = await apiCall({action:'recordAttendanceUpdate', data: data});
+        if(res.success) { 
+            alert("บันทึกสำเร็จ!"); 
+            location.reload(); 
         }
+    }
 
         // --- Dashboard พร้อมรูปภาพ ---
 function renderDashboard() {
