@@ -231,57 +231,67 @@ async function finishAttendance() {
     }
 
         // --- Dashboard พร้อมรูปภาพ ---
-function renderDashboard() {
-        const dateInput = document.getElementById('dashboard-date').value; 
-        // กรองข้อมูล: รองรับทั้งรูปแบบ 2026-03-17 และรูปแบบวันที่ภาษาไทยที่อาจค้างอยู่ในระบบ
-        const daily = attendance.filter(a => {
-            if (!a.timestamp) return false;
-            return a.timestamp.includes(dateInput) || a.timestamp.includes(new Date(dateInput).toLocaleDateString('th-TH'));
-        });
+// --- DASHBOARD RENDERING (แก้ไขใหม่ให้สวยงามและดึงเวลาแม่นยำ) ---
+        function renderDashboard() {
+            const dateInput = document.getElementById('dashboard-date').value; 
+            const daily = attendance.filter(a => a.timestamp && a.timestamp.includes(dateInput));
+            const checkedIds = new Set(daily.map(a => String(a.id)));
 
-        const checkedIds = new Set(daily.map(a => String(a.id)));
+            document.getElementById('stat-present').innerText = daily.filter(a => a.status === 'มา').length;
+            document.getElementById('stat-late').innerText = daily.filter(a => a.status === 'สาย').length;
+            document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedIds.size);
 
-        document.getElementById('stat-present').innerText = daily.filter(a => a.status === 'มา').length;
-        document.getElementById('stat-late').innerText = daily.filter(a => a.status === 'สาย').length;
-        document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedIds.size);
+            const lateL = document.getElementById('late-list'), absL = document.getElementById('absent-list');
+            lateL.innerHTML = ''; absL.innerHTML = '';
 
-        const lateL = document.getElementById('late-list'), absL = document.getElementById('absent-list');
-        lateL.innerHTML = ''; absL.innerHTML = '';
+            // 1. รายการคนมาสาย (แสดงเวลาบันทึก)
+            daily.filter(a => a.status === 'สาย').forEach(a => {
+                const s = students.find(x => String(x.studentid) === String(a.id));
+                const displayTime = formatTimeOnly(a.timestamp);
+                lateL.innerHTML += createDashItem(a.name, `มาสาย - ${displayTime}`, s?.imagedatabase64, 'amber');
+            });
 
-        // 1. รายการคนสาย: ดึงเวลาจาก Timestamp มาแสดง
-        daily.filter(a => a.status === 'สาย').forEach(a => {
-            const s = students.find(x => String(x.studentid) === String(a.id));
-            // แยกเอาเฉพาะเวลา HH:mm:ss จาก 2026-03-17 08:45:10
-            const timeOnly = a.timestamp.includes(' ') ? a.timestamp.split(' ')[1] : a.timestamp;
-            lateL.innerHTML += createDashItem(a.name, `เวลาบันทึก: ${timeOnly}`, s?.imagedatabase64, 'amber');
-        });
+            // 2. รายการคนมาปกติ (เพิ่มเข้าไปเพื่อให้ Dashboard ดูเต็มและสวยงาม)
+            daily.filter(a => a.status === 'มา').forEach(a => {
+                const s = students.find(x => String(x.studentid) === String(a.id));
+                const displayTime = formatTimeOnly(a.timestamp);
+                lateL.innerHTML += createDashItem(a.name, `มาปกติ - ${displayTime}`, s?.imagedatabase64, 'emerald');
+            });
 
-        // 2. รายการคนปกติ (ถ้าต้องการแสดงใน Dashboard ด้วย สามารถเพิ่ม List ได้)
-        // ในที่นี้ผมเน้น "คนสาย" และ "คนขาด" ตามโครงสร้างเดิมของคุณครับ
+            // 3. รายการคนยังไม่มา
+            students.forEach(s => {
+                if(!checkedIds.has(String(s.studentid))) {
+                    absL.innerHTML += createDashItem(s.name, 'ยังไม่มีข้อมูลการสแกน', s.imagedatabase64, 'rose');
+                }
+            });
+            lucide.createIcons();
+        }
 
-        // 3. รายการคนขาด: แสดงรูปคู่ชื่อเหมือนเดิม
-        students.forEach(s => {
-            if(!checkedIds.has(String(s.studentid))) {
-                absL.innerHTML += createDashItem(s.name, 'ยังไม่มีข้อมูลการสแกน', s.imagedatabase64, 'rose');
+        // ฟังก์ชันช่วยดึงเฉพาะเวลา HH:mm จาก String
+        function formatTimeOnly(timestampStr) {
+            if (!timestampStr) return "--:--";
+            const parts = timestampStr.split(' ');
+            if (parts.length >= 2) {
+                const time = parts[1].split(':');
+                return `${time[0]}:${time[1]} น.`;
             }
-        });
-        lucide.createIcons();
-    }
+            return timestampStr; // คืนค่าเดิมถ้าแยกไม่ได้
+        }
 
-    // ฟังก์ชันสร้าง Item ใน Dashboard ให้มีรูปและเวลา
-    function createDashItem(name, subText, img, color) {
-        const imgTag = img ? `<img src="${img}" class="w-12 h-12 rounded-xl object-cover shadow-sm border border-slate-200">` 
-                           : `<div class="w-12 h-12 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400"><i data-lucide="user"></i></div>`;
-        
-        return `
-            <li class="flex items-center p-3 bg-white rounded-2xl border border-slate-100 shadow-sm border-l-4 border-${color}-500 transition-all hover:translate-x-1">
-                <div class="mr-4 flex-shrink-0">${imgTag}</div>
-                <div class="flex-grow min-w-0">
-                    <p class="font-bold text-slate-700 truncate text-sm md:text-base">${name}</p>
-                    <p class="text-xs text-${color}-600 font-medium italic">${subText}</p>
-                </div>
-            </li>`;
-    }
+        // ฟังก์ชันสร้าง Item ใน Dashboard (ปรับขนาดตัวหนังสือให้เล็กลงและสวยงาม)
+        function createDashItem(name, subText, img, color) {
+            const imgTag = img ? `<img src="${img}" class="w-10 h-10 rounded-lg object-cover shadow-sm">` 
+                               : `<div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400"><i data-lucide="user" class="w-5 h-5"></i></div>`;
+            
+            return `
+                <li class="flex items-center p-2.5 bg-white rounded-xl border border-slate-100 shadow-sm border-l-4 border-${color}-500 transition-all hover:bg-slate-50 mb-2">
+                    <div class="mr-3 flex-shrink-0">${imgTag}</div>
+                    <div class="flex-grow min-w-0">
+                        <p class="text-sm font-semibold text-slate-700 truncate">${name}</p>
+                        <p class="text-[11px] text-${color}-600 font-medium italic">${subText}</p>
+                    </div>
+                </li>`;
+        }
 
         function switchTab(tab) {
             document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
