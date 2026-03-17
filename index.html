@@ -231,11 +231,14 @@ async function finishAttendance() {
     }
 
         // --- Dashboard พร้อมรูปภาพ ---
-// --- DASHBOARD RENDERING (แก้ไขใหม่ให้สวยงามและดึงเวลาแม่นยำ) ---
-function renderDashboard() {
+// --- 2. ปรับปรุงฟังก์ชัน Render Dashboard ให้รองรับค่า String ---
+        function renderDashboard() {
             const dateInput = document.getElementById('dashboard-date').value; 
-            // กรองข้อมูลเฉพาะวันที่เลือก
-            const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
+            const daily = attendance.filter(a => {
+                if (!a.timestamp) return false;
+                const ts = String(a.timestamp);
+                return ts.includes(dateInput) || ts.includes(new Date(dateInput).toLocaleDateString('th-TH'));
+            });
             
             const checkedIds = new Set(daily.map(a => String(a.id)));
 
@@ -246,10 +249,9 @@ function renderDashboard() {
             const lateL = document.getElementById('late-list'), absL = document.getElementById('absent-list');
             lateL.innerHTML = ''; absL.innerHTML = '';
 
-            // แสดงรายการคนที่มาแล้ว (เรียงตามเวลาที่บันทึกจริง)
+            // แสดงรายการคนเข้างาน (ใช้เวลาจริงจากตาราง)
             daily.forEach(a => {
                 const s = students.find(x => String(x.studentid) === String(a.id));
-                // ดึงเวลาจาก a.timestamp ที่มาจาก Google Sheet โดยตรง
                 const realTime = formatTimeOnly(a.timestamp); 
                 
                 const color = a.status === 'สาย' ? 'amber' : 'emerald';
@@ -258,30 +260,41 @@ function renderDashboard() {
                 lateL.innerHTML += createDashItem(a.name, `${statusText} - ${realTime}`, s?.imagedatabase64, color);
             });
 
-            // รายการคนยังไม่มา
+            // รายการคนขาด
             students.forEach(s => {
                 if(!checkedIds.has(String(s.studentid))) {
-                    absL.innerHTML += createDashItem(s.name, 'ยังไม่ได้สแกนเข้างาน', s.imagedatabase64, 'rose');
+                    absL.innerHTML += createDashItem(s.name, 'ยังไม่ได้เช็คชื่อ', s.imagedatabase64, 'rose');
                 }
             });
             lucide.createIcons();
         }
 
-// --- 1. ฟังก์ชันดึงเวลาจากคอลัมน์ Timestamp (คอลัมน์ D ใน Sheets) ---
+// --- 1. ฟังก์ชันดึงเวลา (แก้ไขให้ตัดปัญหาเรื่อง Timezone 7 ชม.) ---
         function formatTimeOnly(timestampStr) {
             if (!timestampStr) return "--:--";
             
-            // แปลงเป็น String เผื่อกรณีข้อมูลที่ดึงมาเป็น Object Date
+            // แปลงข้อมูลเป็น String ก่อนเสมอเพื่อป้องกัน Date Object รวน
             const str = String(timestampStr);
 
-            // กรณีรูปแบบ: "2026-03-17 16:05:30" หรือ "17/3/2569 16:05:30"
-            // เราจะหาตำแหน่งของเครื่องหมาย : เพื่อดึงเวลา
-            const match = str.match(/(\d{1,2}:\d{1,2})/); 
-            if (match) {
-                return match[0] + " น.";
+            // ใช้ Regex ดึงเฉพาะตัวเลข HH:mm (เช่น 16:18) ออกมาตรงๆ
+            // วิธีนี้จะข้ามการคำนวณ Timezone และดึงเลขตามที่ปรากฎในตาราง
+            const timeMatch = str.match(/(\d{1,2}:\d{1,2})/); 
+            
+            if (timeMatch) {
+                return timeMatch[0] + " น.";
             }
 
-            return str; // ถ้าหาไม่เจอจริงๆ ให้แสดงค่าเดิม
+            // กรณีดึงจาก Date Object โดยตรง (สำรองไว้)
+            try {
+                const dateObj = new Date(timestampStr);
+                if (!isNaN(dateObj.getTime())) {
+                    const hh = String(dateObj.getHours()).padStart(2, '0');
+                    const mm = String(dateObj.getMinutes()).padStart(2, '0');
+                    return `${hh}:${mm} น.`;
+                }
+            } catch (e) {}
+
+            return str; 
         }
 // --- 3. ฟังก์ชันสร้าง Item (ปรับขนาด Font ให้เล็ก กะทัดรัด สวยงาม) ---
         function createDashItem(name, subText, img, color) {
