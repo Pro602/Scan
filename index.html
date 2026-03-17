@@ -363,6 +363,57 @@
         }
         function closeStudentModal() { stopCamera('modal-video'); document.getElementById('student-modal').classList.add('hidden'); }
         function saveGasUrl() { const u = document.getElementById('gas-url').value; localStorage.setItem(GAS_URL_KEY, u); location.reload(); }
+    async function finishAttendance() {
+            if (scanned.size === 0) return alert("ยังไม่มีรายชื่อที่สแกนสำเร็จ");
+
+            const btn = document.getElementById('btn-submit');
+            const originalText = btn.innerText;
+            
+            // แสดงสถานะกำลังบันทึก
+            btn.disabled = true;
+            btn.innerText = "⏳ กำลังบันทึกข้อมูล...";
+            btn.classList.replace('bg-blue-600', 'bg-slate-400');
+
+            try {
+                // ดึงข้อมูลจาก Map ที่สแกนค้างไว้มาทำเป็น Array
+                const attendanceData = Array.from(scanned.values()).map(s => ({
+                    id: s.studentid,
+                    name: s.name,
+                    status: checkLateStatus() // ฟังก์ชันตรวจสอบว่าสายหรือไม่
+                }));
+
+                // ส่งข้อมูลไปที่ Google Apps Script
+                const res = await apiCall({
+                    action: 'recordAttendance',
+                    data: attendanceData
+                });
+
+                if (res.success) {
+                    alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
+                    scanned.clear(); // ล้างรายชื่อที่สแกนแล้วออก
+                    location.reload(); // โหลดหน้าใหม่เพื่ออัปเดต Dashboard
+                } else {
+                    alert("เกิดข้อผิดพลาดในการบันทึก: " + (res.error || "Unknown Error"));
+                }
+            } catch (e) {
+                console.error(e);
+                alert("ไม่สามารถติดต่อเซิร์ฟเวอร์ได้");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = originalText;
+                btn.classList.replace('bg-slate-400', 'bg-blue-600');
+            }
+        }
+
+        // ฟังก์ชันช่วยเช็คว่าสายหรือไม่ (สมมติว่าสายหลัง 08:30)
+        function checkLateStatus() {
+            const now = new Date();
+            const hour = now.getHours();
+            const min = now.getMinutes();
+            // ถ้าหลัง 08:30 ให้ถือว่าสาย
+            if (hour > 8 || (hour === 8 && min > 30)) return 'สาย';
+            return 'มา';
+        }
     </script>
     <div id="login-modal" class="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center hidden">
     <div class="bg-white p-8 rounded-3xl max-w-sm w-full shadow-2xl space-y-4">
