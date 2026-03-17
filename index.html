@@ -138,8 +138,8 @@
     <div id="setup-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 hidden">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center">
             <h3 class="text-2xl font-bold mb-4 text-blue-600">ตั้งค่าระบบ</h3>
-            <p class="text-gray-500 mb-4 text-sm">https://script.google.com/macros/s/AKfycbw1xy_kOGYuO4waWFIYJY_flJanEARXYdLFqaYS7ytSFi4XdxIm6rPIJ01EPpf9X_eh/exec</p>
-            <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycbw1xy_kOGYuO4waWFIYJY_flJanEARXYdLFqaYS7ytSFi4XdxIm6rPIJ01EPpf9X_eh/exec" class="w-full border p-3 rounded-xl mb-4 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            <p class="text-gray-500 mb-4 text-sm">https://script.google.com/macros/s/AKfycbwq-_KmIoAGm-0mWV-vAEhbqN_zT10S2IMje3dn7X-5QoHLfcL322Z9ZIUqDSM1gV9m/exec</p>
+            <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycbwq-_KmIoAGm-0mWV-vAEhbqN_zT10S2IMje3dn7X-5QoHLfcL322Z9ZIUqDSM1gV9m/exec" class="w-full border p-3 rounded-xl mb-4 text-sm outline-none focus:ring-2 focus:ring-blue-500">
             <button onclick="saveGasUrl()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg">บันทึกและเริ่มใช้งาน</button>
         </div>
     </div>
@@ -233,21 +233,72 @@
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(s.name + " เช็คชื่อแล้ว"));
         }
 
-        async function saveStudent() {
-            const btn = document.getElementById('btn-save-student');
-            const data = {
-                id: document.getElementById('modal-studentid').value,
-                name: document.getElementById('modal-name').value,
-                class: document.getElementById('modal-class').value,
-                // แก้ชื่อตัวแปรให้ตรงกับฝั่งรับ (Google Script)
-                ImageDataBase64: capturedImageData 
-            };
-            if (!data.id || !data.ImageDataBase64) return alert("กรุณากรอกข้อมูลและถ่ายรูป");
-            btn.disabled = true; btn.innerText = "กำลังบันทึก...";
-            const res = await apiCall({ action: 'addStudent', data });
-            if (res.success) location.reload();
-            else { alert(res.error); btn.disabled = false; btn.innerText = "บันทึกพนักงาน"; }
+async function saveStudent() {
+    const btn = document.getElementById('btn-save-student');
+    // ดึงค่าจากหน้าฟอร์ม
+    const studentId = document.getElementById('modal-studentid').value;
+    const studentName = document.getElementById('modal-name').value;
+    const studentClass = document.getElementById('modal-class').value;
+
+    // ตรวจสอบว่ามีรูปภาพที่ถ่ายไว้หรือไม่
+    if (!capturedImageData) {
+        return alert("กรุณาถ่ายรูปพนักงานก่อนบันทึกครับ");
+    }
+    if (!studentId || !studentName) {
+        return alert("กรุณากรอกรหัสและชื่อพนักงานให้ครบถ้วน");
+    }
+
+    const data = {
+        id: studentId,
+        name: studentName,
+        class: studentClass,
+        imageData: capturedImageData // *** เปลี่ยนเป็นชื่อ 'imageData' ให้ตรงกับ Code.gs ของคุณแล้ว ***
+    };
+
+    btn.disabled = true;
+    btn.innerText = "กำลังบันทึก...";
+
+    try {
+        const res = await apiCall({ action: 'addStudent', data: data });
+        if (res.success) {
+            alert("บันทึกพนักงานใหม่เรียบร้อยแล้ว!");
+            location.reload(); // รีโหลดเพื่อดึงข้อมูลใหม่
+        } else {
+            alert("เกิดข้อผิดพลาด: " + res.error);
+            btn.disabled = false;
+            btn.innerText = "บันทึกพนักงาน";
         }
+    } catch (err) {
+        alert("เชื่อมต่อ Server ล้มเหลว");
+        btn.disabled = false;
+        btn.innerText = "บันทึกพนักงาน";
+    }
+}
+
+// แก้ไขฟังก์ชันตอนสแกนใบหน้าให้เสถียรขึ้น
+function markAttendance(student) {
+    if (checkedInToday.has(student.studentid)) return;
+    checkedInToday.set(student.studentid, true);
+
+    // แสดงผลบนหน้าจอ
+    const resImg = document.getElementById('result-img');
+    const placeholder = document.getElementById('result-placeholder');
+    
+    // ตรวจสอบว่าในฐานข้อมูลมีรูปหรือไม่ (ในชีตใช้หัวข้อ imagedatabase64 จาก handleGetStudents)
+    if (student.imagedatabase64) {
+        resImg.src = student.imagedatabase64;
+        resImg.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+    }
+
+    document.getElementById('result-name').innerText = student.name;
+    document.getElementById('result-id').innerText = `ID: ${student.studentid}`;
+    
+    // เสียงตอบรับ
+    const msg = new SpeechSynthesisUtterance(`${student.name} เช็คชื่อเรียบร้อยค่ะ`);
+    msg.lang = 'th-TH';
+    window.speechSynthesis.speak(msg);
+}
 
         function snapPhoto() {
             const v = document.getElementById('modal-video'), c = document.getElementById('capture-canvas');
