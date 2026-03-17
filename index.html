@@ -194,32 +194,49 @@
             switchTab('dashboard');
         }
 
-        async function initializeFaceAPI() {
+async function initializeFaceAPI() {
             try {
                 const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models';
-                await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-                ]);
+                // มั่นใจว่าโหลด Model ครบถ้วน
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
                 
-                const labeledDescriptors = await Promise.all(
-                    students.filter(s => s.imagedatabase64).map(async s => {
+                console.log("Models Loaded, processing students...");
+
+                const labeledDescriptors = [];
+
+                for (const s of students) {
+                    // ตรวจสอบว่ามีข้อมูลรูปภาพ และเป็นรูปแบบ base64 ที่ถูกต้อง
+                    if (s.imagedatabase64 && s.imagedatabase64.startsWith('data:image')) {
                         try {
                             const img = await faceapi.fetchImage(s.imagedatabase64);
                             const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-                            return det ? new faceapi.LabeledFaceDescriptors(s.studentid.toString(), [det.descriptor]) : null;
-                        } catch (e) { return null; }
-                    })
-                );
+                            if (det) {
+                                labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(s.studentid.toString(), [det.descriptor]));
+                                console.log(`Loaded face for: ${s.name}`);
+                            }
+                        } catch (err) {
+                            console.warn(`Skip student ${s.name}: Image error`);
+                            continue; // ถ้าคนไหนรูปเสีย ให้ข้ามไปคนถัดไป ไม่ให้ระบบค้าง
+                        }
+                    }
+                }
 
-                const valid = labeledDescriptors.filter(ld => ld !== null);
-                if (valid.length > 0) faceMatcher = new faceapi.FaceMatcher(valid, 0.55);
+                if (labeledDescriptors.length > 0) {
+                    faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.55);
+                    console.log("FaceMatcher ready!");
+                } else {
+                    console.warn("No valid faces found in database");
+                }
                 
+                // ซ่อนตัวหมุน (Loading) ทันทีที่ประมวลผลเสร็จ
                 const loader = document.getElementById('loading-overlay');
                 if(loader) loader.classList.add('hidden');
+
             } catch (err) {
-                console.error("Face API Error:", err);
+                console.error("Critical Face API Error:", err);
+                alert("ระบบวิเคราะห์ใบหน้าขัดข้อง กรุณารีเฟรชหน้าเว็บ");
             }
         }
 
@@ -227,12 +244,18 @@
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
             document.querySelectorAll('nav button').forEach(b => b.className = 'px-6 py-2 rounded-lg text-sm font-medium transition-all text-slate-500 hover:bg-white');
             
-            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-            document.getElementById(`nav-${tabId}`).className = 'px-6 py-2 rounded-lg text-sm font-bold bg-white text-blue-600 shadow-sm';
+            const targetTab = document.getElementById(`tab-${tabId}`);
+            if(targetTab) targetTab.classList.remove('hidden');
+
+            const navBtn = document.getElementById(`nav-${tabId}`);
+            if(navBtn) navBtn.className = 'px-6 py-2 rounded-lg text-sm font-bold bg-white text-blue-600 shadow-sm';
             
             if (tabId === 'scan') {
                 isVideoRunning = true;
-                startCamera();
+                // หน่วงเวลาเล็กน้อยให้กล้องพร้อม
+                setTimeout(() => {
+                    startCamera();
+                }, 300);
             } else {
                 isVideoRunning = false;
                 stopCamera('video');
