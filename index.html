@@ -388,7 +388,7 @@ async function finishAttendance() {
         }));
 
         const res = await apiCall({
-            action: 'recordAttendanceUpdate', // ใช้ Action นี้เพื่อให้รองรับการเช็คซ้ำ
+            action: 'recordAttendance', // ใช้ Action นี้เพื่อให้รองรับการเช็คซ้ำ
             data: attendanceData
         });
 
