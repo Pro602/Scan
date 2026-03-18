@@ -364,55 +364,33 @@
         function closeStudentModal() { stopCamera('modal-video'); document.getElementById('student-modal').classList.add('hidden'); }
         function saveGasUrl() { const u = document.getElementById('gas-url').value; localStorage.setItem(GAS_URL_KEY, u); location.reload(); }
 
-async function finishAttendance() {
-    if (scanned.size === 0) return alert("ยังไม่มีรายชื่อที่สแกนสำเร็จ");
+        async function finishAttendance() {
+            if(checkedInToday.size === 0) return alert("ยังไม่ได้สแกนหน้าใครเลย");
+        async function sendToSheet() {
+            if (todayScanned.size === 0) return alert("ยังไม่ได้สแกนหน้าใครเลย");
+            const now = new Date();
+            const h = now.getHours(), m = now.getMinutes();
+            const status = (h > 8 || (h === 8 && m > 30)) ? 'สาย' : 'ปกติ';
+            
+            const records = Array.from(checkedInToday.keys()).map(id => {
+                const s = students.find(x => x.studentid === id);
+                return { id: id, name: s.name, status: status, timestamp: now.toISOString() };
+            });
+            const timeStr = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
+            const status = (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30)) ? "สาย" : "ปกติ";
 
-    const btn = document.getElementById('btn-submit');
-    const originalText = btn.innerText;
-    
-    btn.disabled = true;
-    btn.innerText = "⏳ กำลังบันทึกข้อมูล...";
-    btn.classList.replace('bg-blue-600', 'bg-slate-400');
+            const data = Array.from(todayScanned.values()).map(e => ({
+                id: e.studentid, name: e.name, status: status, timestamp: now.toISOString()
+            }));
 
-    try {
-        const now = new Date();
-        const timestamp = now.toLocaleString('sv-SE'); // "2026-03-18 08:30:00"
-
-        const attendanceData = Array.from(scanned.values()).map(s => {
-            // ตรวจสอบชื่อ Property ให้ตรงกับที่โหลดมาจาก Google Sheets (ปกติจะเป็นตัวพิมพ์เล็กหมด)
-            return {
-                id: String(s.studentid),   
-                name: s.name,              
-                class: s.class || "-",     
-                timestamp: timestamp,      
-                location: "Office",        
-                status: checkLateStatus()  
-            };
-        });
-
-        console.log("Data to send:", attendanceData); // เช็คใน Console ว่าข้อมูลครบไหม
-
-        const res = await apiCall({
-            action: 'recordAttendance', 
-            data: attendanceData
-        });
-
-        if (res.success) {
-            alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
-            scanned.clear();
-            location.reload();
-        } else {
-            alert("เกิดข้อผิดพลาด: " + (res.error || "Server Error"));
+            const res = await apiCall({ action: 'recordAttendanceUpdate', data: records });
+            if (res.success) { alert("บันทึกสำเร็จ!"); location.reload(); }
+            const res = await api('recordAttendanceUpdate', data);
+            if (res.success) {
+                alert("บันทึกเข้าระบบสำเร็จ!");
+                location.reload();
+            }
         }
-    } catch (e) {
-        console.error(e);
-        alert("ไม่สามารถติดต่อเซิร์ฟเวอร์ได้");
-    } finally {
-        btn.disabled = false;
-        btn.innerText = originalText;
-        btn.classList.replace('bg-slate-400', 'bg-blue-600');
-    }
-}
         // ฟังก์ชันช่วยเช็คว่าสายหรือไม่ (สมมติว่าสายหลัง 08:30)
         function checkLateStatus() {
             const now = new Date();
