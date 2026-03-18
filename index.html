@@ -371,12 +371,27 @@ async function finishAttendance() {
     const originalText = btn.innerText;
     
     btn.disabled = true;
-    btn.innerText = "⏳ กำลังบันทึกข้อมูล...";
+    btn.innerText = "⏳ กำลังดึงตำแหน่งพิกัด..."; // แจ้งสถานะใหม่
     btn.classList.replace('bg-blue-600', 'bg-slate-400');
 
     try {
+        // 1. ดึงพิกัด GPS จากเครื่อง
+        let gpsLocation = "ไม่ทราบตำแหน่ง";
+        try {
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 5000
+                });
+            });
+            gpsLocation = `${pos.coords.latitude}, ${pos.coords.longitude}`;
+        } catch (err) {
+            console.warn("Geolocation error:", err);
+            // ถ้าดึงไม่ได้ สามารถเลือกให้ใช้ "THAISIAM Office" เป็นค่าสำรองได้
+            gpsLocation = "THAISIAM Office (GPS Error)";
+        }
+
         const now = new Date();
-        // ฟอร์แมตวันที่ให้ตรงกับที่ Code.gs ใช้ตรวจสอบ (YYYY-MM-DD HH:mm:ss)
         const timestamp = now.getFullYear() + "-" + 
                           String(now.getMonth() + 1).padStart(2, '0') + "-" + 
                           String(now.getDate()).padStart(2, '0') + " " + 
@@ -386,31 +401,32 @@ async function finishAttendance() {
 
         const attendanceData = Array.from(scanned.values()).map(s => {
             return {
-                id: String(s.studentid),     // ตรวจสอบว่าใน Google Sheets ใช้หัวข้อ StudentID
+                id: String(s.studentid),
                 name: String(s.name),
                 class: String(s.class || "-"),
                 timestamp: timestamp,
-                location: "THAISIAM Office",
+                location: gpsLocation, // *** เปลี่ยนจากข้อความตายตัวเป็นค่าพิกัดที่ดึงมา ***
                 status: checkLateStatus()
             };
         });
 
-        // *** จุดสำคัญ: เปลี่ยน action เป็น 'recordAttendanceUpdate' ให้ตรงกับ Code.gs ***
+        btn.innerText = "⏳ กำลังบันทึกข้อมูล...";
+
         const res = await apiCall({
             action: 'recordAttendanceUpdate', 
             data: attendanceData
         });
 
         if (res.success) {
-            alert("✅ บันทึกข้อมูลเรียบร้อยแล้ว!");
+            alert("✅ บันทึกข้อมูลพิกัดเรียบร้อยแล้ว!");
             scanned.clear();
             location.reload(); 
         } else {
-            alert("❌ บันทึกไม่สำเร็จ: " + (res.error || "โปรดตรวจสอบการตั้งค่า Permission ใน GAS"));
+            alert("❌ บันทึกไม่สำเร็จ: " + (res.error || "โปรดตรวจสอบ GAS"));
         }
     } catch (e) {
         console.error("Error saving attendance:", e);
-        alert("⚠️ ไม่สามารถเชื่อมต่อ Server ได้");
+        alert("⚠️ ไม่สามารถบันทึกได้");
     } finally {
         btn.disabled = false;
         btn.innerText = originalText;
