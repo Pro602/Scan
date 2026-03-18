@@ -363,47 +363,51 @@
         }
         function closeStudentModal() { stopCamera('modal-video'); document.getElementById('student-modal').classList.add('hidden'); }
         function saveGasUrl() { const u = document.getElementById('gas-url').value; localStorage.setItem(GAS_URL_KEY, u); location.reload(); }
-    async function finishAttendance() {
-            if (scanned.size === 0) return alert("ยังไม่มีรายชื่อที่สแกนสำเร็จ");
+async function finishAttendance() {
+    if (scanned.size === 0) return alert("ยังไม่มีรายชื่อที่สแกนสำเร็จ");
 
-            const btn = document.getElementById('btn-submit');
-            const originalText = btn.innerText;
-            
-            // แสดงสถานะกำลังบันทึก
-            btn.disabled = true;
-            btn.innerText = "⏳ กำลังบันทึกข้อมูล...";
-            btn.classList.replace('bg-blue-600', 'bg-slate-400');
+    const btn = document.getElementById('btn-submit');
+    const originalText = btn.innerText;
+    
+    btn.disabled = true;
+    btn.innerText = "⏳ กำลังบันทึกข้อมูล...";
+    btn.classList.replace('bg-blue-600', 'bg-slate-400');
 
-            try {
-                // ดึงข้อมูลจาก Map ที่สแกนค้างไว้มาทำเป็น Array
-                const attendanceData = Array.from(scanned.values()).map(s => ({
-                    id: s.studentid,
-                    name: s.name,
-                    status: checkLateStatus() // ฟังก์ชันตรวจสอบว่าสายหรือไม่
-                }));
+    try {
+        const now = new Date();
+        // จัดรูปแบบวันที่และเวลาให้ Google Sheets อ่านง่าย (ISO Format)
+        const timestamp = now.toLocaleString('sv-SE'); // ผลลัพธ์: "2026-03-18 08:30:00"
 
-                // ส่งข้อมูลไปที่ Google Apps Script
-                const res = await apiCall({
-                    action: 'recordAttendance',
-                    data: attendanceData
-                });
+        const attendanceData = Array.from(scanned.values()).map(s => ({
+            id: String(s.studentid),   // GAS รอรับ .id
+            name: s.name,              // GAS รอรับ .name
+            class: s.class || "-",     // GAS รอรับ .class (ต้องส่งไปไม่งั้นจะว่าง)
+            timestamp: timestamp,      // GAS รอรับ .timestamp
+            location: "Office",        // GAS รอรับ .location
+            status: checkLateStatus()  // GAS รอรับ .status
+        }));
 
-                if (res.success) {
-                    alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
-                    scanned.clear(); // ล้างรายชื่อที่สแกนแล้วออก
-                    location.reload(); // โหลดหน้าใหม่เพื่ออัปเดต Dashboard
-                } else {
-                    alert("เกิดข้อผิดพลาดในการบันทึก: " + (res.error || "Unknown Error"));
-                }
-            } catch (e) {
-                console.error(e);
-                alert("ไม่สามารถติดต่อเซิร์ฟเวอร์ได้");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = originalText;
-                btn.classList.replace('bg-slate-400', 'bg-blue-600');
-            }
+        const res = await apiCall({
+            action: 'recordAttendanceUpdate', // ใช้ Action นี้เพื่อให้รองรับการเช็คซ้ำ
+            data: attendanceData
+        });
+
+        if (res.success) {
+            alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
+            scanned.clear();
+            location.reload();
+        } else {
+            alert("เกิดข้อผิดพลาด: " + (res.error || "Unknown Error"));
         }
+    } catch (e) {
+        console.error(e);
+        alert("ไม่สามารถติดต่อเซิร์ฟเวอร์ได้");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+        btn.classList.replace('bg-slate-400', 'bg-blue-600');
+    }
+}
 
         // ฟังก์ชันช่วยเช็คว่าสายหรือไม่ (สมมติว่าสายหลัง 08:30)
         function checkLateStatus() {
