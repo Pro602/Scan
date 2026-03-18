@@ -376,20 +376,24 @@ async function finishAttendance() {
 
     try {
         const now = new Date();
-        // จัดรูปแบบวันที่และเวลาให้ Google Sheets อ่านง่าย (ISO Format)
-        const timestamp = now.toLocaleString('sv-SE'); // ผลลัพธ์: "2026-03-18 08:30:00"
+        const timestamp = now.toLocaleString('sv-SE'); // "2026-03-18 08:30:00"
 
-        const attendanceData = Array.from(scanned.values()).map(s => ({
-            id: String(s.studentid),   // GAS รอรับ .id
-            name: s.name,              // GAS รอรับ .name
-            class: s.class || "-",     // GAS รอรับ .class (ต้องส่งไปไม่งั้นจะว่าง)
-            timestamp: timestamp,      // GAS รอรับ .timestamp
-            location: "Office",        // GAS รอรับ .location
-            status: checkLateStatus()  // GAS รอรับ .status
-        }));
+        const attendanceData = Array.from(scanned.values()).map(s => {
+            // ตรวจสอบชื่อ Property ให้ตรงกับที่โหลดมาจาก Google Sheets (ปกติจะเป็นตัวพิมพ์เล็กหมด)
+            return {
+                id: String(s.studentid),   
+                name: s.name,              
+                class: s.class || "-",     
+                timestamp: timestamp,      
+                location: "Office",        
+                status: checkLateStatus()  
+            };
+        });
+
+        console.log("Data to send:", attendanceData); // เช็คใน Console ว่าข้อมูลครบไหม
 
         const res = await apiCall({
-            action: 'recordAttendance', // ใช้ Action นี้เพื่อให้รองรับการเช็คซ้ำ
+            action: 'recordAttendance', 
             data: attendanceData
         });
 
@@ -398,7 +402,7 @@ async function finishAttendance() {
             scanned.clear();
             location.reload();
         } else {
-            alert("เกิดข้อผิดพลาด: " + (res.error || "Unknown Error"));
+            alert("เกิดข้อผิดพลาด: " + (res.error || "Server Error"));
         }
     } catch (e) {
         console.error(e);
