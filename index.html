@@ -50,7 +50,30 @@
                     <p class="text-slate-400 text-sm">ยังไม่เช็คชื่อ</p><p id="stat-absent" class="text-4xl font-bold text-rose-600">0</p>
                 </div>
             </div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+    
+    <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-green-500">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="text-green-600">✅</span>
+            <h3 class="font-bold text-gray-700">รายชื่อพนักงานมาปกติ</h3>
+        </div>
+        <div id="normal-list" class="space-y-3">
+            </div>
+    </div>
 
+    <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-orange-500">
+        <div class="flex items-center gap-2 mb-4">
+            <span class="text-orange-600">⏰</span>
+            <h3 class="font-bold text-gray-700">รายชื่อพนักงานสาย</h3>
+        </div>
+        <div id="late-list" class="space-y-3">
+            </div>
+    </div>
+
+    <div class="bg-white p-4 rounded-xl shadow-sm border-t-4 border-red-500">
+        </div>
+
+</div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border h-[450px] flex flex-col">
                     <h3 class="font-bold mb-4 flex items-center text-amber-600"><i data-lucide="clock" class="mr-2"></i> รายชื่อพนักงานสาย</h3>
@@ -442,6 +465,49 @@ async function finishAttendance() {
             if (hour > 8 || (hour === 8 && min > 30)) return 'สาย';
             return 'มา';
         }
+        // ค้นหาตำแหน่งที่มีการจัดการข้อมูลแสดงผล แล้ววางโค้ดนี้ลงไป
+function renderAttendance(data) {
+    const normalList = document.getElementById('normal-list');
+    const lateList = document.getElementById('late-list');
+    
+    // เคลียร์ข้อมูลเก่าในกล่องรายงานก่อนแสดงค่าใหม่
+    if (normalList) normalList.innerHTML = '';
+    if (lateList) lateList.innerHTML = '';
+
+    data.forEach(emp => {
+        // ตรวจสอบว่าเป็นพิกัด GPS หรือไม่ (ต้องมีเครื่องหมายคอมม่าคั่น)
+        const isGPS = emp.location && emp.location.includes(',');
+        
+        // สร้าง Link สำหรับเปิด Google Maps โดยลบช่องว่างออกเพื่อให้ URL ถูกต้อง
+        const mapUrl = isGPS ? `https://www.google.com/maps/search/?api=1&query=${emp.location.replace(/\s/g, '')}` : '#';
+        
+        // โครงสร้าง HTML สำหรับแต่ละรายชื่อ
+        const html = `
+            <div class="flex items-center justify-between p-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition">
+                <div class="flex items-center gap-3">
+                    <img src="${emp.avatar || 'https://via.placeholder.com/40'}" class="w-10 h-10 rounded-full object-cover border border-gray-200">
+                    <div>
+                        <p class="font-bold text-gray-800 text-sm">${emp.name}</p>
+                        <p class="text-xs text-gray-500">${emp.timestamp ? emp.timestamp.split(' ')[1] : '--:--'} น.</p>
+                    </div>
+                </div>
+                ${isGPS ? 
+                    `<a href="${mapUrl}" target="_blank" class="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-full border border-blue-100 hover:bg-blue-600 hover:text-white transition duration-200">
+                        📍 ดูแผนที่
+                     </a>` : 
+                    `<span class="text-[10px] text-gray-400 italic">${emp.location || '-'}</span>`
+                }
+            </div>
+        `;
+
+        // แยกพนักงานลงกล่องตามสถานะ "มาปกติ" หรือ "สาย"
+        if (emp.status === "มาปกติ" && normalList) {
+            normalList.insertAdjacentHTML('beforeend', html);
+        } else if (emp.status === "สาย" && lateList) {
+            lateList.insertAdjacentHTML('beforeend', html);
+        }
+    });
+}
     </script>
     <div id="login-modal" class="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center hidden">
     <div class="bg-white p-8 rounded-3xl max-w-sm w-full shadow-2xl space-y-4">
