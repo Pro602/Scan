@@ -363,34 +363,54 @@
         }
         function closeStudentModal() { stopCamera('modal-video'); document.getElementById('student-modal').classList.add('hidden'); }
         function saveGasUrl() { const u = document.getElementById('gas-url').value; localStorage.setItem(GAS_URL_KEY, u); location.reload(); }
+async function finishAttendance() {
+    if (scanned.size === 0) return alert("ยังไม่มีรายชื่อที่สแกนสำเร็จ");
 
-        async function finishAttendance() {
-            if(checkedInToday.size === 0) return alert("ยังไม่ได้สแกนหน้าใครเลย");
-        async function sendToSheet() {
-            if (todayScanned.size === 0) return alert("ยังไม่ได้สแกนหน้าใครเลย");
-            const now = new Date();
-            const h = now.getHours(), m = now.getMinutes();
-            const status = (h > 8 || (h === 8 && m > 30)) ? 'สาย' : 'ปกติ';
-            
-            const records = Array.from(checkedInToday.keys()).map(id => {
-                const s = students.find(x => x.studentid === id);
-                return { id: id, name: s.name, status: status, timestamp: now.toISOString() };
-            });
-            const timeStr = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
-            const status = (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30)) ? "สาย" : "ปกติ";
+    const btn = document.getElementById('btn-submit');
+    const originalText = btn.innerText;
+    
+    btn.disabled = true;
+    btn.innerText = "⏳ กำลังบันทึกข้อมูล...";
+    btn.classList.replace('bg-blue-600', 'bg-slate-400');
 
-            const data = Array.from(todayScanned.values()).map(e => ({
-                id: e.studentid, name: e.name, status: status, timestamp: now.toISOString()
-            }));
+    try {
+        const now = new Date();
+        const timestamp = now.toLocaleString('sv-SE'); // ฟอร์แมต "2026-03-18 09:30:00"
 
-            const res = await apiCall({ action: 'recordAttendanceUpdate', data: records });
-            if (res.success) { alert("บันทึกสำเร็จ!"); location.reload(); }
-            const res = await api('recordAttendanceUpdate', data);
-            if (res.success) {
-                alert("บันทึกเข้าระบบสำเร็จ!");
-                location.reload();
-            }
+        // ปรับ Mapping ข้อมูลให้ตรงกับที่ Code.gs ต้องการ 100%
+        const attendanceData = Array.from(scanned.values()).map(s => {
+            return {
+                id: String(s.studentid),   // GAS ใช้ record.id
+                name: String(s.name),      // GAS ใช้ record.name
+                class: String(s.class || "-"), // GAS ใช้ record.class
+                timestamp: timestamp,      // GAS ใช้ record.timestamp
+                location: "THAISIAM Office", // GAS ใช้ record.location
+                status: checkLateStatus()  // GAS ใช้ record.status
+            };
+        });
+
+        // ส่งข้อมูลไปยัง GAS
+        const res = await apiCall({
+            action: 'recordAttendance', 
+            data: attendanceData
+        });
+
+        if (res.success) {
+            alert("✅ บันทึกข้อมูลเรียบร้อยแล้ว!");
+            scanned.clear();
+            location.reload(); // รีโหลดเพื่อล้างหน้าจอและดึงข้อมูลใหม่มาโชว์ใน Dashboard
+        } else {
+            alert("❌ บันทึกไม่สำเร็จ: " + (res.error || "ตรวจสอบชื่อ Action ใน Code.gs"));
         }
+    } catch (e) {
+        console.error("Error saving attendance:", e);
+        alert("⚠️ ติดต่อ Server ไม่ได้ (ตรวจสอบ GAS URL หรืออินเทอร์เน็ต)");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+        btn.classList.replace('bg-slate-400', 'bg-blue-600');
+    }
+}
         // ฟังก์ชันช่วยเช็คว่าสายหรือไม่ (สมมติว่าสายหลัง 08:30)
         function checkLateStatus() {
             const now = new Date();
