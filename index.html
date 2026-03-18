@@ -295,7 +295,7 @@ function renderDashboard() {
     students.forEach(s => {
         if(!checkedIds.has(String(s.studentid))) {
             absL.innerHTML += `
-            <div class="employee-item flex items-center gap-2 p-2 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 grayscale mb-1">
+            <div class="employee-item flex items-center gap-2 p-2 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 mb-1">
                 <img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover">
                 <p class="font-bold text-slate-500 text-xs">${s.name}</p>
             </div>`;
