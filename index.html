@@ -251,52 +251,58 @@
     }
 
     // --- Dashboard & GPS Logic ---
-    function renderDashboard() {
-        const dateInput = document.getElementById('dashboard-date').value;
-        const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
-        const checkedIds = new Set(daily.map(a => String(a.id)));
+// ค้นหา function renderDashboard() ในไฟล์เดิมของคุณ แล้วแทนที่ด้วยส่วนนี้
+function renderDashboard() {
+    const dateInput = document.getElementById('dashboard-date').value;
+    const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
+    const checkedIds = new Set(daily.map(a => String(a.id)));
 
-        document.getElementById('stat-present').innerText = daily.filter(a => a.status === 'มาปกติ').length;
-        document.getElementById('stat-late').innerText = daily.filter(a => a.status === 'สาย').length;
-        document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedIds.size);
+    document.getElementById('stat-present').innerText = daily.filter(a => a.status === 'มาปกติ').length;
+    document.getElementById('stat-late').innerText = daily.filter(a => a.status === 'สาย').length;
+    document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedIds.size);
 
-        const normL = document.getElementById('normal-list'), lateL = document.getElementById('late-list-display'), absL = document.getElementById('absent-list');
-        normL.innerHTML = ''; lateL.innerHTML = ''; absL.innerHTML = '';
+    const normL = document.getElementById('normal-list'), lateL = document.getElementById('late-list-display'), absL = document.getElementById('absent-list');
+    normL.innerHTML = ''; lateL.innerHTML = ''; absL.innerHTML = '';
 
-        daily.forEach(a => {
-            const s = students.find(x => String(x.studentid) === String(a.id));
-            
-            // กู้คืนปุ่ม แผนที่ GPS
-            let gpsBtn = '';
-            if (a.location && a.location.includes(',')) {
-                gpsBtn = `<a href="https://www.google.com/maps?q=${a.location}" target="_blank" class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-600 rounded text-[9px] font-bold hover:bg-blue-200 transition">แผนที่</a>`;
-            }
+    daily.forEach(a => {
+        const s = students.find(x => String(x.studentid) === String(a.id));
+        
+        // --- ส่วนที่แก้ไข: เปลี่ยนจาก "แผนที่" เป็นไอคอนปักหมุด ---
+        let gpsBtn = '';
+        if (a.location && a.location.includes(',')) {
+            gpsBtn = `<a href="https://www.google.com/maps?q=${a.location}" target="_blank" class="ml-2 inline-flex items-center text-red-600 hover:text-red-800 transition transform hover:scale-125" title="ดูแผนที่">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                      </a>`;
+        }
 
-            const itemHtml = `
-                <div class="employee-item flex items-center justify-between bg-white rounded-xl border shadow-sm">
-                    <div class="flex items-center gap-2">
-                        <img src="${s?.imagedatabase64 || ''}" class="w-9 h-9 rounded-lg object-cover">
-                        <div>
-                            <p class="font-bold text-slate-700 text-xs">${a.name}</p>
-                            <p class="text-[9px] text-slate-400 font-mono">${a.timestamp.split(' ')[1] || ''} น. ${gpsBtn}</p>
-                        </div>
+        const itemHtml = `
+            <div class="employee-item flex items-center justify-between bg-white p-2 rounded-xl border shadow-sm mb-1">
+                <div class="flex items-center gap-2">
+                    <img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border">
+                    <div>
+                        <p class="font-bold text-slate-700 text-xs">${a.name}</p>
+                        <p class="text-[10px] text-slate-400 font-mono flex items-center">
+                            ${a.timestamp.split(' ')[1] || ''} น. ${gpsBtn}
+                        </p>
                     </div>
-                    <span class="px-2 py-0.5 text-[8px] rounded-full font-bold ${a.status==='สาย'?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600'}">${a.status}</span>
-                </div>`;
-            if (a.status === 'สาย') lateL.innerHTML += itemHtml; else normL.innerHTML += itemHtml;
-        });
+                </div>
+                <span class="px-2 py-0.5 text-[9px] rounded-full font-bold ${a.status==='สาย'?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600'}">${a.status}</span>
+            </div>`;
+        if (a.status === 'สาย') lateL.innerHTML += itemHtml; else normL.innerHTML += itemHtml;
+    });
 
-        students.forEach(s => {
-            if(!checkedIds.has(String(s.studentid))) {
-                absL.innerHTML += `
-                <div class="employee-item flex items-center gap-2 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 grayscale">
-                    <img src="${s.imagedatabase64}" class="w-9 h-9 rounded-lg object-cover">
-                    <p class="font-bold text-slate-500 text-xs">${s.name}</p>
-                </div>`;
-            }
-        });
-        lucide.createIcons();
-    }
+    // ส่วนของคนขาดงาน (เหมือนเดิม)
+    students.forEach(s => {
+        if(!checkedIds.has(String(s.studentid))) {
+            absL.innerHTML += `
+            <div class="employee-item flex items-center gap-2 p-2 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 grayscale mb-1">
+                <img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover">
+                <p class="font-bold text-slate-500 text-xs">${s.name}</p>
+            </div>`;
+        }
+    });
+    lucide.createIcons(); // สั่งให้วาดไอคอนใหม่
+}
 
     async function finishAttendance() {
         if (scanned.size === 0) return alert("ยังไม่มีรายชื่อที่สแกนสำเร็จ");
