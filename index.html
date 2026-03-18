@@ -13,7 +13,6 @@
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-        /* ===== เอฟเฟกต์โลโก้ 3D Spin & Glow ===== */
         .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; }
         .logo-fade { animation: fadeInLogo 1.2s ease forwards; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)); }
         .logo-spin { animation: spin360 8s linear infinite; transform-style: preserve-3d; }
@@ -35,7 +34,6 @@
             40% { left: 100%; opacity: 0.6; }
             100% { left: 100%; opacity: 0; }
         }
-
         .stat-card { transition: all 0.3s ease; }
         .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
     </style>
@@ -63,6 +61,7 @@
             </div>
         </div>
     </nav>
+
     <main class="max-w-7xl mx-auto p-4 md:p-6">
         <div id="content-dashboard" class="space-y-6">
             <div class="flex justify-between items-end border-b pb-4">
@@ -157,6 +156,8 @@
             </div>
             <div class="flex justify-center space-x-2">
                 <button onclick="startModalCamera()" class="bg-slate-800 text-white px-4 py-1.5 rounded-lg text-xs">เปิดกล้อง</button>
+                <button onclick="document.getElementById('modal-file').click()" class="bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-xs">อัปโหลดรูป</button>
+                <input type="file" id="modal-file" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
                 <button id="btn-snap" onclick="snapPhoto()" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-xs hidden">ถ่ายรูป</button>
             </div>
             <input type="text" id="modal-id" placeholder="รหัสพนักงาน" class="w-full border p-3 rounded-xl outline-none text-sm">
@@ -180,6 +181,7 @@
     <canvas id="capture-canvas" class="hidden"></canvas>
 
 <script>
+    // Hardcoded URL (Fixed according to latest deployment)
     const gasUrl = "https://script.google.com/macros/s/AKfycby-EOIcTxT0bvD-jkGHYDKMI3slV0IjVuX6cluy5cQNVolXa8Rw3LNxTMee2YyCxCuF/exec";
     
     let students = [], attendance = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
@@ -201,7 +203,6 @@
         renderDashboard();
     }
 
-    // --- Face Recognition Logic ---
     async function initFaceAPI() {
         const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
         await Promise.all([
@@ -250,59 +251,54 @@
         }, 500);
     }
 
-    // --- Dashboard & GPS Logic ---
-// ค้นหา function renderDashboard() ในไฟล์เดิมของคุณ แล้วแทนที่ด้วยส่วนนี้
-function renderDashboard() {
-    const dateInput = document.getElementById('dashboard-date').value;
-    const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
-    const checkedIds = new Set(daily.map(a => String(a.id)));
+    function renderDashboard() {
+        const dateInput = document.getElementById('dashboard-date').value;
+        const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
+        const checkedIds = new Set(daily.map(a => String(a.id)));
 
-    document.getElementById('stat-present').innerText = daily.filter(a => a.status === 'มาปกติ').length;
-    document.getElementById('stat-late').innerText = daily.filter(a => a.status === 'สาย').length;
-    document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedIds.size);
+        document.getElementById('stat-present').innerText = daily.filter(a => a.status === 'มาปกติ').length;
+        document.getElementById('stat-late').innerText = daily.filter(a => a.status === 'สาย').length;
+        document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedIds.size);
 
-    const normL = document.getElementById('normal-list'), lateL = document.getElementById('late-list-display'), absL = document.getElementById('absent-list');
-    normL.innerHTML = ''; lateL.innerHTML = ''; absL.innerHTML = '';
+        const normL = document.getElementById('normal-list'), lateL = document.getElementById('late-list-display'), absL = document.getElementById('absent-list');
+        normL.innerHTML = ''; lateL.innerHTML = ''; absL.innerHTML = '';
 
-    daily.forEach(a => {
-        const s = students.find(x => String(x.studentid) === String(a.id));
-        
-        // --- ส่วนที่แก้ไข: เปลี่ยนจาก "แผนที่" เป็นไอคอนปักหมุด ---
-        let gpsBtn = '';
-        if (a.location && a.location.includes(',')) {
-            gpsBtn = `<a href="https://www.google.com/maps?q=${a.location}" target="_blank" class="ml-2 inline-flex items-center text-red-600 hover:text-red-800 transition transform hover:scale-125" title="ดูแผนที่">
-                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
-                      </a>`;
-        }
+        daily.forEach(a => {
+            const s = students.find(x => String(x.studentid) === String(a.id));
+            let gpsBtn = '';
+            if (a.location && a.location.includes(',')) {
+                gpsBtn = `<a href="https://www.google.com/maps?q=${a.location}" target="_blank" class="ml-2 inline-flex items-center text-red-600 hover:text-red-800 transition transform hover:scale-125" title="ดูแผนที่">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                          </a>`;
+            }
 
-        const itemHtml = `
-            <div class="employee-item flex items-center justify-between bg-white p-2 rounded-xl border shadow-sm mb-1">
-                <div class="flex items-center gap-2">
-                    <img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border">
-                    <div>
-                        <p class="font-bold text-slate-700 text-xs">${a.name}</p>
-                        <p class="text-[10px] text-slate-400 font-mono flex items-center">
-                            ${a.timestamp.split(' ')[1] || ''} น. ${gpsBtn}
-                        </p>
+            const itemHtml = `
+                <div class="employee-item flex items-center justify-between bg-white p-2 rounded-xl border shadow-sm mb-1">
+                    <div class="flex items-center gap-2">
+                        <img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border">
+                        <div>
+                            <p class="font-bold text-slate-700 text-xs">${a.name}</p>
+                            <p class="text-[10px] text-slate-400 font-mono flex items-center">
+                                ${a.timestamp.split(' ')[1] || ''} น. ${gpsBtn}
+                            </p>
+                        </div>
                     </div>
-                </div>
-                <span class="px-2 py-0.5 text-[9px] rounded-full font-bold ${a.status==='สาย'?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600'}">${a.status}</span>
-            </div>`;
-        if (a.status === 'สาย') lateL.innerHTML += itemHtml; else normL.innerHTML += itemHtml;
-    });
+                    <span class="px-2 py-0.5 text-[9px] rounded-full font-bold ${a.status==='สาย'?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600'}">${a.status}</span>
+                </div>`;
+            if (a.status === 'สาย') lateL.innerHTML += itemHtml; else normL.innerHTML += itemHtml;
+        });
 
-    // ส่วนของคนขาดงาน (เหมือนเดิม)
-    students.forEach(s => {
-        if(!checkedIds.has(String(s.studentid))) {
-            absL.innerHTML += `
-            <div class="employee-item flex items-center gap-2 p-2 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 mb-1">
-                <img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover">
-                <p class="font-bold text-slate-500 text-xs">${s.name}</p>
-            </div>`;
-        }
-    });
-    lucide.createIcons(); // สั่งให้วาดไอคอนใหม่
-}
+        students.forEach(s => {
+            if(!checkedIds.has(String(s.studentid))) {
+                absL.innerHTML += `
+                <div class="employee-item flex items-center gap-2 p-2 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 mb-1">
+                    <img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover">
+                    <p class="font-bold text-slate-500 text-xs">${s.name}</p>
+                </div>`;
+            }
+        });
+        lucide.createIcons();
+    }
 
     async function finishAttendance() {
         if (scanned.size === 0) return alert("ยังไม่มีรายชื่อที่สแกนสำเร็จ");
@@ -336,15 +332,16 @@ function renderDashboard() {
         else { alert("❌ บันทึกล้มเหลว"); btn.disabled = false; btn.innerText = "บันทึกลง Google Sheets"; }
     }
 
-    // --- Helper Functions ---
     async function apiCall(p) {
         try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
         catch(e) { return {success:false}; }
     }
+
     async function startCamera(id) {
         try { const v = document.getElementById(id); v.srcObject = await navigator.mediaDevices.getUserMedia({video:true}); } 
         catch(e) { alert("Camera Error"); }
     }
+
     function stopCamera(id) { const v = document.getElementById(id); if(v?.srcObject) v.srcObject.getTracks().forEach(t => t.stop()); }
     function speak(t) { const m = new SpeechSynthesisUtterance(t); m.lang = 'th-TH'; window.speechSynthesis.speak(m); }
     
@@ -362,7 +359,6 @@ function renderDashboard() {
         else { stopCamera('video'); }
     }
 
-    // --- Management Logic ---
     function renderStudentTable() {
         document.getElementById('student-table-body').innerHTML = students.map(s => `
             <tr>
@@ -374,9 +370,13 @@ function renderDashboard() {
             </tr>`).join('');
         lucide.createIcons();
     }
+
     function openAddModal() { if (!isLoggedIn) { pendingAction = 'add'; document.getElementById('login-modal').classList.remove('hidden'); } else { document.getElementById('student-modal').classList.remove('hidden'); } }
+    
     async function deleteStudent(i) { if (!isLoggedIn) { pendingAction = 'delete'; pendingDeleteIndex = i; document.getElementById('login-modal').classList.remove('hidden'); } else { executeDelete(i); } }
+    
     async function executeDelete(i) { if (confirm("ยืนยันการลบรายชื่อ?")) { await apiCall({action: 'deleteStudent', data: {rowIndex: i}}); location.reload(); } }
+    
     function checkLogin() {
         const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value;
         if (AUTHORIZED_USERS[u] === p) {
@@ -385,8 +385,35 @@ function renderDashboard() {
             else if (pendingAction === 'delete') executeDelete(pendingDeleteIndex);
         } else alert("Invalid Password");
     }
+
     function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
-    function startModalCamera() { startCamera('modal-video'); document.getElementById('modal-video').classList.remove('hidden'); document.getElementById('preview-img').classList.add('hidden'); document.getElementById('btn-snap').classList.remove('hidden'); }
+    
+    function startModalCamera() { 
+        startCamera('modal-video'); 
+        document.getElementById('modal-video').classList.remove('hidden'); 
+        document.getElementById('preview-img').classList.add('hidden'); 
+        document.getElementById('btn-snap').classList.remove('hidden');
+        document.getElementById('modal-file').value = ''; 
+    }
+
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                capturedImg = e.target.result;
+                const previewImg = document.getElementById('preview-img');
+                previewImg.src = capturedImg;
+                previewImg.classList.remove('hidden');
+                const modalVideo = document.getElementById('modal-video');
+                modalVideo.classList.add('hidden');
+                stopCamera('modal-video');
+                document.getElementById('btn-snap').classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
     function snapPhoto() {
         const v = document.getElementById('modal-video'), c = document.getElementById('capture-canvas');
         c.width = 400; c.height = 400; c.getContext('2d').drawImage(v, 0, 0, 400, 400);
@@ -395,12 +422,14 @@ function renderDashboard() {
         document.getElementById('preview-img').classList.remove('hidden');
         v.classList.add('hidden'); stopCamera('modal-video');
     }
+
     async function saveStudent() {
         const id = document.getElementById('modal-id').value, name = document.getElementById('modal-name').value, cls = document.getElementById('modal-class').value;
         if(!id || !name || !capturedImg) return alert("ข้อมูลไม่ครบ");
         await apiCall({action:'addStudent', data:{id, name, class:cls, imageData:capturedImg}});
         location.reload();
     }
+
     function closeStudentModal() { stopCamera('modal-video'); document.getElementById('student-modal').classList.add('hidden'); }
 </script>
 </body>
