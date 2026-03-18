@@ -118,8 +118,8 @@
 
     <div id="setup-modal" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center hidden">
         <div class="bg-white p-10 rounded-3xl max-w-sm w-full text-center">
-            <h3 class="text-2xl font-bold mb-4">https://script.google.com/macros/s/AKfycbwahf1YPIoqK9V0Fq0uuizLtuwhM0BOgEbYIBnH0s6qa2qhoIuW_HLdFHrCA0QSXilA/exec</h3>
-            <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycbwahf1YPIoqK9V0Fq0uuizLtuwhM0BOgEbYIBnH0s6qa2qhoIuW_HLdFHrCA0QSXilA/exec" class="w-full border-2 p-4 rounded-2xl mb-4 text-center">
+            <h3 class="text-2xl font-bold mb-4">https://script.google.com/macros/s/AKfycby-EOIcTxT0bvD-jkGHYDKMI3slV0IjVuX6cluy5cQNVolXa8Rw3LNxTMee2YyCxCuF/exec</h3>
+            <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/AKfycby-EOIcTxT0bvD-jkGHYDKMI3slV0IjVuX6cluy5cQNVolXa8Rw3LNxTMee2YyCxCuF/exec" class="w-full border-2 p-4 rounded-2xl mb-4 text-center">
             <button onclick="saveGasUrl()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold">บันทึก</button>
         </div>
     </div>
@@ -376,36 +376,41 @@ async function finishAttendance() {
 
     try {
         const now = new Date();
-        const timestamp = now.toLocaleString('sv-SE'); // ฟอร์แมต "2026-03-18 09:30:00"
+        // ฟอร์แมตวันที่ให้ตรงกับที่ Code.gs ใช้ตรวจสอบ (YYYY-MM-DD HH:mm:ss)
+        const timestamp = now.getFullYear() + "-" + 
+                          String(now.getMonth() + 1).padStart(2, '0') + "-" + 
+                          String(now.getDate()).padStart(2, '0') + " " + 
+                          String(now.getHours()).padStart(2, '0') + ":" + 
+                          String(now.getMinutes()).padStart(2, '0') + ":" + 
+                          String(now.getSeconds()).padStart(2, '0');
 
-        // ปรับ Mapping ข้อมูลให้ตรงกับที่ Code.gs ต้องการ 100%
-    const attendanceData = Array.from(scanned.values()).map(s => {
-    return {
-        id: String(s.studentid),     // ต้องใช้ 'id' ให้ตรงกับ record.id ใน Code.gs
-        name: String(s.name),        // ต้องใช้ 'name'
-        class: String(s.class || "-"),
-        timestamp: timestamp,
-        location: "THAISIAM Office",
-        status: checkLateStatus()
-    };
-});
+        const attendanceData = Array.from(scanned.values()).map(s => {
+            return {
+                id: String(s.studentid),     // ตรวจสอบว่าใน Google Sheets ใช้หัวข้อ StudentID
+                name: String(s.name),
+                class: String(s.class || "-"),
+                timestamp: timestamp,
+                location: "THAISIAM Office",
+                status: checkLateStatus()
+            };
+        });
 
-        // ส่งข้อมูลไปยัง GAS
+        // *** จุดสำคัญ: เปลี่ยน action เป็น 'recordAttendanceUpdate' ให้ตรงกับ Code.gs ***
         const res = await apiCall({
-            action: 'recordAttendance', 
+            action: 'recordAttendanceUpdate', 
             data: attendanceData
         });
 
         if (res.success) {
             alert("✅ บันทึกข้อมูลเรียบร้อยแล้ว!");
             scanned.clear();
-            location.reload(); // รีโหลดเพื่อล้างหน้าจอและดึงข้อมูลใหม่มาโชว์ใน Dashboard
+            location.reload(); 
         } else {
-            alert("❌ บันทึกไม่สำเร็จ: " + (res.error || "ตรวจสอบชื่อ Action ใน Code.gs"));
+            alert("❌ บันทึกไม่สำเร็จ: " + (res.error || "โปรดตรวจสอบการตั้งค่า Permission ใน GAS"));
         }
     } catch (e) {
         console.error("Error saving attendance:", e);
-        alert("⚠️ ติดต่อ Server ไม่ได้ (ตรวจสอบ GAS URL หรืออินเทอร์เน็ต)");
+        alert("⚠️ ไม่สามารถเชื่อมต่อ Server ได้");
     } finally {
         btn.disabled = false;
         btn.innerText = originalText;
