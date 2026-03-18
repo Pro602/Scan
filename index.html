@@ -305,7 +305,7 @@
             class: String(s.class || "-"),
             timestamp: timestamp,
             location: gpsLocation,
-            status: (now.getHours() > 15 || (now.getHours() === 15 && now.getMinutes() > 10)) ? 'สาย' : 'มาปกติ'
+            status: (now.getHours() > 15 || (now.getHours() === 15 && now.getMinutes() > 30)) ? 'สาย' : 'มาปกติ'
         }));
 
         btn.innerText = "⏳ กำลังบันทึกข้อมูล...";
