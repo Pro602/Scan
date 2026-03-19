@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบเช็คชื่อพนักงาน - THAISIAM INKJET</title>
+    <title>ระบบสแกนหน้าเข้าออกพนักงาน - THAISIAM INKJET</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
@@ -56,7 +56,7 @@
             
             <div class="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
                 <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-6 py-2.5 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-md transition-all">Dashboard</button>
-                <button onclick="switchTab('scan')" id="tab-scan" class="px-6 py-2.5 rounded-xl text-sm font-medium text-slate-600 transition-all hover:bg-white/50">เช็คชื่อ</button>
+                <button onclick="switchTab('scan')" id="tab-scan" class="px-6 py-2.5 rounded-xl text-sm font-medium text-slate-600 transition-all hover:bg-white/50">สแกนเข้างาน</button>
                 <button onclick="switchTab('manage')" id="tab-manage" class="px-6 py-2.5 rounded-xl text-sm font-medium text-slate-600 transition-all hover:bg-white/50">พนักงาน</button>
             </div>
         </div>
@@ -106,7 +106,7 @@
 
                 <div class="bg-white rounded-2xl shadow-sm border overflow-hidden flex flex-col h-[520px]">
                     <div class="p-3 bg-rose-50 border-b font-bold text-rose-700 text-sm flex items-center">
-                        <i data-lucide="user-minus" class="w-4 h-4 mr-2"></i> ยังไม่เช็คชื่อ
+                        <i data-lucide="user-minus" class="w-4 h-4 mr-2"></i> ยังไม่สแกนเข้างาน
                     </div>
                     <div id="absent-list" class="p-2 space-y-1 overflow-y-auto custom-scrollbar flex-grow bg-slate-50/30"></div>
                 </div>
