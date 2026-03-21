@@ -90,7 +90,7 @@
                 </div>
             </div>
 
-              <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
                 <div class="bg-white rounded-2xl shadow-sm border overflow-hidden flex flex-col h-[520px]">
                     <div class="p-3 bg-emerald-50 border-b font-bold text-emerald-700 text-sm flex items-center">
                         <i data-lucide="check-circle" class="w-4 h-4 mr-2"></i> มาปกติ
@@ -109,6 +109,8 @@
                     <div class="p-3 bg-rose-50 border-b font-bold text-rose-700 text-sm flex items-center">
                         <i data-lucide="user-minus" class="w-4 h-4 mr-2"></i> ยังไม่เช็คชื่อ
                     </div>
+                    <div id="absent-list" class="p-2 space-y-1 overflow-y-auto custom-scrollbar flex-grow bg-slate-50/30"></div>
+                </div>
 
                 <div class="bg-white rounded-2xl shadow-sm border overflow-hidden flex flex-col h-[520px]">
                     <div class="p-3 bg-blue-50 border-b font-bold text-blue-700 text-sm flex items-center">
@@ -116,10 +118,7 @@
                     </div>
                     <div id="latest-scan-list" class="p-2 space-y-1 overflow-y-auto custom-scrollbar flex-grow bg-slate-50/30"></div>
                 </div>
-                    <div id="absent-list" class="p-2 space-y-1 overflow-y-auto custom-scrollbar flex-grow bg-slate-50/30"></div>
-                </div>
             </div>
-        </div>
 
         <div id="content-scan" class="hidden">
             <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border">
@@ -261,55 +260,89 @@
 // ค้นหา function renderDashboard() ในไฟล์เดิมของคุณ แล้วแทนที่ด้วยส่วนนี้
 function renderDashboard() {
     const dateInput = document.getElementById('dashboard-date').value;
-    // กรองข้อมูลเฉพาะวันนี้
+    
+    // กรองข้อมูลสแกนของวันที่เลือก
     const daily = attendance.filter(a => {
-        const firstTs = a.allData[3];
-        const formattedDate = (firstTs instanceof Date) ? firstTs.toISOString().split('T')[0] : String(firstTs).split(' ')[0];
+        const ts = a.timestamp;
+        const formattedDate = String(ts).split(' ')[0];
         return formattedDate === dateInput;
     });
 
     const checkedIds = new Set(daily.map(a => String(a.id)));
+    
+    // ล้างข้อมูลเก่าใน List
+    const normL = document.getElementById('normal-list');
+    const lateL = document.getElementById('late-list-display');
+    const absL = document.getElementById('absent-list');
     const outL = document.getElementById('latest-scan-list');
-    outL.innerHTML = ''; 
-    // ... ส่วนของ normL, lateL เหมือนเดิม ...
+    
+    normL.innerHTML = ''; lateL.innerHTML = ''; absL.innerHTML = ''; outL.innerHTML = '';
 
+    let countPresent = 0, countLate = 0;
+
+    // 1. แสดงคนที่มาแล้ว (ปกติ/สาย) และหาเวลาล่าสุด
     daily.forEach(a => {
         const s = students.find(x => String(x.studentid) === String(a.id));
+        const timeStr = String(a.timestamp).split(' ')[1].substring(0, 5);
         
-        // หาค่าสแกนล่าสุด (วนลูปย้อนหลังจากคอลัมน์สุดท้ายของ row)
-        let latestTime = "";
-        let latestLoc = "";
-        const rowData = a.allData;
-        
-        // เริ่มหาจากท้ายแถว (ดัชนีคอลัมน์ที่เป็นเลขคี่จะเป็น Timestamp เช่น 3, 5, 7, 9...)
-        for (let colIdx = rowData.length - 1; colIdx >= 3; colIdx--) {
-            if (rowData[colIdx] && colIdx % 2 !== 0) { // เจอ Timestamp ล่าสุด
-                latestTime = rowData[colIdx];
-                latestLoc = rowData[colIdx + 1] || "";
-                break;
+        const itemHtml = `
+            <div class="flex items-center gap-2 bg-white p-2 rounded-xl border shadow-sm mb-1">
+                <img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border">
+                <div>
+                    <p class="font-bold text-slate-700 text-[11px]">${a.name}</p>
+                    <p class="text-[10px] text-slate-400">${timeStr} น.</p>
+                </div>
+            </div>`;
+
+        if (a.status === 'มาปกติ') { normL.innerHTML += itemHtml; countPresent++; }
+        else if (a.status === 'สาย') { lateL.innerHTML += itemHtml; countLate++; }
+
+        // ส่วนของสแกนล่าสุด (ดึงจากคอลัมน์สุดท้ายที่มีข้อมูล)
+        let lastTime = "";
+        let lastLoc = "";
+        if (a.allData && Array.isArray(a.allData)) {
+            for (let i = a.allData.length - 1; i >= 3; i--) {
+                if (a.allData[i] && i % 2 !== 0) { // คอลัมน์ Timestamp คือเลขคี่ (3, 5, 7...)
+                    lastTime = a.allData[i];
+                    lastLoc = a.allData[i+1];
+                    break;
+                }
             }
         }
-
-        // ถ้ามีการสแกนมากกว่า 1 ครั้ง (มีค่าในคอลัมน์ G เป็นต้นไป) ให้แสดงในช่อง "สแกนล่าสุด"
-        if (latestTime) {
-            const timeStr = (latestTime instanceof Date) ? latestTime.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}) : String(latestTime).split(' ')[1];
-            
-            outL.innerHTML += `
-                <div class="employee-item flex items-center justify-between bg-white p-2 rounded-xl border shadow-sm mb-1">
-                    <div class="flex items-center gap-2">
-                        <img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border">
-                        <div>
-                            <p class="font-bold text-slate-700 text-xs">${a.name}</p>
-                            <p class="text-[10px] text-blue-500 font-mono">ล่าสุด: ${timeStr} น.</p>
-                        </div>
-                    </div>
-                    ${latestLoc ? `<a href="https://www.google.com/maps?q=${latestLoc}" target="_blank" class="text-blue-400"><i data-lucide="map-pin" class="w-4 h-4"></i></a>` : ''}
-                </div>`;
-        }
         
-        // ... (โค้ดเดิมสำหรับจัดการ normL และ lateL โดยใช้ rowData[3] และ rowData[5] ตามลำดับ) ...
+        const lastTStr = (lastTime instanceof Date) ? lastTime.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}) : String(lastTime).split(' ')[1]?.substring(0,5) || timeStr;
+
+        outL.innerHTML += `
+            <div class="flex items-center justify-between bg-white p-2 rounded-xl border shadow-sm mb-1">
+                <div class="flex items-center gap-2">
+                    <img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border">
+                    <div>
+                        <p class="font-bold text-slate-700 text-[11px]">${a.name}</p>
+                        <p class="text-[10px] text-blue-500 font-bold">ล่าสุด: ${lastTStr} น.</p>
+                    </div>
+                </div>
+                ${lastLoc ? `<a href="https://www.google.com/maps?q=${lastLoc}" target="_blank" class="text-blue-400"><i data-lucide="map-pin" class="w-4 h-4"></i></a>` : ''}
+            </div>`;
     });
-    
+
+    // 2. แสดงคนที่ไม่มา
+    const absentStudents = students.filter(s => !checkedIds.has(String(s.studentid)));
+    absentStudents.forEach(s => {
+        absL.innerHTML += `
+            <div class="flex items-center gap-2 opacity-60 grayscale bg-white p-2 rounded-xl border mb-1">
+                <img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover">
+                <div>
+                    <p class="font-bold text-slate-700 text-[11px]">${s.name}</p>
+                    <p class="text-[10px] text-rose-500 italic">ยังไม่พบข้อมูล</p>
+                </div>
+            </div>`;
+    });
+
+    // อัปเดตตัวเลข Stats
+    document.getElementById('stat-present').innerText = countPresent;
+    document.getElementById('stat-late').innerText = countLate;
+    document.getElementById('stat-absent').innerText = absentStudents.length;
+
     lucide.createIcons();
 }
 
