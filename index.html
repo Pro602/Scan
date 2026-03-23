@@ -207,7 +207,7 @@
             }
         }
         // ปรับ Threshold เป็น 0.6 เพื่อให้ Matching ง่ายและเร็วขึ้น
-        if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.6);
+        if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.5);
     }
 
     async function startDetector() {
@@ -231,7 +231,7 @@
                     const match = faceMatcher.findBestMatch(d.descriptor);
                     const s = students.find(x => String(x.studentid) === match.label);
                     // match.distance < 0.6 คือค่าความแม่นยำที่สมดุลกับความเร็ว
-                    if(s && match.distance < 0.6 && !scanned.has(s.studentid)) {
+                    if(s && match.distance < 0.5 && !scanned.has(s.studentid)) {
                         scanned.set(s.studentid, s);
                         document.getElementById('res-name').innerText = s.name;
                         document.getElementById('res-id').innerText = `ID: ${s.studentid}`;
