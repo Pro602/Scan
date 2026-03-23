@@ -10,7 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Kanit', sans-serif; background-color: #f1f5f9; }
-        /* ซ่อน scrollbar เพื่อความสวยงามแบบในวิดีโอ */
+        
+        /* ซ่อน scrollbar */
         .custom-scrollbar::-webkit-scrollbar { width: 0px; } 
         
         .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; }
@@ -19,17 +20,25 @@
         .logo-fade { animation: fadeInLogo 1.2s ease forwards; }
         @keyframes fadeInLogo { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* CSS สำหรับระบบเลื่อนอัตโนมัติ (Auto-scroll) */
+        /* --- ปรับปรุง CSS สำหรับระบบเลื่อนอัตโนมัติ --- */
         .scroll-container {
             display: flex;
             flex-direction: column;
-            animation: scrollUp 20s linear infinite;
+            /* การเคลื่อนไหวจะทำงานเมื่อมี Class นี้เท่านั้น */
+            animation: scrollUp 15s linear infinite;
         }
-        .scroll-container:hover { animation-play-state: paused; } /* หยุดเลื่อนเมื่อเอาเมาส์วาง */
+        
+        .scroll-container:hover { animation-play-state: paused; } 
 
         @keyframes scrollUp {
             0% { transform: translateY(0); }
-            100% { transform: translateY(-50%); } /* เลื่อนขึ้นครึ่งหนึ่งของเนื้อหาที่ถูกเบิ้ลไว้ */
+            100% { transform: translateY(-50%); } 
+        }
+
+        /* จำกัดหน้าต่างการมองเห็นไว้ที่ประมาณ 8 รายการ (ประมาณ 500px - 520px) */
+        .list-window {
+            overflow: hidden;
+            position: relative;
         }
     </style>
 </head>
@@ -72,19 +81,27 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-white rounded-2xl shadow-sm border overflow-hidden flex flex-col h-[520px]">
                     <div class="p-3 bg-emerald-50 border-b font-bold text-emerald-700 text-xs flex items-center"><i data-lucide="check-circle" class="w-4 h-4 mr-2"></i> มาปกติ (IN)</div>
-                    <div id="normal-list" class="p-2 space-y-1 overflow-y-auto custom-scrollbar flex-grow bg-slate-50/20"></div>
+                    <div class="list-window flex-grow bg-slate-50/20">
+                        <div id="normal-list" class="p-2 space-y-1"></div>
+                    </div>
                 </div>
                 <div class="bg-white rounded-2xl shadow-sm border overflow-hidden flex flex-col h-[520px]">
                     <div class="p-3 bg-amber-50 border-b font-bold text-amber-700 text-xs flex items-center"><i data-lucide="clock" class="w-4 h-4 mr-2"></i> มาสาย (IN)</div>
-                    <div id="late-list-display" class="p-2 space-y-1 overflow-y-auto custom-scrollbar flex-grow bg-slate-50/20"></div>
+                    <div class="list-window flex-grow bg-slate-50/20">
+                        <div id="late-list-display" class="p-2 space-y-1"></div>
+                    </div>
                 </div>
                 <div class="bg-white rounded-2xl shadow-sm border overflow-hidden flex flex-col h-[520px]">
                     <div class="p-3 bg-blue-50 border-b font-bold text-blue-700 text-xs flex items-center"><i data-lucide="log-out" class="w-4 h-4 mr-2"></i> สแกนออก (OUT)</div>
-                    <div id="out-list" class="p-2 space-y-1 overflow-y-auto custom-scrollbar flex-grow bg-slate-50/20"></div>
+                    <div class="list-window flex-grow bg-slate-50/20">
+                        <div id="out-list" class="p-2 space-y-1"></div>
+                    </div>
                 </div>
                 <div class="bg-white rounded-2xl shadow-sm border overflow-hidden flex flex-col h-[520px]">
                     <div class="p-3 bg-rose-50 border-b font-bold text-rose-700 text-xs flex items-center"><i data-lucide="user-minus" class="w-4 h-4 mr-2"></i> ยังไม่สแกน</div>
-                    <div id="absent-list" class="p-2 space-y-1 overflow-y-auto custom-scrollbar flex-grow bg-slate-50/20"></div>
+                    <div class="list-window flex-grow bg-slate-50/20">
+                        <div id="absent-list" class="p-2 space-y-1"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -235,7 +252,7 @@
         }, 500);
     }
 
-    // --- ฟังก์ชัน Dashboard แบบอัปเดตใหม่ (มีปุ่ม Google Maps และ Auto-scroll) ---
+    // --- ฟังก์ชัน Dashboard ปรับปรุงใหม่ตามเงื่อนไข ---
     function renderDashboard() {
         const dateInput = document.getElementById('dashboard-date').value;
         const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
@@ -249,23 +266,20 @@
             abs: document.getElementById('absent-list') 
         };
 
-        // ล้างข้อมูลเก่าและเอา Class เลื่อนออกก่อน
+        // ล้างข้อมูลเก่าและเอา Class เลื่อนออก
         Object.values(lists).forEach(l => {
             l.innerHTML = '';
             l.classList.remove('scroll-container');
         });
 
-        // ฟังก์ชันสร้าง Item ภายใน Dashboard
         const createItem = (a, s) => {
             const time = a.timestamp.split(' ')[1] || '';
             let mapBtn = '';
-            // ถ้ามี Location (และไม่ใช่ค่าเริ่มต้น) ให้แสดงปุ่มปักหมุด
             if (a.location && a.location !== "THAISIAM Office") {
                 mapBtn = `<a href="https://www.google.com/maps/search/?api=1&query=${a.location}" target="_blank" class="text-rose-500 hover:scale-125 transition-transform">
                             <i data-lucide="map-pin" class="w-4 h-4"></i>
                           </a>`;
             }
-
             return `
             <div class="flex items-center justify-between bg-white p-2 rounded-xl border shadow-sm mb-1">
                 <div class="flex items-center gap-2">
@@ -291,6 +305,7 @@
             else { lists.norm.innerHTML += createItem(a, s); counts.in++; }
         });
 
+        // แสดงรายชื่อคนที่ยังไม่สแกน (ทุกคน)
         students.forEach(s => {
             if(!checkedInIds.has(String(s.studentid))) {
                 lists.abs.innerHTML += `
@@ -301,11 +316,15 @@
             }
         });
 
-        // เปิดใช้งานระบบเลื่อนอัตโนมัติถ้าข้อมูลเกิน 8 แถว
+        // --- เงื่อนไขเด็ด: เปิดเลื่อนเฉพาะเมื่อข้อมูลเกิน 8 แถว ---
         Object.keys(lists).forEach(key => {
             const container = lists[key];
-            if (container.children.length > 8) {
-                container.innerHTML += container.innerHTML; // เบิ้ลเนื้อหาเพื่อให้เลื่อนแบบ Infinite Loop
+            const itemsCount = container.children.length;
+            
+            if (itemsCount > 8) {
+                // เบิ้ลเนื้อหาเพื่อให้เลื่อนแบบไร้รอยต่อ
+                container.innerHTML += container.innerHTML; 
+                // เพิ่ม Class สำหรับสั่ง Animation
                 container.classList.add('scroll-container');
             }
         });
@@ -317,6 +336,7 @@
         lucide.createIcons();
     }
 
+    // ฟังก์ชันอื่นๆ คงเดิม...
     async function finishAttendance(type) {
         if (scanned.size === 0) return alert("ยังไม่มีรายชื่อที่สแกนสำเร็จ");
         const btnIn = document.getElementById('btn-in'), btnOut = document.getElementById('btn-out');
