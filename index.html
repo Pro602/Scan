@@ -9,43 +9,22 @@
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        /* 1. ปรับพื้นหลังหลักเป็นโทนเข้มตามที่ต้องการ */
         body { font-family: 'Kanit', sans-serif; background-color: #1a1c1e; color: #f8fafc; }
-        
-        /* 2. CSS สำหรับ LOGO หมุนและแสงเงา (ดึงจากชุดบนที่เคยใช้) */
         .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; overflow: hidden; border-radius: 0.75rem; }
         .logo-fade { animation: fadeInLogo 1.2s ease forwards; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)); }
         .logo-spin { animation: spin360 8s linear infinite; transform-style: preserve-3d; }
-        
-        @keyframes fadeInLogo {
-            from { opacity: 0; transform: translateY(-10px) scale(0.9); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes spin360 {
-            from { transform: rotateY(0deg); }
-            to { transform: rotateY(360deg); }
-        }
-        
-        /* เอฟเฟกต์แสงวิ่งผ่าน Logo */
+        @keyframes fadeInLogo { from { opacity: 0; transform: translateY(-10px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes spin360 { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
         .logo-glow::after {
             content: ""; position: absolute; top: 0; left: -75%; width: 50%; height: 100%;
             background: linear-gradient(120deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
-            transform: skewX(-25deg); animation: shine 3s ease-in-out infinite;
-            pointer-events: none;
+            transform: skewX(-25deg); animation: shine 3s ease-in-out infinite; pointer-events: none;
         }
-        @keyframes shine {
-            0% { left: -75%; opacity: 0; }
-            40% { left: 100%; opacity: 0.6; }
-            100% { left: 100%; opacity: 0; }
-        }
-
-        /* 3. ระบบเลื่อนอัตโนมัติ */
+        @keyframes shine { 0% { left: -75%; opacity: 0; } 40% { left: 100%; opacity: 0.6; } 100% { left: 100%; opacity: 0; } }
         .scroll-container { display: flex; flex-direction: column; animation: scrollUp 15s linear infinite; }
         .scroll-container:hover { animation-play-state: paused; } 
         @keyframes scrollUp { 0% { transform: translateY(0); } 100% { transform: translateY(-50%); } }
         .list-window { overflow: hidden; position: relative; }
-
-        /* 4. ปรับแต่ง Navbar และ UI ส่วนต่างๆ */
         nav { background-color: #25282c !important; border-bottom: 1px solid #334155; }
         .tab-inactive { color: #94a3b8 !important; }
         .custom-scrollbar::-webkit-scrollbar { width: 0px; }
@@ -57,16 +36,13 @@
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-4">
                 <div class="logo-wrapper logo-glow">
-                    <img src="https://lh3.googleusercontent.com/d/1rlAx7j8TDQBCnqrBts_mzs75U1U1aYy3" 
-                         alt="Logo" 
-                         class="logo-fade logo-spin w-14 h-14 object-contain rounded-xl">
+                    <img src="https://lh3.googleusercontent.com/d/1rlAx7j8TDQBCnqrBts_mzs75U1U1aYy3" alt="Logo" class="logo-fade logo-spin w-14 h-14 object-contain rounded-xl">
                 </div>
                 <div class="flex flex-col">
                     <span class="text-blue-400 font-bold text-2xl tracking-tight">THAISIAM INKJET</span>
                     <span class="text-slate-500 text-[10px] uppercase tracking-[0.2em] font-medium">Professional Attendance Recording Systems</span>
                 </div>
             </div>
-            
             <div class="flex bg-slate-800 p-1 rounded-2xl border border-slate-700 shadow-inner">
                 <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-5 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-md transition-all">Dashboard</button>
                 <button onclick="switchTab('scan')" id="tab-scan" class="px-5 py-2 rounded-xl text-sm font-medium tab-inactive transition-all">สแกนบันทึกเวลา</button>
@@ -81,38 +57,28 @@
                 <h2 class="text-lg font-bold text-slate-200">สรุปการเข้างานประจำวัน</h2>
                 <input type="date" id="dashboard-date" onchange="renderDashboard()" class="bg-slate-800 px-3 py-1.5 rounded-xl shadow-sm border border-slate-600 text-sm font-bold text-white outline-none">
             </div>
-
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div class="bg-white p-3 rounded-2xl border-b-4 border-emerald-500 shadow-xl"><span class="text-slate-400 font-bold text-[10px] uppercase">มาปกติ</span><p id="stat-present" class="text-2xl font-black text-emerald-600">0</p></div>
                 <div class="bg-white p-3 rounded-2xl border-b-4 border-amber-500 shadow-xl"><span class="text-slate-400 font-bold text-[10px] uppercase">มาสาย</span><p id="stat-late" class="text-2xl font-black text-amber-600">0</p></div>
                 <div class="bg-white p-3 rounded-2xl border-b-4 border-blue-500 shadow-xl"><span class="text-slate-400 font-bold text-[10px] uppercase">สแกนออก</span><p id="stat-out" class="text-2xl font-black text-blue-600">0</p></div>
                 <div class="bg-white p-3 rounded-2xl border-b-4 border-rose-500 shadow-xl"><span class="text-slate-400 font-bold text-[10px] uppercase">ยังไม่สแกน</span><p id="stat-absent" class="text-2xl font-black text-rose-600">0</p></div>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[520px]">
                     <div class="p-3 bg-emerald-50 border-b font-bold text-emerald-700 text-xs flex items-center"><i data-lucide="check-circle" class="w-4 h-4 mr-2"></i> มาปกติ (IN)</div>
-                    <div class="list-window flex-grow bg-slate-50">
-                        <div id="normal-list" class="p-2 space-y-1"></div>
-                    </div>
+                    <div class="list-window flex-grow bg-slate-50"><div id="normal-list" class="p-2 space-y-1"></div></div>
                 </div>
                 <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[520px]">
                     <div class="p-3 bg-amber-50 border-b font-bold text-amber-700 text-xs flex items-center"><i data-lucide="clock" class="w-4 h-4 mr-2"></i> มาสาย (IN)</div>
-                    <div class="list-window flex-grow bg-slate-50">
-                        <div id="late-list-display" class="p-2 space-y-1"></div>
-                    </div>
+                    <div class="list-window flex-grow bg-slate-50"><div id="late-list-display" class="p-2 space-y-1"></div></div>
                 </div>
                 <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[520px]">
                     <div class="p-3 bg-blue-50 border-b font-bold text-blue-700 text-xs flex items-center"><i data-lucide="log-out" class="w-4 h-4 mr-2"></i> สแกนออก (OUT)</div>
-                    <div class="list-window flex-grow bg-slate-50">
-                        <div id="out-list" class="p-2 space-y-1"></div>
-                    </div>
+                    <div class="list-window flex-grow bg-slate-50"><div id="out-list" class="p-2 space-y-1"></div></div>
                 </div>
                 <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[520px]">
                     <div class="p-3 bg-rose-50 border-b font-bold text-rose-700 text-xs flex items-center"><i data-lucide="user-minus" class="w-4 h-4 mr-2"></i> ยังไม่สแกน</div>
-                    <div class="list-window flex-grow bg-slate-50">
-                        <div id="absent-list" class="p-2 space-y-1"></div>
-                    </div>
+                    <div class="list-window flex-grow bg-slate-50"><div id="absent-list" class="p-2 space-y-1"></div></div>
                 </div>
             </div>
         </div>
@@ -194,36 +160,24 @@
     let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
 
-window.onload = async () => {
+    window.onload = async () => {
         lucide.createIcons();
         document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
-        
-        // ดึงข้อมูลครั้งแรก และโหลดระบบ Face API
         await loadAllData(); 
         await initFaceAPI(); 
 
-        // --- ส่วนที่เพิ่มใหม่: สั่งให้ Update ข้อมูลอัตโนมัติ ---
         setInterval(async () => {
-            console.log("Checking for updates from Google Sheets...");
-            const aRes = await apiCall({action: 'getAttendance'}); // ดึงเฉพาะข้อมูลการลงเวลาใหม่
+            const aRes = await apiCall({action: 'getAttendance'});
             if(aRes.success) {
-                attendance = aRes.data; // อัปเดตตัวแปร attendance ในเครื่อง
-                renderDashboard();      // สั่งให้หน้าจอวาดรายการใหม่ทันที
-                console.log("Dashboard Updated!");
+                attendance = aRes.data;
+                renderDashboard();
             }
-        }, 30000); // 30000 คือ 30 วินาที (ปรับลดได้ตามต้องการ เช่น 10000 คือ 10 วินาที)
-        // ----------------------------------------------
+        }, 30000);
     };
 
     async function apiCall(p) {
-        try { 
-            const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); 
-            return await r.json(); 
-        } 
-        catch(e) { 
-            console.error("API Call Error:", e); 
-            return {success:false}; 
-        }
+        try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
+        catch(e) { console.error("API Call Error:", e); return {success:false}; }
     }
 
     async function loadAllData() {
@@ -246,29 +200,38 @@ window.onload = async () => {
             if (s.imagedatabase64) {
                 try {
                     const img = await faceapi.fetchImage(s.imagedatabase64);
+                    // ปรับแต่งการตรวจจับรูปในฐานข้อมูลให้เบาลง
                     const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
                     if (det) labeled.push(new faceapi.LabeledFaceDescriptors(String(s.studentid), [det.descriptor]));
                 } catch(e) {}
             }
         }
-        if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.45);
+        // ปรับ Threshold เป็น 0.6 เพื่อให้ Matching ง่ายและเร็วขึ้น
+        if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.6);
     }
 
     async function startDetector() {
         const v = document.getElementById('video'), o = document.getElementById('overlay');
         const dim = { width: v.clientWidth, height: v.clientHeight };
         faceapi.matchDimensions(o, dim);
+
         setInterval(async () => {
             if(v.paused || v.ended) return;
-            const dets = await faceapi.detectAllFaces(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
+
+            // ปรับแต่ง TinyFaceDetectorOptions: inputSize 160 ทำให้เร็วขึ้นมาก
+            const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
+            const dets = await faceapi.detectAllFaces(v, options).withFaceLandmarks().withFaceDescriptors();
+            
             const resized = faceapi.resizeResults(dets, dim);
             o.getContext('2d').clearRect(0,0,o.width,o.height);
             faceapi.draw.drawDetections(o, resized);
+
             if(faceMatcher && dets.length > 0) {
                 dets.forEach(d => {
                     const match = faceMatcher.findBestMatch(d.descriptor);
                     const s = students.find(x => String(x.studentid) === match.label);
-                    if(s && match.distance < 0.45 && !scanned.has(s.studentid)) {
+                    // match.distance < 0.6 คือค่าความแม่นยำที่สมดุลกับความเร็ว
+                    if(s && match.distance < 0.6 && !scanned.has(s.studentid)) {
                         scanned.set(s.studentid, s);
                         document.getElementById('res-name').innerText = s.name;
                         document.getElementById('res-id').innerText = `ID: ${s.studentid}`;
@@ -280,50 +243,28 @@ window.onload = async () => {
                     }
                 });
             }
-        }, 500);
+        }, 200); // ปรับเวลาเป็น 200ms เพื่อให้ตรวจจับใบหน้าถี่ขึ้น (เร็วขึ้น)
     }
 
     function renderDashboard() {
         const dateInput = document.getElementById('dashboard-date').value;
         const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
         const checkedInIds = new Set(daily.filter(a => a.type === 'IN' || !a.type).map(a => String(a.id)));
-
         const counts = { in: 0, late: 0, out: 0 };
-        const lists = { 
-            norm: document.getElementById('normal-list'), 
-            late: document.getElementById('late-list-display'), 
-            out: document.getElementById('out-list'), 
-            abs: document.getElementById('absent-list') 
-        };
+        const lists = { norm: document.getElementById('normal-list'), late: document.getElementById('late-list-display'), out: document.getElementById('out-list'), abs: document.getElementById('absent-list') };
 
-        Object.values(lists).forEach(l => {
-            l.innerHTML = '';
-            l.classList.remove('scroll-container');
-        });
+        Object.values(lists).forEach(l => { l.innerHTML = ''; l.classList.remove('scroll-container'); });
 
         const createItem = (a, s) => {
             const time = a.timestamp.split(' ')[1] || '';
-            let mapBtn = '';
-            if (a.location && a.location !== "THAISIAM Office") {
-                mapBtn = `<a href="https://maps.google.com/?q=${a.location}" target="_blank" class="text-rose-500 hover:scale-125 transition-transform">
-                            <i data-lucide="map-pin" class="w-4 h-4"></i>
-                          </a>`;
-            }
+            let mapBtn = (a.location && a.location !== "THAISIAM Office") ? `<a href="https://www.google.com/maps?q=${a.location}" target="_blank" class="text-rose-500 hover:scale-125 transition-transform"><i data-lucide="map-pin" class="w-4 h-4"></i></a>` : '';
             return `
             <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-1">
                 <div class="flex items-center gap-2">
                     <img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border">
-                    <div>
-                        <p class="font-bold text-slate-700 text-[11px]">${a.name}</p>
-                        <p class="text-[9px] text-slate-400 font-mono">${time} น.</p>
-                    </div>
+                    <div><p class="font-bold text-slate-700 text-[11px]">${a.name}</p><p class="text-[9px] text-slate-400 font-mono">${time} น.</p></div>
                 </div>
-                <div class="flex items-center gap-2">
-                    ${mapBtn}
-                    <span class="px-2 py-0.5 text-[9px] rounded-full font-bold ${a.type==='OUT'?'bg-blue-100 text-blue-600':(a.status==='สาย'?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">
-                        ${a.type==='OUT'?'ออก':a.status}
-                    </span>
-                </div>
+                <div class="flex items-center gap-2">${mapBtn}<span class="px-2 py-0.5 text-[9px] rounded-full font-bold ${a.type==='OUT'?'bg-blue-100 text-blue-600':(a.status==='สาย'?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">${a.type==='OUT'?'ออก':a.status}</span></div>
             </div>`;
         };
 
@@ -334,33 +275,22 @@ window.onload = async () => {
             else { lists.norm.innerHTML += createItem(a, s); counts.in++; }
         });
 
-        // รายชื่อคนที่ยังไม่สแกน: ปรับให้คมชัดด้วยสีขาวทึบและตัวหนังสือสีเทาเข้ม
         students.forEach(s => {
             if(!checkedInIds.has(String(s.studentid))) {
                 lists.abs.innerHTML += `
                 <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-1">
                     <div class="flex items-center gap-2">
                         <img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border">
-                        <div>
-                            <p class="font-bold text-slate-600 text-[11px]">${s.name}</p>
-                            <p class="text-[9px] text-slate-400 font-mono">ยังไม่บันทึก</p>
-                        </div>
+                        <div><p class="font-bold text-slate-600 text-[11px]">${s.name}</p><p class="text-[9px] text-slate-400 font-mono">ยังไม่บันทึก</p></div>
                     </div>
-                    <span class="px-2 py-0.5 text-[9px] rounded-full font-bold bg-slate-100 text-slate-400">
-                        WAITING
-                    </span>
+                    <span class="px-2 py-0.5 text-[9px] rounded-full font-bold bg-slate-100 text-slate-400">WAITING</span>
                 </div>`;
             }
         });
 
-        // จัดการระบบเลื่อนอัตโนมัติ
         Object.keys(lists).forEach(key => {
             const container = lists[key];
-            const itemsCount = container.children.length;
-            if (itemsCount > 8) {
-                container.innerHTML += container.innerHTML; 
-                container.classList.add('scroll-container');
-            }
+            if (container.children.length > 8) { container.innerHTML += container.innerHTML; container.classList.add('scroll-container'); }
         });
 
         document.getElementById('stat-present').innerText = counts.in;
@@ -433,26 +363,12 @@ window.onload = async () => {
         } else alert("รหัสผ่านไม่ถูกต้อง");
     }
     function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
-    
-    function startModalCamera() { 
-        startCamera('modal-video'); 
-        document.getElementById('modal-video').classList.remove('hidden'); 
-        document.getElementById('preview-img').classList.add('hidden'); 
-        document.getElementById('btn-snap').classList.remove('hidden');
-        document.getElementById('modal-file').value = ''; 
-    }
+    function startModalCamera() { startCamera('modal-video'); document.getElementById('modal-video').classList.remove('hidden'); document.getElementById('preview-img').classList.add('hidden'); document.getElementById('btn-snap').classList.remove('hidden'); document.getElementById('modal-file').value = ''; }
     function handleFileUpload(event) {
         const file = event.target.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = (e) => {
-                capturedImg = e.target.result;
-                document.getElementById('preview-img').src = capturedImg;
-                document.getElementById('preview-img').classList.remove('hidden');
-                document.getElementById('modal-video').classList.add('hidden');
-                stopCamera('modal-video');
-                document.getElementById('btn-snap').classList.add('hidden');
-            };
+            reader.onload = (e) => { capturedImg = e.target.result; document.getElementById('preview-img').src = capturedImg; document.getElementById('preview-img').classList.remove('hidden'); document.getElementById('modal-video').classList.add('hidden'); stopCamera('modal-video'); document.getElementById('btn-snap').classList.add('hidden'); };
             reader.readAsDataURL(file);
         }
     }
@@ -460,10 +376,7 @@ window.onload = async () => {
         const v = document.getElementById('modal-video'), c = document.getElementById('capture-canvas');
         c.width = 400; c.height = 400; c.getContext('2d').drawImage(v, 0, 0, 400, 400);
         capturedImg = c.toDataURL('image/jpeg', 0.8);
-        document.getElementById('preview-img').src = capturedImg;
-        document.getElementById('preview-img').classList.remove('hidden');
-        v.classList.add('hidden'); stopCamera('modal-video');
-        document.getElementById('btn-snap').classList.add('hidden');
+        document.getElementById('preview-img').src = capturedImg; document.getElementById('preview-img').classList.remove('hidden'); v.classList.add('hidden'); stopCamera('modal-video'); document.getElementById('btn-snap').classList.add('hidden');
     }
     async function saveStudent() {
         const id = document.getElementById('modal-id').value, name = document.getElementById('modal-name').value, cls = document.getElementById('modal-class').value;
