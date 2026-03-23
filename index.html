@@ -10,13 +10,27 @@
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Kanit', sans-serif; background-color: #f1f5f9; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        /* ซ่อน scrollbar เพื่อความสวยงามแบบในวิดีโอ */
+        .custom-scrollbar::-webkit-scrollbar { width: 0px; } 
+        
         .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; }
         .logo-spin { animation: spin360 8s linear infinite; transform-style: preserve-3d; }
         @keyframes spin360 { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
         .logo-fade { animation: fadeInLogo 1.2s ease forwards; }
         @keyframes fadeInLogo { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* CSS สำหรับระบบเลื่อนอัตโนมัติ (Auto-scroll) */
+        .scroll-container {
+            display: flex;
+            flex-direction: column;
+            animation: scrollUp 20s linear infinite;
+        }
+        .scroll-container:hover { animation-play-state: paused; } /* หยุดเลื่อนเมื่อเอาเมาส์วาง */
+
+        @keyframes scrollUp {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-50%); } /* เลื่อนขึ้นครึ่งหนึ่งของเนื้อหาที่ถูกเบิ้ลไว้ */
+        }
     </style>
 </head>
 <body class="bg-slate-50">
@@ -221,27 +235,78 @@
         }, 500);
     }
 
+    // --- ฟังก์ชัน Dashboard แบบอัปเดตใหม่ (มีปุ่ม Google Maps และ Auto-scroll) ---
     function renderDashboard() {
         const dateInput = document.getElementById('dashboard-date').value;
         const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
         const checkedInIds = new Set(daily.filter(a => a.type === 'IN' || !a.type).map(a => String(a.id)));
 
         const counts = { in: 0, late: 0, out: 0 };
-        const lists = { norm: document.getElementById('normal-list'), late: document.getElementById('late-list-display'), out: document.getElementById('out-list'), abs: document.getElementById('absent-list') };
-        Object.values(lists).forEach(l => l.innerHTML = '');
+        const lists = { 
+            norm: document.getElementById('normal-list'), 
+            late: document.getElementById('late-list-display'), 
+            out: document.getElementById('out-list'), 
+            abs: document.getElementById('absent-list') 
+        };
+
+        // ล้างข้อมูลเก่าและเอา Class เลื่อนออกก่อน
+        Object.values(lists).forEach(l => {
+            l.innerHTML = '';
+            l.classList.remove('scroll-container');
+        });
+
+        // ฟังก์ชันสร้าง Item ภายใน Dashboard
+        const createItem = (a, s) => {
+            const time = a.timestamp.split(' ')[1] || '';
+            let mapBtn = '';
+            // ถ้ามี Location (และไม่ใช่ค่าเริ่มต้น) ให้แสดงปุ่มปักหมุด
+            if (a.location && a.location !== "THAISIAM Office") {
+                mapBtn = `<a href="https://www.google.com/maps/search/?api=1&query=${a.location}" target="_blank" class="text-rose-500 hover:scale-125 transition-transform">
+                            <i data-lucide="map-pin" class="w-4 h-4"></i>
+                          </a>`;
+            }
+
+            return `
+            <div class="flex items-center justify-between bg-white p-2 rounded-xl border shadow-sm mb-1">
+                <div class="flex items-center gap-2">
+                    <img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border">
+                    <div>
+                        <p class="font-bold text-slate-700 text-[11px]">${a.name}</p>
+                        <p class="text-[9px] text-slate-400 font-mono">${time} น.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    ${mapBtn}
+                    <span class="px-2 py-0.5 text-[9px] rounded-full font-bold ${a.type==='OUT'?'bg-blue-100 text-blue-600':(a.status==='สาย'?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">
+                        ${a.type==='OUT'?'ออก':a.status}
+                    </span>
+                </div>
+            </div>`;
+        };
 
         daily.forEach(a => {
             const s = students.find(x => String(x.studentid) === String(a.id));
-            const time = a.timestamp.split(' ')[1] || '';
-            const itemHtml = `<div class="flex items-center justify-between bg-white p-2 rounded-xl border shadow-sm mb-1"><div class="flex items-center gap-2"><img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border"><div><p class="font-bold text-slate-700 text-xs">${a.name}</p><p class="text-[10px] text-slate-400 font-mono">${time} น.</p></div></div><span class="px-2 py-0.5 text-[9px] rounded-full font-bold ${a.type==='OUT'?'bg-blue-100 text-blue-600':(a.status==='สาย'?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">${a.type==='OUT'?'ออก':a.status}</span></div>`;
-            if (a.type === 'OUT') { lists.out.innerHTML += itemHtml; counts.out++; }
-            else if (a.status === 'สาย') { lists.late.innerHTML += itemHtml; counts.late++; }
-            else { lists.norm.innerHTML += itemHtml; counts.in++; }
+            if (a.type === 'OUT') { lists.out.innerHTML += createItem(a, s); counts.out++; }
+            else if (a.status === 'สาย') { lists.late.innerHTML += createItem(a, s); counts.late++; }
+            else { lists.norm.innerHTML += createItem(a, s); counts.in++; }
         });
 
         students.forEach(s => {
             if(!checkedInIds.has(String(s.studentid))) {
-                lists.abs.innerHTML += `<div class="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-dashed mb-1 opacity-60"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover"><p class="font-bold text-slate-500 text-xs">${s.name}</p></div>`;
+                lists.abs.innerHTML += `
+                <div class="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-dashed mb-1 opacity-60">
+                    <img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover">
+                    <p class="font-bold text-slate-500 text-[11px]">${s.name}</p>
+                </div>`;
+            }
+        });
+
+        // เปิดใช้งานระบบเลื่อนอัตโนมัติถ้าข้อมูลเกิน 8 แถว
+        Object.keys(lists).forEach(key => {
+            const container = lists[key];
+            if (container.children.length > 8) {
+                container.innerHTML += container.innerHTML; // เบิ้ลเนื้อหาเพื่อให้เลื่อนแบบ Infinite Loop
+                container.classList.add('scroll-container');
             }
         });
 
