@@ -194,16 +194,36 @@
     let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
 
-    window.onload = async () => {
+window.onload = async () => {
         lucide.createIcons();
         document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
+        
+        // ดึงข้อมูลครั้งแรก และโหลดระบบ Face API
         await loadAllData(); 
         await initFaceAPI(); 
+
+        // --- ส่วนที่เพิ่มใหม่: สั่งให้ Update ข้อมูลอัตโนมัติ ---
+        setInterval(async () => {
+            console.log("Checking for updates from Google Sheets...");
+            const aRes = await apiCall({action: 'getAttendance'}); // ดึงเฉพาะข้อมูลการลงเวลาใหม่
+            if(aRes.success) {
+                attendance = aRes.data; // อัปเดตตัวแปร attendance ในเครื่อง
+                renderDashboard();      // สั่งให้หน้าจอวาดรายการใหม่ทันที
+                console.log("Dashboard Updated!");
+            }
+        }, 30000); // 30000 คือ 30 วินาที (ปรับลดได้ตามต้องการ เช่น 10000 คือ 10 วินาที)
+        // ----------------------------------------------
     };
 
     async function apiCall(p) {
-        try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
-        catch(e) { console.error("API Call Error:", e); return {success:false}; }
+        try { 
+            const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); 
+            return await r.json(); 
+        } 
+        catch(e) { 
+            console.error("API Call Error:", e); 
+            return {success:false}; 
+        }
     }
 
     async function loadAllData() {
