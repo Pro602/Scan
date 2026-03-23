@@ -9,53 +9,61 @@
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        /* ปรับพื้นหลังหลักให้เป็นโทนเข้มเพื่อให้รายงานดูเด่นชัด */
+        /* 1. ปรับพื้นหลังหลักเป็นโทนเข้มตามที่ต้องการ */
         body { font-family: 'Kanit', sans-serif; background-color: #1a1c1e; color: #f8fafc; }
         
-        /* ซ่อน scrollbar */
-        .custom-scrollbar::-webkit-scrollbar { width: 0px; } 
-        
-        .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; }
+        /* 2. CSS สำหรับ LOGO หมุนและแสงเงา (ดึงจากชุดบนที่เคยใช้) */
+        .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; overflow: hidden; border-radius: 0.75rem; }
+        .logo-fade { animation: fadeInLogo 1.2s ease forwards; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)); }
         .logo-spin { animation: spin360 8s linear infinite; transform-style: preserve-3d; }
-        @keyframes spin360 { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
-        .logo-fade { animation: fadeInLogo 1.2s ease forwards; }
-        @keyframes fadeInLogo { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* --- CSS สำหรับระบบเลื่อนอัตโนมัติ --- */
-        .scroll-container {
-            display: flex;
-            flex-direction: column;
-            animation: scrollUp 15s linear infinite;
+        
+        @keyframes fadeInLogo {
+            from { opacity: 0; transform: translateY(-10px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes spin360 {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(360deg); }
         }
         
+        /* เอฟเฟกต์แสงวิ่งผ่าน Logo */
+        .logo-glow::after {
+            content: ""; position: absolute; top: 0; left: -75%; width: 50%; height: 100%;
+            background: linear-gradient(120deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
+            transform: skewX(-25deg); animation: shine 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes shine {
+            0% { left: -75%; opacity: 0; }
+            40% { left: 100%; opacity: 0.6; }
+            100% { left: 100%; opacity: 0; }
+        }
+
+        /* 3. ระบบเลื่อนอัตโนมัติ */
+        .scroll-container { display: flex; flex-direction: column; animation: scrollUp 15s linear infinite; }
         .scroll-container:hover { animation-play-state: paused; } 
+        @keyframes scrollUp { 0% { transform: translateY(0); } 100% { transform: translateY(-50%); } }
+        .list-window { overflow: hidden; position: relative; }
 
-        @keyframes scrollUp {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(-50%); } 
-        }
-
-        .list-window {
-            overflow: hidden;
-            position: relative;
-        }
-
-        /* ปรับแต่ง Navbar ให้ออกโทนเข้มเข้ากับพื้นหลัง */
+        /* 4. ปรับแต่ง Navbar และ UI ส่วนต่างๆ */
         nav { background-color: #25282c !important; border-bottom: 1px solid #334155; }
         .tab-inactive { color: #94a3b8 !important; }
+        .custom-scrollbar::-webkit-scrollbar { width: 0px; }
     </style>
 </head>
 <body>
 
-<nav class="shadow-lg sticky top-0 z-50 p-3">
+    <nav class="shadow-lg sticky top-0 z-50 p-3">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-4">
-                <div class="logo-wrapper">
-                    <img src="https://lh3.googleusercontent.com/d/1rlAx7j8TDQBCnqrBts_mzs75U1U1aYy3" alt="Logo" class="logo-fade logo-spin w-12 h-12 object-contain rounded-xl">
+                <div class="logo-wrapper logo-glow">
+                    <img src="https://lh3.googleusercontent.com/d/1rlAx7j8TDQBCnqrBts_mzs75U1U1aYy3" 
+                         alt="Logo" 
+                         class="logo-fade logo-spin w-14 h-14 object-contain rounded-xl">
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-blue-400 font-bold text-xl tracking-tight">THAISIAM INKJET</span>
-                    <span class="text-slate-500 text-[9px] uppercase font-medium tracking-widest">Professional Attendance Recording Systems</span>
+                    <span class="text-blue-400 font-bold text-2xl tracking-tight">THAISIAM INKJET</span>
+                    <span class="text-slate-500 text-[10px] uppercase tracking-[0.2em] font-medium">Professional Attendance Recording Systems</span>
                 </div>
             </div>
             
@@ -108,7 +116,7 @@
                 </div>
             </div>
         </div>
-
+        
         <div id="content-scan" class="hidden">
             <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200">
                 <div class="relative aspect-video bg-slate-900 rounded-2xl overflow-hidden mb-4 border-4 border-slate-50 shadow-inner">
@@ -277,7 +285,7 @@
             const time = a.timestamp.split(' ')[1] || '';
             let mapBtn = '';
             if (a.location && a.location !== "THAISIAM Office") {
-                mapBtn = `<a href="https://www.google.com/maps?q=${a.location}" target="_blank" class="text-rose-500 hover:scale-125 transition-transform">
+                mapBtn = `<a href="https://maps.google.com/?q=${a.location}" target="_blank" class="text-rose-500 hover:scale-125 transition-transform">
                             <i data-lucide="map-pin" class="w-4 h-4"></i>
                           </a>`;
             }
@@ -306,7 +314,7 @@
             else { lists.norm.innerHTML += createItem(a, s); counts.in++; }
         });
 
-        // แก้ไข: ปรับให้ "ยังไม่สแกน" มีความคมชัดสูงขึ้น โดยใช้สีขาวทึบและตัดความโปร่งแสงออก
+        // รายชื่อคนที่ยังไม่สแกน: ปรับให้คมชัดด้วยสีขาวทึบและตัวหนังสือสีเทาเข้ม
         students.forEach(s => {
             if(!checkedInIds.has(String(s.studentid))) {
                 lists.abs.innerHTML += `
@@ -325,6 +333,7 @@
             }
         });
 
+        // จัดการระบบเลื่อนอัตโนมัติ
         Object.keys(lists).forEach(key => {
             const container = lists[key];
             const itemsCount = container.children.length;
