@@ -10,17 +10,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Kanit', sans-serif; background-color: #1a1c1e; color: #f8fafc; }
-        .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; overflow: hidden; border-radius: 0.75rem; }
-        .logo-fade { animation: fadeInLogo 1.2s ease forwards; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)); }
-        .logo-spin { animation: spin360 8s linear infinite; transform-style: preserve-3d; }
-        @keyframes fadeInLogo { from { opacity: 0; transform: translateY(-10px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        @keyframes spin360 { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
-        .logo-glow::after {
-            content: ""; position: absolute; top: 0; left: -75%; width: 50%; height: 100%;
-            background: linear-gradient(120deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
-            transform: skewX(-25deg); animation: shine 3s ease-in-out infinite; pointer-events: none;
-        }
-        @keyframes shine { 0% { left: -75%; opacity: 0; } 40% { left: 100%; opacity: 0.6; } 100% { left: 100%; opacity: 0; } }
         .scroll-container { display: flex; flex-direction: column; animation: scrollUp 15s linear infinite; }
         .scroll-container:hover { animation-play-state: paused; } 
         @keyframes scrollUp { 0% { transform: translateY(0); } 100% { transform: translateY(-50%); } }
@@ -34,12 +23,9 @@
     <nav class="shadow-lg sticky top-0 z-50 p-3">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-4">
-                <div class="logo-wrapper logo-glow">
-                    <img src="https://lh3.googleusercontent.com/d/1rlAx7j8TDQBCnqrBts_mzs75U1U1aYy3" alt="Logo" class="logo-fade logo-spin w-14 h-14 object-contain rounded-xl">
-                </div>
                 <div class="flex flex-col">
                     <span class="text-blue-400 font-bold text-2xl tracking-tight">THAISIAM INKJET</span>
-                    <span class="text-slate-500 text-[10px] uppercase tracking-[0.2em] font-medium">Professional Attendance Recording Systems</span>
+                    <span class="text-slate-500 text-[10px] uppercase tracking-[0.2em] font-medium">Professional Attendance Systems</span>
                 </div>
             </div>
             <div class="flex bg-slate-800 p-1 rounded-2xl border border-slate-700 shadow-inner">
@@ -56,12 +42,7 @@
                 <h2 class="text-lg font-bold text-slate-200">สรุปการเข้างานประจำวัน</h2>
                 <input type="date" id="dashboard-date" onchange="renderDashboard()" class="bg-slate-800 px-3 py-1.5 rounded-xl shadow-sm border border-slate-600 text-sm font-bold text-white outline-none">
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div class="bg-white p-3 rounded-2xl border-b-4 border-emerald-500 shadow-xl"><span class="text-slate-400 font-bold text-[10px] uppercase">มาปกติ</span><p id="stat-present" class="text-2xl font-black text-emerald-600">0</p></div>
-                <div class="bg-white p-3 rounded-2xl border-b-4 border-amber-500 shadow-xl"><span class="text-slate-400 font-bold text-[10px] uppercase">มาสาย</span><p id="stat-late" class="text-2xl font-black text-amber-600">0</p></div>
-                <div class="bg-white p-3 rounded-2xl border-b-4 border-blue-500 shadow-xl"><span class="text-slate-400 font-bold text-[10px] uppercase">สแกนออก</span><p id="stat-out" class="text-2xl font-black text-blue-600">0</p></div>
-                <div class="bg-white p-3 rounded-2xl border-b-4 border-rose-500 shadow-xl"><span class="text-slate-400 font-bold text-[10px] uppercase">ยังไม่สแกน</span><p id="stat-absent" class="text-2xl font-black text-rose-600">0</p></div>
-            </div>
+            
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[520px]">
                     <div class="p-3 bg-emerald-50 border-b font-bold text-emerald-700 text-xs flex items-center"><i data-lucide="check-circle" class="w-4 h-4 mr-2"></i> มาปกติ (IN)</div>
@@ -81,7 +62,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div id="content-scan" class="hidden">
             <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200 text-slate-800">
                 <div class="mb-4">
@@ -108,96 +89,34 @@
                 </div>
             </div>
         </div>
-
-        <div id="content-manage" class="hidden space-y-4">
-            <div class="flex justify-between items-center text-slate-200">
-                <h2 class="text-xl font-bold">รายชื่อพนักงาน</h2>
-                <button onclick="openAddModal()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-md">+ เพิ่มพนักงาน</button>
+        
+        <div id="content-manage" class="hidden">
             </div>
-            <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-                <table class="w-full text-left text-sm text-slate-800">
-                    <thead class="bg-slate-50 text-slate-400 font-bold">
-                        <tr><th class="p-4">รูป</th><th class="p-4">รหัส</th><th class="p-4">ชื่อ</th><th class="p-4">แผนก</th><th class="p-4 text-center">จัดการ</th></tr>
-                    </thead>
-                    <tbody id="student-table-body" class="divide-y divide-slate-100"></tbody>
-                </table>
-            </div>
-        </div>
     </main>
-
-    <div id="login-modal" class="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center hidden backdrop-blur-md">
-        <div class="bg-white p-8 rounded-[2rem] max-w-xs w-full shadow-2xl space-y-4 text-slate-800">
-            <h3 class="text-lg font-bold text-center">ยืนยันสิทธิ์เข้าถึง</h3>
-            <input type="text" id="login-user" placeholder="Username" class="w-full border p-3 rounded-xl outline-none text-sm focus:ring-2 ring-blue-500">
-            <input type="password" id="login-pass" placeholder="Password" class="w-full border p-3 rounded-xl outline-none text-sm focus:ring-2 ring-blue-500">
-            <button onclick="checkLogin()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700">Login</button>
-            <button onclick="closeLoginModal()" class="w-full text-slate-400 text-xs text-center">ยกเลิก</button>
-        </div>
-    </div>
-
-    <div id="student-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden backdrop-blur-sm">
-        <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full mx-4 shadow-2xl space-y-4 text-center text-slate-800">
-            <h3 class="text-xl font-bold border-b pb-3">ลงทะเบียนใหม่</h3>
-            <div class="relative w-32 h-32 bg-slate-100 rounded-2xl mx-auto overflow-hidden border-2 border-dashed border-slate-300">
-                <video id="modal-video" class="w-full h-full object-cover hidden" autoplay muted playsinline></video>
-                <img id="preview-img" class="w-full h-full object-cover">
-            </div>
-            <div class="flex justify-center space-x-2">
-                <button onclick="startModalCamera()" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[10px]">เปิดกล้อง</button>
-                <button onclick="document.getElementById('modal-file').click()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px]">อัปโหลด</button>
-                <input type="file" id="modal-file" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
-                <button id="btn-snap" onclick="snapPhoto()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[10px] hidden">ถ่ายรูป</button>
-            </div>
-            <input type="text" id="modal-id" placeholder="รหัสพนักงาน" class="w-full border p-3 rounded-xl outline-none text-sm">
-            <input type="text" id="modal-name" placeholder="ชื่อ-นามสกุล" class="w-full border p-3 rounded-xl outline-none text-sm">
-            <input type="text" id="modal-class" placeholder="แผนก" class="w-full border p-3 rounded-xl outline-none text-sm">
-            <button onclick="saveStudent()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-blue-700">บันทึกข้อมูล</button>
-            <button onclick="closeStudentModal()" class="w-full text-slate-400 text-xs">ยกเลิก</button>
-        </div>
-    </div>
-
-    <canvas id="capture-canvas" class="hidden"></canvas>
-    <audio id="snd-ok" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
 <script>
     const gasUrl = "https://script.google.com/macros/s/AKfycby9t947sFIvKCyxoLrFjLu0nNSGo95rdgFLarIfIVanE7kCKEDfglqgikUZCeFC_JAj/exec";
-    let students = [], attendance = [], locationList = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
-    let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
-    const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
+    let students = [], attendance = [], locationList = [], faceMatcher = null, scanned = new Map();
 
     window.onload = async () => {
         lucide.createIcons();
         document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
         await loadAllData(); 
         await initFaceAPI(); 
-
-        setInterval(async () => {
-            const aRes = await apiCall({action: 'getAttendance'});
-            if(aRes.success) {
-                attendance = aRes.data;
-                renderDashboard();
-            }
-        }, 30000);
     };
 
     async function apiCall(p) {
         try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
-        catch(e) { console.error("API Call Error:", e); return {success:false}; }
+        catch(e) { return {success:false}; }
     }
 
     async function loadAllData() {
         const [sRes, aRes, lRes] = await Promise.all([
-            apiCall({action:'getStudents'}), 
-            apiCall({action:'getAttendance'}),
-            apiCall({action:'getLocations'})
+            apiCall({action:'getStudents'}), apiCall({action:'getAttendance'}), apiCall({action:'getLocations'})
         ]);
         if(sRes.success) students = sRes.data;
         if(aRes.success) attendance = aRes.data;
-        if(lRes.success) {
-            locationList = lRes.data;
-            renderLocationDropdown();
-        }
-        renderStudentTable();
+        if(lRes.success) { locationList = lRes.data; renderLocationDropdown(); }
         renderDashboard();
     }
 
@@ -206,18 +125,9 @@
         select.innerHTML = '<option value="">-- เลือกสถานที่ --</option>';
         locationList.forEach((loc, index) => {
             const option = document.createElement('option');
-            option.value = index;
-            option.text = loc.name;
+            option.value = index; option.text = loc.name;
             select.appendChild(option);
         });
-    }
-
-    function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371e3;
-        const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
-        const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
-        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
     async function initFaceAPI() {
@@ -237,7 +147,8 @@
                 } catch(e) {}
             }
         }
-        if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.45);
+        // ปรับค่า Threshold จาก 0.5 เป็น 0.4 เพื่อความแม่นยำ (ยิ่งน้อยยิ่งตรวจจับเข้มงวด)
+        if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.4); 
     }
 
     async function startDetector() {
@@ -247,25 +158,19 @@
 
         setInterval(async () => {
             if(v.paused || v.ended) return;
-            const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
-            const dets = await faceapi.detectAllFaces(v, options).withFaceLandmarks().withFaceDescriptors();
-            const resized = faceapi.resizeResults(dets, dim);
-            o.getContext('2d').clearRect(0,0,o.width,o.height);
-            faceapi.draw.drawDetections(o, resized);
-
+            const dets = await faceapi.detectAllFaces(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
             if(faceMatcher && dets.length > 0) {
                 dets.forEach(d => {
                     const match = faceMatcher.findBestMatch(d.descriptor);
                     const s = students.find(x => String(x.studentid) === match.label);
-                    if(s && match.distance < 0.45 && !scanned.has(s.studentid)) {
+                    // ตรวจสอบค่าความแม่นยำที่เข้มงวดขึ้น
+                    if(s && match.distance < 0.4 && !scanned.has(s.studentid)) {
                         scanned.set(s.studentid, s);
                         document.getElementById('res-name').innerText = s.name;
                         document.getElementById('res-id').innerText = `ID: ${s.studentid}`;
                         document.getElementById('res-img').src = s.imagedatabase64;
                         document.getElementById('res-img').classList.remove('hidden');
                         document.getElementById('res-img-placeholder').classList.add('hidden');
-                        document.getElementById('snd-ok').play();
-                        speak(`สแกนสำเร็จ คุณ${s.name}`);
                     }
                 });
             }
@@ -275,25 +180,27 @@
     function renderDashboard() {
         const dateInput = document.getElementById('dashboard-date').value;
         const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
-        const checkedInIds = new Set(daily.filter(a => a.type === 'IN' || !a.type).map(a => String(a.id)));
-        const counts = { in: 0, late: 0, out: 0 };
+        const checkedInIds = new Set(daily.map(a => String(a.id)));
         const lists = { norm: document.getElementById('normal-list'), late: document.getElementById('late-list-display'), out: document.getElementById('out-list'), abs: document.getElementById('absent-list') };
 
         Object.values(lists).forEach(l => { l.innerHTML = ''; l.classList.remove('scroll-container'); });
 
         const createItem = (a, s) => {
             const time = a.timestamp.split(' ')[1] || '';
-            // แสดง Location Name แทนพิกัด และแสดงไอคอนปักหมุดสีแดงทุกกรณี
             const locationDisplay = a.location_name || a.location || '';
-            const mapUrl = a.location.includes(',') ? `https://www.google.com/maps?q=${a.location}` : '#';
+            const mapUrl = a.location && a.location.includes(',') ? `https://www.google.com/maps?q=${a.location}` : '#';
             
+            // แก้ไขการแสดงผล LocationName ให้อยู่ใต้เวลา (ใช้ class block)
             return `
             <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-1">
                 <div class="flex items-center gap-2">
                     <img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border">
                     <div>
                         <p class="font-bold text-slate-700 text-[11px]">${a.name}</p>
-                        <p class="text-[9px] text-slate-400 font-mono">${time} น. (${locationDisplay})</p>
+                        <p class="text-[9px] text-slate-400 font-mono">
+                            ${time} น.
+                            <span class="block text-blue-500 font-medium">(${locationDisplay})</span>
+                        </p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -309,33 +216,17 @@
 
         daily.forEach(a => {
             const s = students.find(x => String(x.studentid) === String(a.id));
-            if (a.type === 'OUT') { lists.out.innerHTML += createItem(a, s); counts.out++; }
-            else if (a.status === 'สาย') { lists.late.innerHTML += createItem(a, s); counts.late++; }
-            else { lists.norm.innerHTML += createItem(a, s); counts.in++; }
+            if (a.type === 'OUT') lists.out.innerHTML += createItem(a, s);
+            else if (a.status === 'สาย') lists.late.innerHTML += createItem(a, s);
+            else lists.norm.innerHTML += createItem(a, s);
         });
 
         students.forEach(s => {
             if(!checkedInIds.has(String(s.studentid))) {
-                lists.abs.innerHTML += `
-                <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-1">
-                    <div class="flex items-center gap-2">
-                        <img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border">
-                        <div><p class="font-bold text-slate-600 text-[11px]">${s.name}</p><p class="text-[9px] text-blue-500 font-medium">${s.class || '-'}</p></div>
-                    </div>
-                    <span class="px-2 py-0.5 text-[9px] rounded-full font-bold bg-slate-100 text-slate-400">WAITING</span>
-                </div>`;
+                lists.abs.innerHTML += `<div class="p-2 bg-white rounded-lg border text-[11px] font-bold text-slate-400">${s.name} (ยังไม่บันทึก)</div>`;
             }
         });
 
-        Object.keys(lists).forEach(key => {
-            const container = lists[key];
-            if (container.children.length > 8) { container.innerHTML += container.innerHTML; container.classList.add('scroll-container'); }
-        });
-
-        document.getElementById('stat-present').innerText = counts.in;
-        document.getElementById('stat-late').innerText = counts.late;
-        document.getElementById('stat-out').innerText = counts.out;
-        document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedInIds.size);
         lucide.createIcons();
     }
 
@@ -344,38 +235,13 @@
         const select = document.getElementById('location-select');
         if (select.value === "") return alert("โปรดเลือกสถานที่ปฏิบัติงาน");
 
-        const btnIn = document.getElementById('btn-in'), btnOut = document.getElementById('btn-out');
-        btnIn.disabled = true; btnOut.disabled = true;
-
         const selectedLoc = locationList[select.value];
         let gpsLocation = "";
-        let finalLocationName = selectedLoc.name;
 
-        if (selectedLoc.name !== "ทำงานนอกสถานที่") {
-            try {
-                const pos = await new Promise((res, rej) => { 
-                    navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 }); 
-                });
-                const distance = getDistance(pos.coords.latitude, pos.coords.longitude, selectedLoc.lat, selectedLoc.lng);
-
-                if (distance > selectedLoc.radius) {
-                    alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร`);
-                    btnIn.disabled = false; btnOut.disabled = false;
-                    return;
-                }
-                gpsLocation = `${pos.coords.latitude},${pos.coords.longitude}`;
-            } catch (err) {
-                alert("ไม่สามารถเข้าถึงพิกัด GPS ได้");
-                btnIn.disabled = false; btnOut.disabled = false;
-                return;
-            }
-        } else {
-            // กรณีทำงานนอกสถานที่ พยายามดึงพิกัดเพื่อปักหมุด แต่ถ้าไม่ได้ก็บันทึกแค่ชื่อ
-            try {
-                const pos = await new Promise((res) => { navigator.geolocation.getCurrentPosition(res, null, {timeout: 3000}); });
-                gpsLocation = `${pos.coords.latitude},${pos.coords.longitude}`;
-            } catch (e) { gpsLocation = "ทำงานนอกสถานที่"; }
-        }
+        try {
+            const pos = await new Promise((res, rej) => { navigator.geolocation.getCurrentPosition(res, rej, { timeout: 10000 }); });
+            gpsLocation = `${pos.coords.latitude},${pos.coords.longitude}`;
+        } catch (err) { gpsLocation = "ทำงานนอกสถานที่"; }
 
         const now = new Date();
         const timestamp = now.toISOString().slice(0, 10) + " " + now.toTimeString().split(' ')[0];
@@ -383,83 +249,24 @@
         
         const attendanceData = Array.from(scanned.values()).map(s => ({
             id: String(s.studentid), name: String(s.name), class: String(s.class || "-"),
-            timestamp: timestamp, 
-            location: gpsLocation, 
-            location_name: finalLocationName, // ส่งชื่อสถานที่ไปด้วย
+            timestamp: timestamp, location: gpsLocation, location_name: selectedLoc.name,
             status: isLate ? 'สาย' : (type==='OUT'?'ออกงาน':'มาปกติ'), type: type
         }));
 
         const res = await apiCall({ action: 'recordAttendanceUpdate', data: attendanceData });
-        if (res.success) { alert(`บันทึก${type==='IN'?'เข้างาน':'ออกงาน'}สำเร็จ!`); location.reload(); }
-        else { alert("บันทึกล้มเหลว"); btnIn.disabled = false; btnOut.disabled = false; }
+        if (res.success) { alert(`บันทึก${type}สำเร็จ!`); location.reload(); }
     }
 
     function switchTab(tab) {
         document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
         document.getElementById(`content-${tab}`).classList.remove('hidden');
-        document.querySelectorAll('nav button').forEach(btn => {
-            btn.classList.remove('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
-            btn.classList.add('tab-inactive');
-        });
-        const activeTab = document.getElementById(`tab-${tab}`);
-        activeTab.classList.add('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
-        activeTab.classList.remove('tab-inactive');
         if (tab === 'scan') { startCamera('video'); setTimeout(startDetector, 1000); } 
-        else { stopCamera('video'); }
     }
 
     async function startCamera(id) {
         try { const v = document.getElementById(id); v.srcObject = await navigator.mediaDevices.getUserMedia({video:true}); } 
-        catch(e) { alert("Camera Error: โปรดอนุญาตให้เข้าถึงกล้อง"); }
+        catch(e) { alert("Camera Error"); }
     }
-    function stopCamera(id) { const v = document.getElementById(id); if(v?.srcObject) v.srcObject.getTracks().forEach(t => t.stop()); }
-    function speak(t) { const m = new SpeechSynthesisUtterance(t); m.lang = 'th-TH'; window.speechSynthesis.speak(m); }
-
-    function renderStudentTable() {
-        document.getElementById('student-table-body').innerHTML = students.map(s => `<tr><td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td><td class="p-4 font-mono text-xs">${s.studentid}</td><td class="p-4 font-bold text-slate-700">${s.name}</td><td class="p-4 text-xs text-slate-400">${s.class || '-'}</td><td class="p-4 text-center"><button onclick="deleteStudent(${s.rowIndex})" class="text-rose-500 hover:scale-125 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td></tr>`).join('');
-        lucide.createIcons();
-    }
-
-    function openAddModal() { if (!isLoggedIn) { pendingAction = 'add'; document.getElementById('login-modal').classList.remove('hidden'); } else { document.getElementById('student-modal').classList.remove('hidden'); } }
-    function deleteStudent(i) { if (!isLoggedIn) { pendingAction = 'delete'; pendingDeleteIndex = i; document.getElementById('login-modal').classList.remove('hidden'); } else { executeDelete(i); } }
-    async function executeDelete(i) { if (confirm("ยืนยันการลบรายชื่อ?")) { await apiCall({action: 'deleteStudent', data: {rowIndex: i}}); location.reload(); } }
-    
-    function checkLogin() {
-        const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value;
-        if (AUTHORIZED_USERS[u] === p) {
-            isLoggedIn = true; document.getElementById('login-modal').classList.add('hidden');
-            if (pendingAction === 'add') document.getElementById('student-modal').classList.remove('hidden');
-            else if (pendingAction === 'delete') executeDelete(pendingDeleteIndex);
-        } else alert("รหัสผ่านไม่ถูกต้อง");
-    }
-    
-    function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
-    function startModalCamera() { startCamera('modal-video'); document.getElementById('modal-video').classList.remove('hidden'); document.getElementById('preview-img').classList.add('hidden'); document.getElementById('btn-snap').classList.remove('hidden'); document.getElementById('modal-file').value = ''; }
-    
-    function handleFileUpload(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => { capturedImg = e.target.result; document.getElementById('preview-img').src = capturedImg; document.getElementById('preview-img').classList.remove('hidden'); document.getElementById('modal-video').classList.add('hidden'); stopCamera('modal-video'); document.getElementById('btn-snap').classList.add('hidden'); };
-            reader.readAsDataURL(file);
-        }
-    }
-    
-    function snapPhoto() {
-        const v = document.getElementById('modal-video'), c = document.getElementById('capture-canvas');
-        c.width = 400; c.height = 400; c.getContext('2d').drawImage(v, 0, 0, 400, 400);
-        capturedImg = c.toDataURL('image/jpeg', 0.8);
-        document.getElementById('preview-img').src = capturedImg; document.getElementById('preview-img').classList.remove('hidden'); v.classList.add('hidden'); stopCamera('modal-video'); document.getElementById('btn-snap').classList.add('hidden');
-    }
-    
-    async function saveStudent() {
-        const id = document.getElementById('modal-id').value, name = document.getElementById('modal-name').value, cls = document.getElementById('modal-class').value;
-        if(!id || !name || !capturedImg) return alert("ข้อมูลไม่ครบถ้วน");
-        await apiCall({action:'addStudent', data:{id, name, class:cls, imageData:capturedImg}});
-        location.reload();
-    }
-    
-    function closeStudentModal() { stopCamera('modal-video'); document.getElementById('student-modal').classList.add('hidden'); }
 </script>
 </body>
 </html>
