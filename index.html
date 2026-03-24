@@ -84,7 +84,14 @@
         </div>
         
         <div id="content-scan" class="hidden">
-            <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200">
+            <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200 text-slate-800">
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2 tracking-widest">📍 เลือกสถานที่ปฏิบัติงาน</label>
+                    <select id="location-select" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold focus:ring-2 ring-blue-500 outline-none">
+                        <option value="">-- กำลังโหลดสถานที่ --</option>
+                    </select>
+                </div>
+
                 <div class="relative aspect-video bg-slate-900 rounded-2xl overflow-hidden mb-4 border-4 border-slate-50 shadow-inner">
                     <video id="video" class="w-full h-full object-cover" autoplay muted playsinline></video>
                     <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
@@ -156,7 +163,7 @@
 
 <script>
     const gasUrl = "https://script.google.com/macros/s/AKfycby9t947sFIvKCyxoLrFjLu0nNSGo95rdgFLarIfIVanE7kCKEDfglqgikUZCeFC_JAj/exec";
-    let students = [], attendance = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
+    let students = [], attendance = [], locationList = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
     let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
 
@@ -181,11 +188,40 @@
     }
 
     async function loadAllData() {
-        const [sRes, aRes] = await Promise.all([apiCall({action:'getStudents'}), apiCall({action:'getAttendance'})]);
+        const [sRes, aRes, lRes] = await Promise.all([
+            apiCall({action:'getStudents'}), 
+            apiCall({action:'getAttendance'}),
+            apiCall({action:'getLocations'})
+        ]);
         if(sRes.success) students = sRes.data;
         if(aRes.success) attendance = aRes.data;
+        if(lRes.success) {
+            locationList = lRes.data;
+            renderLocationDropdown();
+        }
         renderStudentTable();
         renderDashboard();
+    }
+
+    // ฟังก์ชันสร้างรายการสถานที่ใน Dropdown
+    function renderLocationDropdown() {
+        const select = document.getElementById('location-select');
+        select.innerHTML = '<option value="">-- เลือกสถานที่ --</option>';
+        locationList.forEach((loc, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.text = loc.name;
+            select.appendChild(option);
+        });
+    }
+
+    // ฟังก์ชันคำนวณระยะห่าง (Haversine)
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; // เมตร
+        const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
+        const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
+        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
     async function initFaceAPI() {
@@ -200,13 +236,11 @@
             if (s.imagedatabase64) {
                 try {
                     const img = await faceapi.fetchImage(s.imagedatabase64);
-                    // ปรับแต่งการตรวจจับรูปในฐานข้อมูลให้เบาลง
                     const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
                     if (det) labeled.push(new faceapi.LabeledFaceDescriptors(String(s.studentid), [det.descriptor]));
                 } catch(e) {}
             }
         }
-        // ปรับ Threshold เป็น 0.6 เพื่อให้ Matching ง่ายและเร็วขึ้น
         if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.5);
     }
 
@@ -217,11 +251,8 @@
 
         setInterval(async () => {
             if(v.paused || v.ended) return;
-
-            // ปรับแต่ง TinyFaceDetectorOptions: inputSize 160 ทำให้เร็วขึ้นมาก
             const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
             const dets = await faceapi.detectAllFaces(v, options).withFaceLandmarks().withFaceDescriptors();
-            
             const resized = faceapi.resizeResults(dets, dim);
             o.getContext('2d').clearRect(0,0,o.width,o.height);
             faceapi.draw.drawDetections(o, resized);
@@ -230,7 +261,6 @@
                 dets.forEach(d => {
                     const match = faceMatcher.findBestMatch(d.descriptor);
                     const s = students.find(x => String(x.studentid) === match.label);
-                    // match.distance < 0.6 คือค่าความแม่นยำที่สมดุลกับความเร็ว
                     if(s && match.distance < 0.5 && !scanned.has(s.studentid)) {
                         scanned.set(s.studentid, s);
                         document.getElementById('res-name').innerText = s.name;
@@ -243,7 +273,7 @@
                     }
                 });
             }
-        }, 200); // ปรับเวลาเป็น 200ms เพื่อให้ตรวจจับใบหน้าถี่ขึ้น (เร็วขึ้น)
+        }, 200);
     }
 
     function renderDashboard() {
@@ -257,12 +287,14 @@
 
         const createItem = (a, s) => {
             const time = a.timestamp.split(' ')[1] || '';
-            let mapBtn = (a.location && a.location !== "THAISIAM Office") ? `<a href="https://www.google.com/maps?q=${a.location}" target="_blank" class="text-rose-500 hover:scale-125 transition-transform"><i data-lucide="map-pin" class="w-4 h-4"></i></a>` : '';
+            // ตรวจสอบพิกัดเพื่อแสดงปุ่มแมพ
+            let isCoords = a.location && a.location.includes(',');
+            let mapBtn = isCoords ? `<a href="https://www.google.com/maps?q=${a.location}" target="_blank" class="text-rose-500 hover:scale-125 transition-transform"><i data-lucide="map-pin" class="w-4 h-4"></i></a>` : '';
             return `
             <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-1">
                 <div class="flex items-center gap-2">
                     <img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border">
-                    <div><p class="font-bold text-slate-700 text-[11px]">${a.name}</p><p class="text-[9px] text-slate-400 font-mono">${time} น.</p></div>
+                    <div><p class="font-bold text-slate-700 text-[11px]">${a.name}</p><p class="text-[9px] text-slate-400 font-mono">${time} น. (${a.location || ''})</p></div>
                 </div>
                 <div class="flex items-center gap-2">${mapBtn}<span class="px-2 py-0.5 text-[9px] rounded-full font-bold ${a.type==='OUT'?'bg-blue-100 text-blue-600':(a.status==='สาย'?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">${a.type==='OUT'?'ออก':a.status}</span></div>
             </div>`;
@@ -302,14 +334,38 @@
 
     async function finishAttendance(type) {
         if (scanned.size === 0) return alert("ยังไม่มีรายชื่อที่สแกนสำเร็จ");
+        
+        const select = document.getElementById('location-select');
+        if (select.value === "") return alert("โปรดเลือกสถานที่ปฏิบัติงาน");
+
         const btnIn = document.getElementById('btn-in'), btnOut = document.getElementById('btn-out');
         btnIn.disabled = true; btnOut.disabled = true;
 
-        let gpsLocation = "THAISIAM Office";
-        try {
-            const pos = await new Promise((res, rej) => { navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 }); });
-            gpsLocation = `${pos.coords.latitude},${pos.coords.longitude}`;
-        } catch (err) {}
+        const selectedLoc = locationList[select.value];
+        let gpsLocation = selectedLoc.name;
+
+        // ถ้าไม่ใช่ "ทำงานนอกสถานที่" ให้เช็ค GPS
+        if (selectedLoc.name !== "ทำงานนอกสถานที่") {
+            try {
+                const pos = await new Promise((res, rej) => { 
+                    navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 }); 
+                });
+                const currentLat = pos.coords.latitude;
+                const currentLng = pos.coords.longitude;
+                const distance = getDistance(currentLat, currentLng, selectedLoc.lat, selectedLoc.lng);
+
+                if (distance > selectedLoc.radius) {
+                    alert(`❌ อยู่นอกพื้นที่ปฏิบัติงาน!\nท่านห่างจากจุดที่กำหนดประมาณ ${Math.round(distance)} เมตร`);
+                    btnIn.disabled = false; btnOut.disabled = false;
+                    return;
+                }
+                gpsLocation = `${currentLat},${currentLng}`;
+            } catch (err) {
+                alert("ไม่สามารถเข้าถึงพิกัด GPS ได้ โปรดตรวจสอบการอนุญาต");
+                btnIn.disabled = false; btnOut.disabled = false;
+                return;
+            }
+        }
 
         const now = new Date();
         const timestamp = now.toISOString().slice(0, 10) + " " + now.toTimeString().split(' ')[0];
@@ -354,6 +410,7 @@
     function openAddModal() { if (!isLoggedIn) { pendingAction = 'add'; document.getElementById('login-modal').classList.remove('hidden'); } else { document.getElementById('student-modal').classList.remove('hidden'); } }
     function deleteStudent(i) { if (!isLoggedIn) { pendingAction = 'delete'; pendingDeleteIndex = i; document.getElementById('login-modal').classList.remove('hidden'); } else { executeDelete(i); } }
     async function executeDelete(i) { if (confirm("ยืนยันการลบรายชื่อ?")) { await apiCall({action: 'deleteStudent', data: {rowIndex: i}}); location.reload(); } }
+    
     function checkLogin() {
         const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value;
         if (AUTHORIZED_USERS[u] === p) {
@@ -362,8 +419,10 @@
             else if (pendingAction === 'delete') executeDelete(pendingDeleteIndex);
         } else alert("รหัสผ่านไม่ถูกต้อง");
     }
+    
     function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
     function startModalCamera() { startCamera('modal-video'); document.getElementById('modal-video').classList.remove('hidden'); document.getElementById('preview-img').classList.add('hidden'); document.getElementById('btn-snap').classList.remove('hidden'); document.getElementById('modal-file').value = ''; }
+    
     function handleFileUpload(event) {
         const file = event.target.files[0];
         if (file) {
@@ -372,18 +431,21 @@
             reader.readAsDataURL(file);
         }
     }
+    
     function snapPhoto() {
         const v = document.getElementById('modal-video'), c = document.getElementById('capture-canvas');
         c.width = 400; c.height = 400; c.getContext('2d').drawImage(v, 0, 0, 400, 400);
         capturedImg = c.toDataURL('image/jpeg', 0.8);
         document.getElementById('preview-img').src = capturedImg; document.getElementById('preview-img').classList.remove('hidden'); v.classList.add('hidden'); stopCamera('modal-video'); document.getElementById('btn-snap').classList.add('hidden');
     }
+    
     async function saveStudent() {
         const id = document.getElementById('modal-id').value, name = document.getElementById('modal-name').value, cls = document.getElementById('modal-class').value;
         if(!id || !name || !capturedImg) return alert("ข้อมูลไม่ครบถ้วน");
         await apiCall({action:'addStudent', data:{id, name, class:cls, imageData:capturedImg}});
         location.reload();
     }
+    
     function closeStudentModal() { stopCamera('modal-video'); document.getElementById('student-modal').classList.add('hidden'); }
 </script>
 </body>
