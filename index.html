@@ -27,7 +27,6 @@
         .list-window { overflow: hidden; position: relative; }
         nav { background-color: #25282c !important; border-bottom: 1px solid #334155; }
         .tab-inactive { color: #94a3b8 !important; }
-        .custom-scrollbar::-webkit-scrollbar { width: 0px; }
     </style>
 </head>
 <body>
@@ -91,12 +90,11 @@
                         <option value="">-- กำลังโหลดสถานที่ --</option>
                     </select>
                 </div>
-
                 <div class="relative aspect-video bg-slate-900 rounded-2xl overflow-hidden mb-4 border-4 border-slate-50 shadow-inner">
                     <video id="video" class="w-full h-full object-cover" autoplay muted playsinline></video>
                     <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
                 </div>
-                <div class="flex items-center space-x-4 bg-slate-50 p-4 rounded-2xl border mb-6 text-slate-800">
+                <div class="flex items-center space-x-4 bg-slate-50 p-4 rounded-2xl border mb-6">
                     <img id="res-img" class="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-sm hidden">
                     <div id="res-img-placeholder" class="w-16 h-16 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400"><i data-lucide="user"></i></div>
                     <div>
@@ -203,7 +201,6 @@
         renderDashboard();
     }
 
-    // ฟังก์ชันสร้างรายการสถานที่ใน Dropdown
     function renderLocationDropdown() {
         const select = document.getElementById('location-select');
         select.innerHTML = '<option value="">-- เลือกสถานที่ --</option>';
@@ -215,9 +212,8 @@
         });
     }
 
-    // ฟังก์ชันคำนวณระยะห่าง (Haversine)
     function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371e3; // เมตร
+        const R = 6371e3;
         const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
         const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
         const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
@@ -241,7 +237,7 @@
                 } catch(e) {}
             }
         }
-        if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.5);
+        if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.45);
     }
 
     async function startDetector() {
@@ -261,7 +257,7 @@
                 dets.forEach(d => {
                     const match = faceMatcher.findBestMatch(d.descriptor);
                     const s = students.find(x => String(x.studentid) === match.label);
-                    if(s && match.distance < 0.5 && !scanned.has(s.studentid)) {
+                    if(s && match.distance < 0.45 && !scanned.has(s.studentid)) {
                         scanned.set(s.studentid, s);
                         document.getElementById('res-name').innerText = s.name;
                         document.getElementById('res-id').innerText = `ID: ${s.studentid}`;
@@ -287,16 +283,27 @@
 
         const createItem = (a, s) => {
             const time = a.timestamp.split(' ')[1] || '';
-            // ตรวจสอบพิกัดเพื่อแสดงปุ่มแมพ
-            let isCoords = a.location && a.location.includes(',');
-            let mapBtn = isCoords ? `<a href="https://www.google.com/maps?q=${a.location}" target="_blank" class="text-rose-500 hover:scale-125 transition-transform"><i data-lucide="map-pin" class="w-4 h-4"></i></a>` : '';
+            // แสดง Location Name แทนพิกัด และแสดงไอคอนปักหมุดสีแดงทุกกรณี
+            const locationDisplay = a.location_name || a.location || '';
+            const mapUrl = a.location.includes(',') ? `https://www.google.com/maps?q=${a.location}` : '#';
+            
             return `
             <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-1">
                 <div class="flex items-center gap-2">
                     <img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border">
-                    <div><p class="font-bold text-slate-700 text-[11px]">${a.name}</p><p class="text-[9px] text-slate-400 font-mono">${time} น. (${a.location || ''})</p></div>
+                    <div>
+                        <p class="font-bold text-slate-700 text-[11px]">${a.name}</p>
+                        <p class="text-[9px] text-slate-400 font-mono">${time} น. (${locationDisplay})</p>
+                    </div>
                 </div>
-                <div class="flex items-center gap-2">${mapBtn}<span class="px-2 py-0.5 text-[9px] rounded-full font-bold ${a.type==='OUT'?'bg-blue-100 text-blue-600':(a.status==='สาย'?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">${a.type==='OUT'?'ออก':a.status}</span></div>
+                <div class="flex items-center gap-2">
+                    <a href="${mapUrl}" target="_blank" class="text-rose-500 hover:scale-125 transition-transform">
+                        <i data-lucide="map-pin" class="w-4 h-4"></i>
+                    </a>
+                    <span class="px-2 py-0.5 text-[9px] rounded-full font-bold ${a.type==='OUT'?'bg-blue-100 text-blue-600':(a.status==='สาย'?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">
+                        ${a.type==='OUT'?'ออก':a.status}
+                    </span>
+                </div>
             </div>`;
         };
 
@@ -334,7 +341,6 @@
 
     async function finishAttendance(type) {
         if (scanned.size === 0) return alert("ยังไม่มีรายชื่อที่สแกนสำเร็จ");
-        
         const select = document.getElementById('location-select');
         if (select.value === "") return alert("โปรดเลือกสถานที่ปฏิบัติงาน");
 
@@ -342,29 +348,33 @@
         btnIn.disabled = true; btnOut.disabled = true;
 
         const selectedLoc = locationList[select.value];
-        let gpsLocation = selectedLoc.name;
+        let gpsLocation = "";
+        let finalLocationName = selectedLoc.name;
 
-        // ถ้าไม่ใช่ "ทำงานนอกสถานที่" ให้เช็ค GPS
         if (selectedLoc.name !== "ทำงานนอกสถานที่") {
             try {
                 const pos = await new Promise((res, rej) => { 
                     navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 }); 
                 });
-                const currentLat = pos.coords.latitude;
-                const currentLng = pos.coords.longitude;
-                const distance = getDistance(currentLat, currentLng, selectedLoc.lat, selectedLoc.lng);
+                const distance = getDistance(pos.coords.latitude, pos.coords.longitude, selectedLoc.lat, selectedLoc.lng);
 
                 if (distance > selectedLoc.radius) {
-                    alert(`❌ อยู่นอกพื้นที่ปฏิบัติงาน!\nท่านห่างจากจุดที่กำหนดประมาณ ${Math.round(distance)} เมตร`);
+                    alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร`);
                     btnIn.disabled = false; btnOut.disabled = false;
                     return;
                 }
-                gpsLocation = `${currentLat},${currentLng}`;
+                gpsLocation = `${pos.coords.latitude},${pos.coords.longitude}`;
             } catch (err) {
-                alert("ไม่สามารถเข้าถึงพิกัด GPS ได้ โปรดตรวจสอบการอนุญาต");
+                alert("ไม่สามารถเข้าถึงพิกัด GPS ได้");
                 btnIn.disabled = false; btnOut.disabled = false;
                 return;
             }
+        } else {
+            // กรณีทำงานนอกสถานที่ พยายามดึงพิกัดเพื่อปักหมุด แต่ถ้าไม่ได้ก็บันทึกแค่ชื่อ
+            try {
+                const pos = await new Promise((res) => { navigator.geolocation.getCurrentPosition(res, null, {timeout: 3000}); });
+                gpsLocation = `${pos.coords.latitude},${pos.coords.longitude}`;
+            } catch (e) { gpsLocation = "ทำงานนอกสถานที่"; }
         }
 
         const now = new Date();
@@ -373,7 +383,10 @@
         
         const attendanceData = Array.from(scanned.values()).map(s => ({
             id: String(s.studentid), name: String(s.name), class: String(s.class || "-"),
-            timestamp: timestamp, location: gpsLocation, status: isLate ? 'สาย' : (type==='OUT'?'ออกงาน':'มาปกติ'), type: type
+            timestamp: timestamp, 
+            location: gpsLocation, 
+            location_name: finalLocationName, // ส่งชื่อสถานที่ไปด้วย
+            status: isLate ? 'สาย' : (type==='OUT'?'ออกงาน':'มาปกติ'), type: type
         }));
 
         const res = await apiCall({ action: 'recordAttendanceUpdate', data: attendanceData });
