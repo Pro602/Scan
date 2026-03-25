@@ -338,18 +338,17 @@ const createItem = (a, s) => {
         });
     }
 
+// วางทับของเดิมที่เป็นชื่อนี้ได้เลย
 async function approveAction(id, date) {
-    // ใช้ชื่อจากคนที่ Login จริงๆ ถ้าไม่มีค่อยเป็น Admin
-    const approverName = (currentLoginUser && currentLoginUser.name) ? currentLoginUser.name : "Admin";
-
-    if(!confirm(`ยืนยันการอนุมัติโดยคุณ ${approverName}?`)) return;
+    const approver = currentUserName || "Admin";
+    if(!confirm(`ยืนยันการอนุมัติโดยคุณ ${approver}?`)) return;
 
     const res = await apiCall({ 
         action: 'approveLeave', 
         data: { 
             id: id, 
-            date: date,
-            approvedBy: approverName // ส่งชื่อที่ Login จริงไป
+            date: date, 
+            approvedBy: approver // ส่งค่าชื่อไปที่ Google Sheets
         } 
     });
 
@@ -357,6 +356,8 @@ async function approveAction(id, date) {
         alert("อนุมัติสำเร็จ"); 
         await loadAllData(); 
         renderApprovalList(); 
+    } else {
+        alert("ล้มเหลว");
     }
 }
 
@@ -540,7 +541,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
     async function startCamera(id) { try { document.getElementById(id).srcObject = await navigator.mediaDevices.getUserMedia({video:true}); } catch(e){} }
     function stopCamera(id) { const v = document.getElementById(id); if(v?.srcObject) v.srcObject.getTracks().forEach(t => t.stop()); }
     function speak(t) { const m = new SpeechSynthesisUtterance(t); m.lang = 'th-TH'; window.speechSynthesis.speak(m); }
-    function checkLogin() { const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value; if (AUTHORIZED_USERS[u] === p) { isLoggedIn = true; document.getElementById('login-modal').classList.add('hidden'); if(pendingAction) switchTab(pendingAction); } else alert("Error"); }
+    function checkLogin() { const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value; if (AUTHORIZED_USERS[u] === p) { isLoggedIn = true; currentUserName = u; document.getElementById('login-modal').classList.add('hidden'); if(pendingAction) switchTab(pendingAction); } else alert("Error"); }
     function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
     function startModalCamera() { startCamera('modal-video'); document.getElementById('modal-video').classList.remove('hidden'); document.getElementById('preview-img').classList.add('hidden'); document.getElementById('btn-snap').classList.remove('hidden'); }
     function snapPhoto() { const v = document.getElementById('modal-video'), c = document.getElementById('capture-canvas'); c.width = 400; c.height = 400; c.getContext('2d').drawImage(v,0,0,400,400); capturedImg = c.toDataURL('image/jpeg', 0.8); document.getElementById('preview-img').src = capturedImg; document.getElementById('preview-img').classList.remove('hidden'); v.classList.add('hidden'); stopCamera('modal-video'); document.getElementById('btn-snap').classList.add('hidden'); }
