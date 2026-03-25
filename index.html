@@ -440,54 +440,49 @@ async function finishAttendance(type) {
     const select = document.getElementById('location-select');
     const btnIn = document.getElementById('btn-in'), btnOut = document.getElementById('btn-out');
 
-    // ตรวจสอบเบื้องต้น
     if (id === 'STANDING BY' || !select.value || select.value === "") {
         return alert("กรุณาสแกนใบหน้าและเลือกสถานที่");
     }
 
-    // --- จุดแก้ไขสำคัญ: ดึงชื่อสถานที่จากตัวเลือกที่เลือก (Text) ---
     const selectedLocName = select.options[select.selectedIndex].text.trim();
-    
-    // ค้นหาข้อมูลพิกัดจาก locationList
-    const selectedLoc = locationList.find(l => {
-        const nameInSheet = (l.name || l.LocationName || "").toString().trim();
-        return nameInSheet === selectedLocName;
-    });
+    const selectedLoc = locationList.find(l => (l.name || l.LocationName || "").toString().trim() === selectedLocName);
 
-    // เงื่อนไข: ถ้าเลือก "ทำงานนอกสถานที่" ให้ผ่านได้เลย ไม่ต้องเช็คพิกัด
-    if (selectedLocName === "ทำงานนอกสถานที่") {
-        // ให้ผ่านไปยังขั้นตอนบันทึกได้เลย
-    } else if (!selectedLoc) {
-        // ถ้าไม่ใช่ทำงานนอกสถานที่ และหาพิกัดไม่เจอ ให้แจ้งเตือน
+    if (selectedLocName !== "ทำงานนอกสถานที่" && !selectedLoc) {
         return alert("ไม่พบข้อมูลพิกัดของสถานที่: " + selectedLocName);
     }
 
     btnIn.disabled = true; btnOut.disabled = true;
 
     try {
-        // ขอพิกัดปัจจุบัน
+        // 1. ขอพิกัด GPS
         const pos = await new Promise((res, rej) => {
-            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 });
+            navigator.geolocation.getCurrentPosition(res, rej, { 
+                enableHighAccuracy: true, 
+                timeout: 10000,
+                maximumAge: 0 
+            });
         });
         
         const currentLat = pos.coords.latitude;
         const currentLng = pos.coords.longitude;
 
-        // เช็คระยะทาง (ยกเว้น "ทำงานนอกสถานที่")
+        // 2. เช็คระยะทาง (ถ้าไม่ใช่ทำงานนอกสถานที่)
         if (selectedLocName !== "ทำงานนอกสถานที่") {
-            const targetLat = selectedLoc.lat || selectedLoc.Latitude;
-            const targetLng = selectedLoc.lng || selectedLoc.Longitude;
-            const radius = selectedLoc.radius || selectedLoc['Radius (Meters)'] || 100;
+            const targetLat = parseFloat(selectedLoc.lat || selectedLoc.Latitude);
+            const targetLng = parseFloat(selectedLoc.lng || selectedLoc.Longitude);
+            const radius = parseFloat(selectedLoc.radius || selectedLoc['Radius (Meters)'] || 100);
 
             const distance = getDistance(currentLat, currentLng, targetLat, targetLng);
+            
             if (distance > radius) {
-                alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร`);
+                // แจ้งเตือนระยะทาง แล้วหยุดการทำงานตรงนี้ (Return ออกไปเลย)
+                alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร (จำกัด ${radius} เมตร)`);
                 btnIn.disabled = false; btnOut.disabled = false;
-                return;
+                return; // *** สำคัญมาก ต้อง return เพื่อไม่ให้ไปทำงานส่วนบันทึก ***
             }
         }
 
-        // บันทึกข้อมูลไปยัง Google Sheets
+        // 3. ถ้าผ่านเงื่อนไขระยะทาง หรือเป็น "ทำงานนอกสถานที่" ให้มาทำส่วนบันทึก
         const res = await apiCall({
             action: 'recordAttendanceUpdate', 
             data: [{
@@ -511,7 +506,15 @@ async function finishAttendance(type) {
         }
 
     } catch (err) {
-        alert("ไม่สามารถเข้าถึงพิกัด GPS ได้ กรุณาเปิดตำแหน่งบนอุปกรณ์");
+        // แก้ไขตรงนี้: ให้เช็คว่า error เกิดจาก GPS จริงหรือไม่
+        console.error(err);
+        if (err.code === 1) {
+            alert("กรุณาอนุญาตสิทธิ์การเข้าถึงตำแหน่ง (GPS)");
+        } else if (err.code === 3) {
+            alert("สัญญาณ GPS หมดเวลา (Timeout) กรุณาลองใหม่อีกครั้ง");
+        } else {
+            alert("เกิดข้อผิดพลาด: " + err.message);
+        }
     } finally {
         btnIn.disabled = false; btnOut.disabled = false;
     }
