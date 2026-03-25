@@ -444,9 +444,9 @@ async function finishAttendance(type) {
         return alert("กรุณาสแกนใบหน้าและเลือกสถานที่");
     }
 
-    // --- จุดที่แก้ไข 1: ดึงเฉพาะรหัสพนักงาน (ตัดคำว่า ID: ออก) ---
+    // --- จุดที่ 1: ลบ "ID: " ออกให้เหลือแค่รหัสพนักงานจริงๆ ---
     let rawId = resIdElement.innerText;
-    const cleanId = rawId.replace(/ID:\s*/g, '').trim(); 
+    const cleanId = rawId.replace(/ID:\s*/gi, '').trim(); 
 
     const selectedLocName = select.options[select.selectedIndex].text.trim();
     const selectedLoc = locationList.find(l => (l.name || l.LocationName || "").toString().trim() === selectedLocName);
@@ -482,16 +482,17 @@ async function finishAttendance(type) {
             }
         }
 
-        // --- จุดที่แก้ไข 2: ดึงชื่อและแผนก (Class) ให้ถูกต้องตามหน้าจอ ---
+        // --- จุดที่ 2: ดึงชื่อและแผนก (Class) จากหน้าจอให้ถูกต้อง ---
+        // ตรวจสอบว่า ID ในหน้า Dashboard คือ res-name และ res-class
         const resName = document.getElementById('res-name') ? document.getElementById('res-name').innerText.trim() : "";
         const resClass = document.getElementById('res-class') ? document.getElementById('res-class').innerText.trim() : "";
 
         const res = await apiCall({
             action: 'recordAttendanceUpdate', 
             data: [{
-                id: cleanId,        // ส่ง ID ที่สะอาดแล้ว (เช่น TS0057)
+                id: cleanId,        // ส่งเฉพาะ TS0057
                 name: resName, 
-                class: resClass,    // ส่งแผนกที่ดึงได้จากหน้าจอ
+                class: resClass,    // ส่งค่าแผนกที่ดึงจากหน้าจอ
                 timestamp: new Date().toLocaleString('th-TH'),
                 location: `${currentLat},${currentLng}`,
                 location_name: selectedLocName, 
@@ -503,6 +504,9 @@ async function finishAttendance(type) {
         if (res.success) {
             if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
             alert("บันทึกสำเร็จ");
+            
+            // เคลียร์ข้อมูลหน้าจอก่อนโหลดใหม่ (ช่วยให้ Dashboard อัปเดตไวขึ้น)
+            isLoggedIn = false;
             location.reload();
         } else {
             alert("บันทึกผิดพลาด: " + res.message);
@@ -510,11 +514,7 @@ async function finishAttendance(type) {
 
     } catch (err) {
         console.error(err);
-        if (err.code === 1) {
-            alert("กรุณาอนุญาตสิทธิ์การเข้าถึงตำแหน่ง (GPS)");
-        } else {
-            alert("เกิดข้อผิดพลาด: " + err.message);
-        }
+        alert("เกิดข้อผิดพลาด: " + err.message);
     } finally {
         btnIn.disabled = false; btnOut.disabled = false;
     }
