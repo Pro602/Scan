@@ -46,7 +46,8 @@
             <div class="flex bg-slate-800 p-1 rounded-2xl border border-slate-700 shadow-inner overflow-x-auto">
                 <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-md transition-all whitespace-nowrap">Dashboard</button>
                 <button onclick="switchTab('scan')" id="tab-scan" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">สแกนบันทึกเวลา</button>
-                <button onclick="switchTab('leave')" id="tab-leave" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">จัดการการลา</button>
+                <button onclick="switchTab('leave')" id="tab-leave" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">ลงชื่อการลา</button>
+                <button onclick="switchTab('approve')" id="tab-approve" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">จัดการการอนุมัติ</button>
                 <button onclick="switchTab('manage')" id="tab-manage" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">พนักงาน</button>
             </div>
         </div>
@@ -111,6 +112,15 @@
             </div>
         </div>
 
+        <div id="content-approve" class="hidden space-y-4">
+            <div class="text-center pb-2">
+                <h3 class="text-xl font-bold italic text-slate-200">Pending Approvals</h3>
+                <p class="text-[10px] text-slate-500 uppercase tracking-widest">รายการรออนุมัติการลา (สำหรับ Supervisor)</p>
+            </div>
+            <div id="pending-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+        </div>
+
         <div id="content-leave" class="hidden">
             <div class="max-w-md mx-auto bg-white p-8 rounded-[2.5rem] shadow-2xl space-y-4 text-slate-800 border border-slate-200">
                 <div class="text-center pb-2">
@@ -120,7 +130,7 @@
                 <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">เลือกพนักงาน</label><select id="leave-student-select" class="w-full p-3 rounded-xl border bg-slate-50 text-sm font-bold outline-none"></select></div>
                 <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">วันที่ลา</label><input type="date" id="leave-date" class="w-full p-3 rounded-xl border bg-slate-50 text-sm font-bold outline-none"></div>
                 <div><label class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">ประเภทการลา</label><select id="leave-type" class="w-full p-3 rounded-xl border bg-slate-50 text-sm font-bold outline-none"><option value="ลากิจ">ลากิจ (Personal Leave)</option><option value="ลาป่วย">ลาป่วย (Sick Leave)</option><option value="พักร้อน">พักร้อน (Annual Leave)</option><option value="วันหยุด">วันหยุด (Day Off)</option></select></div>
-                <button onclick="saveLeave()" class="w-full bg-slate-800 text-white py-4 rounded-xl font-bold shadow-md hover:bg-black transition-all">บันทึกข้อมูลการลา</button>
+                <button onclick="saveLeave()" class="w-full bg-slate-800 text-white py-4 rounded-xl font-bold shadow-md hover:bg-black transition-all">ส่งคำขอการลา</button>
             </div>
         </div>
 
@@ -211,6 +221,76 @@
         renderDashboard();
     }
 
+    function switchTab(tab) {
+        // จัดการเรื่อง Login สำหรับ Tab ที่สำคัญ
+        if ((tab === 'approve' || tab === 'manage') && !isLoggedIn) {
+            pendingAction = tab;
+            document.getElementById('login-modal').classList.remove('hidden');
+            return;
+        }
+
+        document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
+        const target = document.getElementById(`content-${tab}`);
+        if(target) target.classList.remove('hidden');
+
+        document.querySelectorAll('nav button').forEach(btn => {
+            btn.classList.remove('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
+            btn.classList.add('tab-inactive');
+        });
+        const activeTab = document.getElementById(`tab-${tab}`);
+        if(activeTab) {
+            activeTab.classList.add('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
+            activeTab.classList.remove('tab-inactive');
+        }
+
+        if (tab === 'scan') { startCamera('video'); setTimeout(startDetector, 1000); } 
+        else stopCamera('video');
+
+        if (tab === 'approve') renderApprovalList();
+    }
+
+    // --- ส่วนงานจัดการการอนุมัติ (Logic ใหม่) ---
+    function renderApprovalList() {
+        const container = document.getElementById('pending-list');
+        container.innerHTML = '';
+        
+        // กรองรายการลาที่สถานะเป็น "รออนุมัติ" หรือ "Pending"
+        const pending = leaves.filter(l => l.status === 'รออนุมัติ' || l.status === 'Pending');
+        
+        if(pending.length === 0) {
+            container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500 italic">ไม่มีรายการที่รออนุมัติในขณะนี้</div>';
+            return;
+        }
+
+        pending.forEach(l => {
+            const card = document.createElement('div');
+            card.className = "bg-white p-5 rounded-3xl shadow-lg border-l-8 border-amber-500 flex justify-between items-center";
+            card.innerHTML = `
+                <div>
+                    <h4 class="font-bold text-slate-800 text-lg">${l.name}</h4>
+                    <p class="text-sm text-slate-500">${l.type} | วันที่ ${l.date}</p>
+                </div>
+                <button onclick="approveAction('${l.id}', '${l.date}')" class="bg-emerald-600 text-white px-6 py-2 rounded-2xl font-bold hover:bg-emerald-700 shadow-md transition-all">
+                    อนุมัติ
+                </button>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    async function approveAction(id, date) {
+        if(!confirm("ยืนยันการอนุมัติการลา?")) return;
+        const res = await apiCall({ action: 'approveLeave', data: { id: id, date: date } });
+        if(res.success) {
+            alert("อนุมัติสำเร็จ");
+            await loadAllData();
+            renderApprovalList();
+        } else {
+            alert("เกิดข้อผิดพลาด");
+        }
+    }
+
+    // ฟังก์ชันอื่นๆ (สแกนหน้า, Dashboard, จัดการพนักงาน) คงเดิมตามชุดที่ใช้งานได้
     function renderLocationDropdown() {
         const select = document.getElementById('location-select');
         select.innerHTML = '<option value="">-- เลือกสถานที่ --</option>';
@@ -234,17 +314,10 @@
         const date = document.getElementById('leave-date').value;
         const type = document.getElementById('leave-type').value;
         if(!id || !date) return alert("กรุณาเลือกข้อมูลให้ครบ");
-        const res = await apiCall({ action: 'addLeave', data: {id, name: student.name, date, type} });
-        if(res.success) { alert("บันทึกการลาสำเร็จ"); location.reload(); }
+        // สถานะเริ่มต้นจะถูกส่งเป็น 'รออนุมัติ'
+        const res = await apiCall({ action: 'addLeave', data: {id, name: student.name, date, type, status: 'รออนุมัติ'} });
+        if(res.success) { alert("ส่งคำขอสำเร็จ รอการอนุมัติ"); location.reload(); }
         else alert("เกิดข้อผิดพลาด");
-    }
-
-    function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371e3;
-        const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
-        const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
-        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
     async function initFaceAPI() {
@@ -334,7 +407,7 @@
 
         students.forEach(s => {
             if(!checkedInIds.has(String(s.studentid))) {
-                const leaveToday = leaves.find(l => String(l.id) === String(s.studentid) && l.date === dateInput);
+                const leaveToday = leaves.find(l => String(l.id) === String(s.studentid) && l.date === dateInput && l.status !== 'รออนุมัติ');
                 const statusText = leaveToday ? leaveToday.type : "WAITING";
                 const bgClass = leaveToday ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400";
                 lists.abs.innerHTML += `
@@ -362,46 +435,39 @@
         if (select.value === "") return alert("โปรดเลือกสถานที่ปฏิบัติงาน");
         const btnIn = document.getElementById('btn-in'), btnOut = document.getElementById('btn-out');
         btnIn.disabled = true; btnOut.disabled = true;
-        const selectedLoc = locationList[select.value];
-        let gpsLocation = "";
+        
         try {
+            const selectedLoc = locationList[select.value];
             const pos = await new Promise((res, rej) => { navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 }); });
-            gpsLocation = `${pos.coords.latitude},${pos.coords.longitude}`;
+            const gpsLocation = `${pos.coords.latitude},${pos.coords.longitude}`;
+            
             if (selectedLoc.name !== "ทำงานนอกสถานที่") {
-                const distance = getDistance(pos.coords.latitude, pos.coords.longitude, selectedLoc.lat, selectedLoc.lng);
+                const R = 6371e3;
+                const dLat = (pos.coords.latitude - selectedLoc.lat) * Math.PI/180;
+                const dLon = (pos.coords.longitude - selectedLoc.lng) * Math.PI/180;
+                const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(selectedLoc.lat*Math.PI/180)*Math.cos(pos.coords.latitude*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+                const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                
                 if (distance > selectedLoc.radius) {
-                    speak("คุณอยู่นอกพื้นที่กำหนด"); 
-                    alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร`);
+                    alert(`❌ อยู่นอกพื้นที่! ห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร`);
                     btnIn.disabled = false; btnOut.disabled = false; return;
                 }
             }
-        } catch (err) { alert("ไม่สามารถระบุพิกัด GPS ได้ โปรดอนุญาตสิทธิ์"); btnIn.disabled = false; btnOut.disabled = false; return; }
 
-        const now = new Date();
-        const timestamp = now.toISOString().slice(0, 10) + " " + now.toTimeString().split(' ')[0];
-        const isLate = (type === 'IN' && (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30)));
-        const attendanceData = Array.from(scanned.values()).map(s => ({
-            id: String(s.studentid), name: String(s.name), class: String(s.class || "-"),
-            timestamp: timestamp, location: gpsLocation, location_name: selectedLoc.name,
-            status: isLate ? 'สาย' : (type==='OUT'?'ออกงาน':'มาปกติ'), type: type
-        }));
-        const res = await apiCall({ action: 'recordAttendanceUpdate', data: attendanceData });
-        if (res.success) { alert(`บันทึก${type==='IN'?'เข้างาน':'ออกงาน'}สำเร็จ!`); location.reload(); }
-        else { alert("ล้มเหลว"); btnIn.disabled = false; btnOut.disabled = false; }
-    }
-
-    function switchTab(tab) {
-        document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
-        document.getElementById(`content-${tab}`).classList.remove('hidden');
-        document.querySelectorAll('nav button').forEach(btn => {
-            btn.classList.remove('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
-            btn.classList.add('tab-inactive');
-        });
-        const activeTab = document.getElementById(`tab-${tab}`);
-        activeTab.classList.add('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
-        activeTab.classList.remove('tab-inactive');
-        if (tab === 'scan') { startCamera('video'); setTimeout(startDetector, 1000); } 
-        else stopCamera('video');
+            const now = new Date();
+            const timestamp = now.toISOString().slice(0, 10) + " " + now.toTimeString().split(' ')[0];
+            const isLate = (type === 'IN' && (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30)));
+            
+            const attendanceData = Array.from(scanned.values()).map(s => ({
+                id: String(s.studentid), name: String(s.name), class: String(s.class || "-"),
+                timestamp: timestamp, location: gpsLocation, location_name: selectedLoc.name,
+                status: isLate ? 'สาย' : (type==='OUT'?'ออกงาน':'มาปกติ'), type: type
+            }));
+            
+            const res = await apiCall({ action: 'recordAttendanceUpdate', data: attendanceData });
+            if (res.success) { alert(`บันทึก${type==='IN'?'เข้างาน':'ออกงาน'}สำเร็จ!`); location.reload(); }
+            else { alert("ล้มเหลว"); btnIn.disabled = false; btnOut.disabled = false; }
+        } catch (err) { alert("ไม่สามารถระบุพิกัด GPS ได้"); btnIn.disabled = false; btnOut.disabled = false; }
     }
 
     async function startCamera(id) {
@@ -416,20 +482,25 @@
         lucide.createIcons();
     }
 
-    function openAddModal() { if (!isLoggedIn) { pendingAction = 'add'; document.getElementById('login-modal').classList.remove('hidden'); } else document.getElementById('student-modal').classList.remove('hidden'); }
-    function deleteStudent(i) { if (!isLoggedIn) { pendingAction = 'delete'; pendingDeleteIndex = i; document.getElementById('login-modal').classList.remove('hidden'); } else executeDelete(i); }
+    function openAddModal() { switchTab('manage'); document.getElementById('student-modal').classList.remove('hidden'); }
+    function deleteStudent(i) { pendingDeleteIndex = i; executeDelete(i); }
     async function executeDelete(i) { if (confirm("ยืนยันการลบ?")) { await apiCall({action: 'deleteStudent', data: {rowIndex: i}}); location.reload(); } }
 
     function checkLogin() {
         const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value;
         if (AUTHORIZED_USERS[u] === p) {
-            isLoggedIn = true; document.getElementById('login-modal').classList.add('hidden');
-            if (pendingAction === 'add') document.getElementById('student-modal').classList.remove('hidden');
-            else if (pendingAction === 'delete') executeDelete(pendingDeleteIndex);
-        } else alert("รหัสผ่านไม่ถูกต้อง");
+            isLoggedIn = true; 
+            document.getElementById('login-modal').classList.add('hidden');
+            if (pendingAction) {
+                switchTab(pendingAction);
+                pendingAction = null;
+            }
+        } else {
+            alert("รหัสผ่านไม่ถูกต้อง");
+        }
     }
 
-    function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
+    function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); pendingAction = null; }
     function startModalCamera() { startCamera('modal-video'); document.getElementById('modal-video').classList.remove('hidden'); document.getElementById('preview-img').classList.add('hidden'); document.getElementById('btn-snap').classList.remove('hidden'); }
     
     function handleFileUpload(event) {
