@@ -424,6 +424,9 @@ async function approveAction(id, date) {
                         scanned.set(s.studentid, s);
                         document.getElementById('res-name').innerText = s.name;
                         document.getElementById('res-id').innerText = `ID: ${s.studentid}`;
+                        if(document.getElementById('res-class')) {
+        document.getElementById('res-class').innerText = s.class || "-";
+    }
                         document.getElementById('res-img').src = s.imagedatabase64;
                         document.getElementById('res-img').classList.remove('hidden');
                         document.getElementById('res-img-placeholder').classList.add('hidden');
