@@ -444,9 +444,9 @@ async function finishAttendance(type) {
         return alert("กรุณาสแกนใบหน้าและเลือกสถานที่");
     }
 
-    // --- จุดที่ 1: ลบ "ID: " ออกให้เหลือแค่รหัสพนักงานจริงๆ ---
-    let rawId = resIdElement.innerText;
-    const cleanId = rawId.replace(/ID:\s*/gi, '').trim(); 
+    // --- จุดแก้ไข 1: ลบคำว่า "ID:" ออกให้เหลือแค่รหัสล้วนๆ (เช่น TS0057) ---
+    // ระบบ Dashboard จะทำงานได้ รหัสใน Sheet ต้องไม่มีคำว่า "ID:" นำหน้า
+    let cleanId = resIdElement.innerText.replace(/ID:\s*/gi, '').trim(); 
 
     const selectedLocName = select.options[select.selectedIndex].text.trim();
     const selectedLoc = locationList.find(l => (l.name || l.LocationName || "").toString().trim() === selectedLocName);
@@ -455,21 +455,13 @@ async function finishAttendance(type) {
 
     try {
         const pos = await new Promise((res, rej) => {
-            navigator.geolocation.getCurrentPosition(res, rej, { 
-                enableHighAccuracy: true, 
-                timeout: 10000,
-                maximumAge: 0 
-            });
+            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 });
         });
         
         const currentLat = pos.coords.latitude;
         const currentLng = pos.coords.longitude;
 
         if (selectedLocName !== "ทำงานนอกสถานที่") {
-            if (!selectedLoc) {
-                btnIn.disabled = false; btnOut.disabled = false;
-                return alert("ไม่พบข้อมูลพิกัดของสถานที่: " + selectedLocName);
-            }
             const targetLat = parseFloat(selectedLoc.lat || selectedLoc.Latitude);
             const targetLng = parseFloat(selectedLoc.lng || selectedLoc.Longitude);
             const radius = parseFloat(selectedLoc.radius || selectedLoc['Radius (Meters)'] || 100);
@@ -482,38 +474,39 @@ async function finishAttendance(type) {
             }
         }
 
-        // --- จุดที่ 2: ดึงชื่อและแผนก (Class) จากหน้าจอให้ถูกต้อง ---
-        // ตรวจสอบว่า ID ในหน้า Dashboard คือ res-name และ res-class
+        // --- จุดแก้ไข 2: ดึงข้อมูลชื่อและแผนก (Class) ---
+        // ตรวจสอบ ID: res-name และ res-class ในหน้า HTML ของคุณว่ามีอยู่จริง
         const resName = document.getElementById('res-name') ? document.getElementById('res-name').innerText.trim() : "";
         const resClass = document.getElementById('res-class') ? document.getElementById('res-class').innerText.trim() : "";
+
+        // คำนวณสถานะ มาสาย (ถ้าหลัง 08:30 น. ให้ถือว่าสาย)
+        const now = new Date();
+        const isLate = (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30));
+        const statusText = isLate ? 'สาย' : 'ปกติ';
 
         const res = await apiCall({
             action: 'recordAttendanceUpdate', 
             data: [{
-                id: cleanId,        // ส่งเฉพาะ TS0057
+                id: cleanId,        // ส่งเฉพาะรหัสพนักงาน เช่น TS0057
                 name: resName, 
-                class: resClass,    // ส่งค่าแผนกที่ดึงจากหน้าจอ
-                timestamp: new Date().toLocaleString('th-TH'),
+                class: resClass,    // ส่งแผนกที่ดึงมาได้
+                timestamp: now.toLocaleString('th-TH'),
                 location: `${currentLat},${currentLng}`,
                 location_name: selectedLocName, 
-                status: (new Date().getHours() >= 8 && new Date().getMinutes() > 30) ? 'สาย' : 'ปกติ',
+                status: statusText, // ส่งสถานะ 'สาย' หรือ 'ปกติ'
                 type: type
             }]
         });
 
         if (res.success) {
             if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
-            alert("บันทึกสำเร็จ");
-            
-            // เคลียร์ข้อมูลหน้าจอก่อนโหลดใหม่ (ช่วยให้ Dashboard อัปเดตไวขึ้น)
-            isLoggedIn = false;
+            alert(`บันทึก${type}สำเร็จ: สถานะ ${statusText}`);
             location.reload();
         } else {
             alert("บันทึกผิดพลาด: " + res.message);
         }
 
     } catch (err) {
-        console.error(err);
         alert("เกิดข้อผิดพลาด: " + err.message);
     } finally {
         btnIn.disabled = false; btnOut.disabled = false;
