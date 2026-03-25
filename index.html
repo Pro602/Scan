@@ -58,7 +58,7 @@
     <main class="max-w-7xl mx-auto p-4 md:p-6">
         <div id="content-dashboard" class="space-y-6">
             <div class="flex justify-between items-center border-b border-slate-700 pb-4">
-                <h2 class="text-lg font-bold text-slate-200 uppercase tracking-widest">สรุปการเข้างานประจำวัน</h2>
+                <h2 class="text-lg font-bold text-slate-200 uppercase tracking-widest">Daily Summary</h2>
                 <input type="date" id="dashboard-date" onchange="renderDashboard()" class="bg-slate-800 px-3 py-1.5 rounded-xl shadow-sm border border-slate-600 text-sm font-bold text-white outline-none">
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -337,20 +337,19 @@ const createItem = (a, s) => {
         });
     }
 
-    async function approveAction(id, date) {
-    // 1. ดึงชื่อผู้อนุมัติจากตัวแปรที่เก็บค่าตอน Login (ตรวจสอบชื่อตัวแปรในระบบของคุณ)
-    // หากระบบคุณใช้ชื่อตัวแปร currentUser ให้ใช้แบบด้านล่างนี้ครับ
-    const approverName = (typeof currentUser !== 'undefined' && currentUser.name) ? currentUser.name : "Admin";
+async function approveAction(id, date) {
+    // แก้ไข: ดึงชื่อจากตัวแปร user ที่ระบบเก็บไว้ตอน Login
+    // ถ้าไม่มีชื่อ ให้ใช้ 'Unknown' แทนการระบุเจาะจงว่าเป็น Admin
+    const approverName = (user && user.name) ? user.name : "ไม่ได้ระบุชื่อ";
 
-    if(!confirm("ยืนยันการอนุมัติ?")) return;
+    if(!confirm(`ยืนยันการอนุมัติโดยคุณ ${approverName}?`)) return;
 
-    // 2. ส่งค่าไปหา GAS โดยเพิ่ม approvedBy เข้าไปใน data
     const res = await apiCall({ 
         action: 'approveLeave', 
         data: { 
             id: id, 
             date: date,
-            approvedBy: approverName  // <--- เพิ่มบรรทัดนี้เพื่อให้ชื่อบันทึกลงชีท
+            approvedBy: approverName // ส่งชื่อที่ดึงได้จริงไปที่ Code.gs
         } 
     });
 
@@ -359,7 +358,7 @@ const createItem = (a, s) => {
         await loadAllData(); 
         renderApprovalList(); 
     } else {
-        alert("ล้มเหลว: " + (res.message || "ไม่ทราบสาเหตุ"));
+        alert("ล้มเหลว: " + res.message);
     }
 }
 
@@ -446,45 +445,61 @@ async function finishAttendance(type) {
         return alert("กรุณาสแกนใบหน้าและเลือกสถานที่");
     }
 
-    // 1. ดึงข้อมูลสถานที่ที่เลือกจาก locationList (อ้างอิงตาม Index ที่เลือก)
-    const selectedLoc = locationList.find(l => l.name === select.value);
-    if (!selectedLoc) return alert("ไม่พบข้อมูลสถานที่");
+    // 1. ดึงข้อมูลสถานที่ (ใช้ trim() เพื่อป้องกันชื่อไม่ตรงเพราะช่องว่าง)
+    const selectedLocName = select.value.trim();
+    
+    // ค้นหาใน locationList
+    const selectedLoc = locationList.find(l => l.name.trim() === selectedLocName);
+
+    // ตรวจสอบ: ถ้าไม่ใช่ "ทำงานนอกสถานที่" และหาพิกัดใน locationList ไม่เจอ ให้แจ้งเตือน
+    if (!selectedLoc && selectedLocName !== "ทำงานนอกสถานที่") {
+        return alert("ไม่พบข้อมูลพิกัดของสถานที่: " + selectedLocName);
+    }
 
     btnIn.disabled = true; btnOut.disabled = true;
 
     try {
         // 2. ขอพิกัดปัจจุบัน
         const pos = await new Promise((res, rej) => {
-            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 });
+            navigator.geolocation.getCurrentPosition(res, rej, { 
+                enableHighAccuracy: true, 
+                timeout: 10000 
+            });
         });
         
         const currentLat = pos.coords.latitude;
         const currentLng = pos.coords.longitude;
 
-        // 3. ตรวจเช็คระยะทาง (ยกเว้นถ้าเป็น "ทำงานนอกสถานที่")
-        if (selectedLoc.name !== "ทำงานนอกสถานที่") {
+        // 3. ตรวจเช็คระยะทาง
+        if (selectedLocName === "ทำงานนอกสถานที่") {
+            // กรณีทำงานนอกสถานที่: ให้ผ่านได้เลย ไม่ต้องเช็คระยะทาง
+        } else {
+            // กรณีสถานที่อื่นๆ: ต้องเช็คระยะทาง
             const distance = getDistance(currentLat, currentLng, selectedLoc.lat, selectedLoc.lng);
             if (distance > selectedLoc.radius) {
-                alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร`);
+                alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร (จำกัดในระยะ ${selectedLoc.radius} เมตร)`);
                 btnIn.disabled = false; btnOut.disabled = false;
                 return;
             }
         }
 
-        // 4. ส่งข้อมูลไปยัง GAS (เพิ่มฟิลด์ lat, lng ไปด้วย)
+        // 4. ส่งข้อมูลไปยัง GAS
         const res = await apiCall({
-            action: 'addAttendance', 
-            data: {
+            action: 'recordAttendanceUpdate', // ใช้ action ให้ตรงกับใน Code.gs ของคุณ
+            data: [{
                 id: id, 
-                type: type, 
-                location_name: selectedLoc.name, 
-                lat: currentLat, 
-                lng: currentLng
-            }
+                name: document.getElementById('res-name').innerText,
+                class: document.getElementById('res-class').innerText,
+                timestamp: new Date().toLocaleString('th-TH'),
+                location: `${currentLat},${currentLng}`,
+                location_name: selectedLocName, 
+                status: (new Date().getHours() >= 8 && new Date().getMinutes() > 30) ? 'สาย' : 'ปกติ', // ตัวอย่างเงื่อนไขสาย
+                type: type
+            }]
         });
 
         if (res.success) {
-            document.getElementById('snd-ok').play();
+            if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
             alert("บันทึกสำเร็จ");
             location.reload();
         } else {
@@ -492,7 +507,7 @@ async function finishAttendance(type) {
         }
 
     } catch (err) {
-        alert("ไม่สามารถเข้าถึงพิกัด GPS ได้ กรุณาเปิดตำแหน่งอุปกรณ์");
+        alert("ไม่สามารถเข้าถึงพิกัด GPS ได้ หรือคุณปฏิเสธการเข้าถึงพิกัด");
     } finally {
         btnIn.disabled = false; btnOut.disabled = false;
     }
