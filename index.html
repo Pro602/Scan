@@ -338,27 +338,38 @@ const createItem = (a, s) => {
     }
 
 async function approveAction(id, date) {
-    // แก้ไข: ดึงชื่อจากตัวแปร user ที่ระบบเก็บไว้ตอน Login
-    // ถ้าไม่มีชื่อ ให้ใช้ 'Unknown' แทนการระบุเจาะจงว่าเป็น Admin
-    const approverName = (user && user.name) ? user.name : "ไม่ได้ระบุชื่อ";
+    // ดึงชื่อผู้อนุมัติจากตัวแปร user ที่เก็บไว้ตอน Login (ถ้าไม่มีให้ใช้ชื่อ Username หรือ 'Admin')
+    let approverName = "Admin";
+    if (typeof user !== 'undefined' && user && user.name) {
+        approverName = user.name;
+    } else if (typeof currentUser !== 'undefined' && currentUser.name) {
+        approverName = currentUser.name;
+    }
 
-    if(!confirm(`ยืนยันการอนุมัติโดยคุณ ${approverName}?`)) return;
+    if(!confirm(`ยืนยันการอนุมัติการลาโดยคุณ ${approverName}?`)) return;
 
-    const res = await apiCall({ 
-        action: 'approveLeave', 
-        data: { 
-            id: id, 
-            date: date,
-            approvedBy: approverName // ส่งชื่อที่ดึงได้จริงไปที่ Code.gs
-        } 
-    });
+    try {
+        const res = await apiCall({ 
+            action: 'approveLeave', 
+            data: { 
+                id: id, 
+                date: date,
+                approvedBy: approverName 
+            } 
+        });
 
-    if(res.success) { 
-        alert("อนุมัติสำเร็จ"); 
-        await loadAllData(); 
-        renderApprovalList(); 
-    } else {
-        alert("ล้มเหลว: " + res.message);
+        if(res.success) { 
+            alert("อนุมัติสำเร็จ"); 
+            // โหลดข้อมูลใหม่เพื่อให้หน้าจออัปเดต
+            if (typeof loadAllData === 'function') await loadAllData();
+            if (typeof renderApprovalList === 'function') renderApprovalList();
+            else location.reload(); // ถ้าไม่มีฟังก์ชันด้านบนให้ Refresh หน้าแทน
+        } else {
+            alert("ล้มเหลว: " + res.message);
+        }
+    } catch (e) {
+        console.error(e);
+        alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
     }
 }
 
@@ -445,47 +456,40 @@ async function finishAttendance(type) {
         return alert("กรุณาสแกนใบหน้าและเลือกสถานที่");
     }
 
-    // 1. ดึงข้อมูลสถานที่ (ใช้ trim() เพื่อป้องกันชื่อไม่ตรงเพราะช่องว่าง)
     const selectedLocName = select.value.trim();
-    
-    // ค้นหาใน locationList
-    const selectedLoc = locationList.find(l => l.name.trim() === selectedLocName);
 
-    // ตรวจสอบ: ถ้าไม่ใช่ "ทำงานนอกสถานที่" และหาพิกัดใน locationList ไม่เจอ ให้แจ้งเตือน
+    // ค้นหาแบบข้ามเงื่อนไขตัวพิมพ์เล็ก/ใหญ่ และตัดช่องว่าง
+    const selectedLoc = locationList.find(l => {
+        const locName = (l.name || l.LocationName || "").toString().trim();
+        return locName === selectedLocName;
+    });
+
+    // เงื่อนไข: ถ้าเป็น "ทำงานนอกสถานที่" ให้ผ่านได้เลยแม้ไม่มีใน List พิกัด
     if (!selectedLoc && selectedLocName !== "ทำงานนอกสถานที่") {
-        return alert("ไม่พบข้อมูลพิกัดของสถานที่: " + selectedLocName);
+        return alert("ไม่พบพิกัดของสถานที่: " + selectedLocName);
     }
 
     btnIn.disabled = true; btnOut.disabled = true;
 
     try {
-        // 2. ขอพิกัดปัจจุบัน
         const pos = await new Promise((res, rej) => {
-            navigator.geolocation.getCurrentPosition(res, rej, { 
-                enableHighAccuracy: true, 
-                timeout: 10000 
-            });
+            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 });
         });
         
         const currentLat = pos.coords.latitude;
         const currentLng = pos.coords.longitude;
 
-        // 3. ตรวจเช็คระยะทาง
-        if (selectedLocName === "ทำงานนอกสถานที่") {
-            // กรณีทำงานนอกสถานที่: ให้ผ่านได้เลย ไม่ต้องเช็คระยะทาง
-        } else {
-            // กรณีสถานที่อื่นๆ: ต้องเช็คระยะทาง
-            const distance = getDistance(currentLat, currentLng, selectedLoc.lat, selectedLoc.lng);
-            if (distance > selectedLoc.radius) {
-                alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร (จำกัดในระยะ ${selectedLoc.radius} เมตร)`);
+        if (selectedLocName !== "ทำงานนอกสถานที่") {
+            const distance = getDistance(currentLat, currentLng, selectedLoc.lat || selectedLoc.Latitude, selectedLoc.lng || selectedLoc.Longitude);
+            if (distance > (selectedLoc.radius || selectedLoc['Radius (Meters)'])) {
+                alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดกำหนด ${Math.round(distance)} เมตร`);
                 btnIn.disabled = false; btnOut.disabled = false;
                 return;
             }
         }
 
-        // 4. ส่งข้อมูลไปยัง GAS
         const res = await apiCall({
-            action: 'recordAttendanceUpdate', // ใช้ action ให้ตรงกับใน Code.gs ของคุณ
+            action: 'recordAttendanceUpdate', 
             data: [{
                 id: id, 
                 name: document.getElementById('res-name').innerText,
@@ -493,21 +497,17 @@ async function finishAttendance(type) {
                 timestamp: new Date().toLocaleString('th-TH'),
                 location: `${currentLat},${currentLng}`,
                 location_name: selectedLocName, 
-                status: (new Date().getHours() >= 8 && new Date().getMinutes() > 30) ? 'สาย' : 'ปกติ', // ตัวอย่างเงื่อนไขสาย
+                status: (new Date().getHours() >= 8 && new Date().getMinutes() > 30) ? 'สาย' : 'ปกติ',
                 type: type
             }]
         });
 
         if (res.success) {
-            if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
             alert("บันทึกสำเร็จ");
             location.reload();
-        } else {
-            alert("บันทึกผิดพลาด: " + res.message);
         }
-
     } catch (err) {
-        alert("ไม่สามารถเข้าถึงพิกัด GPS ได้ หรือคุณปฏิเสธการเข้าถึงพิกัด");
+        alert("กรุณาเปิด GPS บนอุปกรณ์ของคุณ");
     } finally {
         btnIn.disabled = false; btnOut.disabled = false;
     }
