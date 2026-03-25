@@ -437,16 +437,24 @@ async function approveAction(id, date) {
 
 async function finishAttendance(type) {
     const resIdElement = document.getElementById('res-id');
+    const resNameElement = document.getElementById('res-name');
+    const resClassElement = document.getElementById('res-class'); // เช็ค ID นี้ใน HTML
     const select = document.getElementById('location-select');
     const btnIn = document.getElementById('btn-in'), btnOut = document.getElementById('btn-out');
 
-    if (!resIdElement || resIdElement.innerText === 'STANDING BY' || !select.value || select.value === "") {
+    if (!resIdElement || resIdElement.innerText === 'STANDING BY' || !select.value) {
         return alert("กรุณาสแกนใบหน้าและเลือกสถานที่");
     }
 
-    // --- จุดแก้ไข 1: ลบคำว่า "ID:" ออกให้เหลือแค่รหัสล้วนๆ (เช่น TS0057) ---
-    // ระบบ Dashboard จะทำงานได้ รหัสใน Sheet ต้องไม่มีคำว่า "ID:" นำหน้า
-    let cleanId = resIdElement.innerText.replace(/ID:\s*/gi, '').trim(); 
+    // --- 1. ล้างค่า ID ให้เหลือแค่รหัสล้วน (เช่น TS0057) ---
+    const cleanId = resIdElement.innerText.replace(/ID:\s*/gi, '').trim(); 
+
+    // --- 2. ดึงค่า Class (แผนก) แบบป้องกันค่าว่าง ---
+    // ถ้าหน้าจอแสดง "แผนก: ผลิต" โค้ดนี้จะดึงแค่ "ผลิต" ไปบันทึก
+    let cleanClass = "-";
+    if (resClassElement) {
+        cleanClass = resClassElement.innerText.replace(/แผนก:\s*/gi, '').replace(/Class:\s*/gi, '').trim();
+    }
 
     const selectedLocName = select.options[select.selectedIndex].text.trim();
     const selectedLoc = locationList.find(l => (l.name || l.LocationName || "").toString().trim() === selectedLocName);
@@ -474,33 +482,29 @@ async function finishAttendance(type) {
             }
         }
 
-        // --- จุดแก้ไข 2: ดึงข้อมูลชื่อและแผนก (Class) ---
-        // ตรวจสอบ ID: res-name และ res-class ในหน้า HTML ของคุณว่ามีอยู่จริง
-        const resName = document.getElementById('res-name') ? document.getElementById('res-name').innerText.trim() : "";
-        const resClass = document.getElementById('res-class') ? document.getElementById('res-class').innerText.trim() : "";
-
-        // คำนวณสถานะ มาสาย (ถ้าหลัง 08:30 น. ให้ถือว่าสาย)
+        // --- 3. กำหนดสถานะ มาสาย/ปกติ (อิงตามเวลา 08:30) ---
         const now = new Date();
-        const isLate = (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30));
-        const statusText = isLate ? 'สาย' : 'ปกติ';
+        const hour = now.getHours();
+        const min = now.getMinutes();
+        const statusText = (hour > 8 || (hour === 8 && min > 30)) ? 'สาย' : 'ปกติ';
 
         const res = await apiCall({
             action: 'recordAttendanceUpdate', 
             data: [{
-                id: cleanId,        // ส่งเฉพาะรหัสพนักงาน เช่น TS0057
-                name: resName, 
-                class: resClass,    // ส่งแผนกที่ดึงมาได้
+                id: cleanId,
+                name: resNameElement ? resNameElement.innerText.trim() : "", 
+                class: cleanClass, // ส่งแผนกที่ล้างคำนำหน้าออกแล้ว
                 timestamp: now.toLocaleString('th-TH'),
                 location: `${currentLat},${currentLng}`,
                 location_name: selectedLocName, 
-                status: statusText, // ส่งสถานะ 'สาย' หรือ 'ปกติ'
+                status: statusText, // ส่งสถานะ 'สาย' หรือ 'ปกติ' ไปที่ช่อง Status
                 type: type
             }]
         });
 
         if (res.success) {
             if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
-            alert(`บันทึก${type}สำเร็จ: สถานะ ${statusText}`);
+            alert(`บันทึก${type}สำเร็จ! (สถานะ: ${statusText})`);
             location.reload();
         } else {
             alert("บันทึกผิดพลาด: " + res.message);
