@@ -441,52 +441,49 @@ async function approveAction(id, date) {
         }, 300);
     }
 
-async function finishAttendance(type) {
-    const id = document.getElementById('res-id').innerText;
-    const select = document.getElementById('location-select');
-    const btnIn = document.getElementById('btn-in'), btnOut = document.getElementById('btn-out');
+    async function finishAttendance(type) {
+        if (scanned.size === 0) return alert("ยังไม่มีรายชื่อที่สแกนสำเร็จ");
+        const select = document.getElementById('location-select');
+        if (select.value === "") return alert("โปรดเลือกสถานที่ปฏิบัติงาน");
 
-    if (id === 'STANDING BY' || !select.value) {
-        return alert("กรุณาสแกนใบหน้าและเลือกสถานที่");
-    }
+        const btnIn = document.getElementById('btn-in'), btnOut = document.getElementById('btn-out');
+        btnIn.disabled = true; btnOut.disabled = true;
 
-    const selectedLocName = select.value.trim();
+        const selectedLoc = locationList[select.value];
+        let gpsLocation = "";
+        let finalLocationName = selectedLoc.name;
 
-    // แก้ไขการค้นหา: ตรวจสอบทั้งชื่อคอลัมน์ name และ LocationName
-    const selectedLoc = locationList.find(l => {
-        const nameInSheet = (l.name || l.locationname || l.LocationName || "").toString().trim();
-        return nameInSheet === selectedLocName;
-    });
-
-    // เงื่อนไข: ถ้าเป็น "ทำงานนอกสถานที่" ให้ผ่านได้เลย
-    if (!selectedLoc && selectedLocName !== "ทำงานนอกสถานที่") {
-        return alert("ไม่พบข้อมูลพิกัดของสถานที่: " + selectedLocName);
-    }
-
-    btnIn.disabled = true; btnOut.disabled = true;
-
-    try {
-        const pos = await new Promise((res, rej) => {
-            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 });
-        });
-        
-        const currentLat = pos.coords.latitude;
-        const currentLng = pos.coords.longitude;
-
-        if (selectedLocName !== "ทำงานนอกสถานที่") {
-            // ดึงค่า Latitude, Longitude และ Radius ให้ตรงกับหัวตารางใน Sheet
-            const targetLat = selectedLoc.lat || selectedLoc.latitude || selectedLoc.Latitude;
-            const targetLng = selectedLoc.lng || selectedLoc.longitude || selectedLoc.Longitude;
-            const radius = selectedLoc.radius || selectedLoc['radius (meters)'] || selectedLoc['Radius (Meters)'];
-
-            const distance = getDistance(currentLat, currentLng, targetLat, targetLng);
-            
-            if (distance > radius) {
-                alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร (จำกัดในระยะ ${radius} เมตร)`);
-                btnIn.disabled = false; btnOut.disabled = false;
-                return;
+        if (selectedLoc.name !== "ทำงานนอกสถานที่") {
+            try {
+                const pos = await new Promise((res, rej) => { 
+                    navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 }); 
+                });
+                const distance = getDistance(pos.coords.latitude, pos.coords.longitude, selectedLoc.lat, selectedLoc.lng);
+                if (distance > selectedLoc.radius) {
+                    alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร`);
+                    btnIn.disabled = false; btnOut.disabled = false; return;
+                }
+                gpsLocation = `${pos.coords.latitude},${pos.coords.longitude}`;
+            } catch (err) {
+                alert("ไม่สามารถเข้าถึงพิกัด GPS ได้");
+                btnIn.disabled = false; btnOut.disabled = false; return;
             }
+        } else {
+            try {
+                const pos = await new Promise((res) => { navigator.geolocation.getCurrentPosition(res, null, {timeout: 3000}); });
+                gpsLocation = `${pos.coords.latitude},${pos.coords.longitude}`;
+            } catch (e) { gpsLocation = "ทำงานนอกสถานที่"; }
         }
+
+        const now = new Date();
+        const timestamp = now.toISOString().slice(0, 10) + " " + now.toTimeString().split(' ')[0];
+        const isLate = (type === 'IN' && (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30)));
+
+        const attendanceData = Array.from(scanned.values()).map(s => ({
+            id: String(s.studentid), name: String(s.name), class: String(s.class || "-"),
+            timestamp: timestamp, location: gpsLocation, location_name: finalLocationName,
+            status: isLate ? 'สาย' : (type==='OUT'?'ออกงาน':'มาปกติ'), type: type
+        }));
 
         // บันทึกข้อมูล (ใช้ action recordAttendanceUpdate ตาม Code.gs)
         const res = await apiCall({
