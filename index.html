@@ -55,7 +55,6 @@
                 </div>
             </div>
             <div class="flex bg-slate-800 p-1 rounded-2xl border border-slate-700 shadow-inner overflow-x-auto">
-@@ -67,19 +69,19 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[520px]">
@@ -79,7 +78,6 @@
                     <div class="list-window flex-grow bg-slate-50"><div id="absent-list" class="p-2 space-y-1"></div></div>
                 </div>
             </div>
-@@ -88,12 +90,12 @@
         <div id="content-scan" class="hidden">
             <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200 text-slate-800">
                 <div class="mb-4">
@@ -95,7 +93,6 @@
                     <video id="video" class="w-full h-full object-cover" autoplay muted playsinline></video>
                     <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
                 </div>
-@@ -106,31 +108,30 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
@@ -137,7 +134,6 @@
             </div>
         </div>
 
-@@ -139,7 +140,7 @@
                 <h2 class="text-xl font-bold uppercase tracking-tighter">Employee List</h2>
                 <button onclick="openAddModal()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-md">+ เพิ่มพนักงาน</button>
             </div>
@@ -146,7 +142,7 @@
                 <table class="w-full text-left text-sm text-slate-800 min-w-[600px]">
                     <thead class="bg-slate-50 text-slate-400 font-bold">
                         <tr><th class="p-4">รูป</th><th class="p-4">รหัส</th><th class="p-4">ชื่อ</th><th class="p-4">แผนก</th><th class="p-4 text-center">จัดการ</th></tr>
-@@ -153,30 +154,28 @@
+
     <div id="login-modal" class="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center hidden backdrop-blur-md">
         <div class="bg-white p-8 rounded-[2rem] max-w-xs w-full shadow-2xl space-y-4 text-slate-800">
             <h3 class="text-lg font-bold text-center">ยืนยันสิทธิ์เข้าถึง</h3>
@@ -185,7 +181,6 @@
             <button onclick="closeStudentModal()" class="w-full text-slate-400 text-xs">ยกเลิก</button>
         </div>
     </div>
-@@ -200,7 +199,7 @@
             if(aRes.success) attendance = aRes.data;
             if(vRes.success) leaves = vRes.data;
             renderDashboard();
@@ -194,7 +189,6 @@
     };
 
     async function apiCall(p) {
-@@ -221,113 +220,139 @@
         renderDashboard();
     }
 
@@ -363,7 +357,6 @@
             btn.classList.add('tab-inactive');
         });
     }
-
     function renderLeaveDropdown() {
         const select = document.getElementById('leave-student-select');
         if(!select) return;
@@ -375,7 +368,6 @@
         if (tab === 'scan') { startCamera('video'); setTimeout(startDetector, 1000); } else stopCamera('video');
         if (tab === 'approve') renderApprovalList();
     }
-
     async function saveLeave() {
         const id = document.getElementById('leave-student-select').value;
         const student = students.find(x => String(x.studentid) === String(id));
@@ -391,7 +383,6 @@
         if(res.success) { alert("ส่งคำขอสำเร็จ"); location.reload(); }
         else alert("ล้มเหลว");
     }
-
     async function initFaceAPI() {
         const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
         try {
@@ -404,7 +395,6 @@
             const labeled = [];
             for (const s of students) {
                 if (s.imagedatabase64) {
-@@ -339,7 +364,7 @@
                 }
             }
             if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.45);
@@ -413,7 +403,6 @@
     }
 
     async function startDetector() {
-@@ -371,165 +396,56 @@
         }, 300);
     }
 
