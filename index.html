@@ -16,7 +16,7 @@
         @keyframes fadeInLogo { from { opacity: 0; transform: translateY(-10px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes spin360 { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
         
-        /* Animation สำหรับปุ่มอนุมัติ (วงแดง 1) */
+        /* Animation สำหรับปุ่มอนุมัติ */
         @keyframes pulse-orange {
             0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); background-color: rgba(30, 41, 59, 1); }
             50% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); background-color: rgba(245, 158, 11, 1); color: white; }
@@ -162,7 +162,7 @@
     </div>
 
     <div id="student-modal" class="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center hidden backdrop-blur-sm">
-        <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full mx-4 shadow-2xl space-y-4 text-center text-slate-800">
+        <div class="bg-white rounded-[2rem] p-8 max-sm w-full mx-4 shadow-2xl space-y-4 text-center text-slate-800">
             <h3 class="text-xl font-bold border-b pb-3">ลงทะเบียนพนักงาน</h3>
             <div class="relative w-32 h-32 bg-slate-100 rounded-2xl mx-auto overflow-hidden border-2 border-dashed border-slate-300">
                 <video id="modal-video" class="w-full h-full object-cover hidden" autoplay muted playsinline></video>
@@ -186,7 +186,7 @@
 <script>
     const gasUrl = "https://script.google.com/macros/s/AKfycby9t947sFIvKCyxoLrFjLu0nNSGo95rdgFLarIfIVanE7kCKEDfglqgikUZCeFC_JAj/exec";
     let students = [], attendance = [], locationList = [], leaves = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
-    let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
+    let isLoggedIn = false, pendingAction = null, currentUserName = "";
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
 
     window.onload = async () => {
@@ -220,7 +220,6 @@
         renderDashboard();
     }
 
-    // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
     function renderDashboard() {
         const dateInput = document.getElementById('dashboard-date').value;
         const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
@@ -229,7 +228,6 @@
         const lists = { norm: document.getElementById('normal-list'), late: document.getElementById('late-list-display'), out: document.getElementById('out-list'), abs: document.getElementById('absent-list') };
         Object.values(lists).forEach(l => { if(l){ l.innerHTML = ''; l.classList.remove('scroll-container'); } });
 
-        // ตรวจสอบข้อมูล Pending เพื่อกระพริบปุ่ม (วงแดง 1)
         const hasPending = leaves.some(l => l.status === 'Pending' || l.status === 'รออนุมัติ');
         const approveBtn = document.getElementById('tab-approve');
         if(hasPending) approveBtn.classList.add('btn-pending-pulse');
@@ -237,8 +235,7 @@
 
         const createItem = (a, s) => {
             const time = a.timestamp.split(' ')[1] || '';
-            return `
-            <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-1">
+            return `<div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-1">
                 <div class="flex items-center gap-2">
                     <img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border">
                     <div>
@@ -259,31 +256,18 @@
             else { lists.norm.innerHTML += createItem(a, s); counts.in++; }
         });
 
-        // วงแดง 3: ปรับการแสดงผลการลาที่ Pending / Approve
         students.forEach(s => {
             if(!checkedInIds.has(String(s.studentid))) {
                 const leaveToday = leaves.find(l => String(l.id) === String(s.studentid) && l.date === dateInput);
-                let statusText = "WAITING";
-                let bgClass = "bg-slate-100 text-slate-400";
-
+                let statusText = "WAITING", bgClass = "bg-slate-100 text-slate-400";
                 if (leaveToday) {
-                    if (leaveToday.status === 'Pending' || leaveToday.status === 'รออนุมัติ') {
-                        statusText = "รอการอนุมัติการแจ้งลา";
-                        bgClass = "bg-yellow-400 text-black"; // แถบสีเหลือง
-                    } else {
-                        statusText = leaveToday.type;
-                        bgClass = "bg-emerald-500 text-white"; // แถบสีเขียว (อนุมัติแล้ว)
-                    }
+                    if (leaveToday.status === 'Pending' || leaveToday.status === 'รออนุมัติ') { statusText = "รอการอนุมัติการแจ้งลา"; bgClass = "bg-yellow-400 text-black"; }
+                    else { statusText = leaveToday.type; bgClass = "bg-emerald-500 text-white"; }
                 }
-
-                lists.abs.innerHTML += `
-                <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-1">
+                lists.abs.innerHTML += `<div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-1">
                     <div class="flex items-center gap-2">
                         <img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border">
-                        <div>
-                            <p class="font-bold text-slate-600 text-[10px]">${s.name}</p>
-                            <p class="text-[8px] text-blue-700 font-bold">${s.class || '-'}</p>
-                        </div>
+                        <div><p class="font-bold text-slate-600 text-[10px]">${s.name}</p><p class="text-[8px] text-blue-700 font-bold">${s.class || '-'}</p></div>
                     </div>
                     <span class="px-2 py-0.5 text-[8px] rounded-full font-bold ${bgClass}">${statusText}</span>
                 </div>`;
@@ -297,15 +281,11 @@
         document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedInIds.size);
     }
 
-    // --- ส่วนงานจัดการการอนุมัติ ---
     function renderApprovalList() {
         const container = document.getElementById('pending-list');
         container.innerHTML = '';
         const pending = leaves.filter(l => l.status === 'Pending' || l.status === 'รออนุมัติ');
-        if(pending.length === 0) {
-            container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500 italic">ไม่มีรายการรออนุมัติ</div>';
-            return;
-        }
+        if(pending.length === 0) { container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500 italic">ไม่มีรายการรออนุมัติ</div>'; return; }
         pending.forEach(l => {
             const card = document.createElement('div');
             card.className = "bg-white p-5 rounded-3xl shadow-lg border-l-8 border-amber-500 flex justify-between items-center";
@@ -316,13 +296,12 @@
     }
 
     async function approveAction(id, date) {
-        if(!confirm("ยืนยันการอนุมัติ?")) return;
-        const res = await apiCall({ action: 'approveLeave', data: { id: id, date: date } });
+        if(!confirm(`ยืนยันการอนุมัติโดยคุณ ${currentUserName}?`)) return;
+        const res = await apiCall({ action: 'approveLeave', data: { id: id, date: date, approvedBy: currentUserName } });
         if(res.success) { alert("อนุมัติสำเร็จ"); await loadAllData(); renderApprovalList(); }
         else alert("ล้มเหลว");
     }
 
-    // --- ส่วน Logic พื้นฐาน (คงเดิม) ---
     function switchTab(tab) {
         if ((tab === 'approve' || tab === 'manage') && !isLoggedIn) { pendingAction = tab; document.getElementById('login-modal').classList.remove('hidden'); return; }
         document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
@@ -389,7 +368,7 @@
                         document.getElementById('res-img').classList.remove('hidden');
                         document.getElementById('res-img-placeholder').classList.add('hidden');
                         document.getElementById('snd-ok').play();
-                        speak(`สแกนสำเร็จค่ะคุณ ${s.name.split(' ')[0]}`);
+                        speak(`สแกนสำเร็จค่ะ ${s.name.split(' ')[0]}`);
                     }
                 });
             }
@@ -439,11 +418,21 @@
     async function startCamera(id) { try { document.getElementById(id).srcObject = await navigator.mediaDevices.getUserMedia({video:true}); } catch(e){} }
     function stopCamera(id) { const v = document.getElementById(id); if(v?.srcObject) v.srcObject.getTracks().forEach(t => t.stop()); }
     function speak(t) { const m = new SpeechSynthesisUtterance(t); m.lang = 'th-TH'; window.speechSynthesis.speak(m); }
-    function checkLogin() { const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value; if (AUTHORIZED_USERS[u] === p) { isLoggedIn = true; document.getElementById('login-modal').classList.add('hidden'); if(pendingAction) switchTab(pendingAction); } else alert("Error"); }
+    
+    function checkLogin() { 
+        const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value; 
+        if (AUTHORIZED_USERS[u] === p) { 
+            isLoggedIn = true; 
+            currentUserName = u; // เก็บชื่อคน Login
+            document.getElementById('login-modal').classList.add('hidden'); 
+            if(pendingAction) switchTab(pendingAction); 
+        } else alert("Username หรือ Password ไม่ถูกต้อง"); 
+    }
+    
     function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
     function startModalCamera() { startCamera('modal-video'); document.getElementById('modal-video').classList.remove('hidden'); document.getElementById('preview-img').classList.add('hidden'); document.getElementById('btn-snap').classList.remove('hidden'); }
     function snapPhoto() { const v = document.getElementById('modal-video'), c = document.getElementById('capture-canvas'); c.width = 400; c.height = 400; c.getContext('2d').drawImage(v,0,0,400,400); capturedImg = c.toDataURL('image/jpeg', 0.8); document.getElementById('preview-img').src = capturedImg; document.getElementById('preview-img').classList.remove('hidden'); v.classList.add('hidden'); stopCamera('modal-video'); document.getElementById('btn-snap').classList.add('hidden'); }
-    async function saveStudent() { const sId = document.getElementById('modal-id').value, sName = document.getElementById('modal-name').value, sClass = document.getElementById('modal-class').value; if(!capturedImg || !sId || !sName) return alert("Error"); const res = await apiCall({ action: 'addStudent', data: {studentid: sId, name: sName, class: sClass, imagedatabase64: capturedImg} }); if(res.success) location.reload(); else alert("Error"); }
+    async function saveStudent() { const sId = document.getElementById('modal-id').value, sName = document.getElementById('modal-name').value, sClass = document.getElementById('modal-class').value; if(!capturedImg || !sId || !sName) return alert("กรุณากรอกข้อมูลให้ครบ"); const res = await apiCall({ action: 'addStudent', data: {studentid: sId, name: sName, class: sClass, imagedatabase64: capturedImg} }); if(res.success) location.reload(); else alert("Error"); }
     function closeStudentModal() { document.getElementById('student-modal').classList.add('hidden'); stopCamera('modal-video'); }
     function openAddModal() { document.getElementById('student-modal').classList.remove('hidden'); }
 </script>
