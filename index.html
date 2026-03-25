@@ -437,11 +437,33 @@
         document.getElementById('preview-img').src = capturedImg; document.getElementById('preview-img').classList.remove('hidden'); v.classList.add('hidden'); stopCamera('modal-video'); document.getElementById('btn-snap').classList.add('hidden');
     }
 
-    async function saveStudent() {
-        if(!capturedImg || !document.getElementById('modal-id').value || !document.getElementById('modal-name').value) return alert("กรอกข้อมูลให้ครบและถ่ายรูป");
-        const res = await apiCall({action:'addStudent', data:{studentid: document.getElementById('modal-id').value, name: document.getElementById('modal-name').value, class: document.getElementById('modal-class').value, imagedatabase64: capturedImg}});
-        if(res.success) location.reload(); else alert("บันทึกล้มเหลว");
+ // --- แก้ไขฟังก์ชัน saveStudent ใน Index.html ---
+async function saveStudent() {
+    const sId = document.getElementById('modal-id').value.trim();
+    const sName = document.getElementById('modal-name').value.trim();
+    const sClass = document.getElementById('modal-class').value.trim();
+
+    if(!capturedImg || !sId || !sName) {
+        return alert("กรุณากรอกข้อมูลให้ครบ (รหัส, ชื่อ) และถ่ายรูป/อัปโหลดรูปภาพ");
     }
+
+    const res = await apiCall({
+        action: 'addStudent', 
+        data: {
+            studentid: sId, 
+            name: sName, 
+            class: sClass, 
+            imagedatabase64: capturedImg
+        }
+    });
+
+    if(res.success) {
+        alert("บันทึกพนักงานใหม่เรียบร้อยแล้ว");
+        location.reload(); 
+    } else {
+        alert("บันทึกล้มเหลว: " + (res.error || "โปรดลองอีกครั้ง"));
+    }
+}
 
     function closeStudentModal() { document.getElementById('student-modal').classList.add('hidden'); stopCamera('modal-video'); }
 </script>
