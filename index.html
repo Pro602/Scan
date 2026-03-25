@@ -475,16 +475,6 @@ async function approveAction(id, date) {
             } catch (e) { gpsLocation = "ทำงานนอกสถานที่"; }
         }
 
-        const now = new Date();
-        const timestamp = now.toISOString().slice(0, 10) + " " + now.toTimeString().split(' ')[0];
-        const isLate = (type === 'IN' && (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30)));
-
-        const attendanceData = Array.from(scanned.values()).map(s => ({
-            id: String(s.studentid), name: String(s.name), class: String(s.class || "-"),
-            timestamp: timestamp, location: gpsLocation, location_name: finalLocationName,
-            status: isLate ? 'สาย' : (type==='OUT'?'ออกงาน':'มาปกติ'), type: type
-        }));
-
         // บันทึกข้อมูล (ใช้ action recordAttendanceUpdate ตาม Code.gs)
         const res = await apiCall({
             action: 'recordAttendanceUpdate', 
