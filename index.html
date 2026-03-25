@@ -440,26 +440,32 @@ async function finishAttendance(type) {
     const select = document.getElementById('location-select');
     const btnIn = document.getElementById('btn-in'), btnOut = document.getElementById('btn-out');
 
-    if (id === 'STANDING BY' || !select.value) {
+    // ตรวจสอบเบื้องต้น
+    if (id === 'STANDING BY' || !select.value || select.value === "") {
         return alert("กรุณาสแกนใบหน้าและเลือกสถานที่");
     }
 
-    const selectedLocName = select.value.trim();
-
-    // แก้ไขการค้นหา: ตรวจสอบทั้งชื่อคอลัมน์ name และ LocationName
+    // --- จุดแก้ไขสำคัญ: ดึงชื่อสถานที่จากตัวเลือกที่เลือก (Text) ---
+    const selectedLocName = select.options[select.selectedIndex].text.trim();
+    
+    // ค้นหาข้อมูลพิกัดจาก locationList
     const selectedLoc = locationList.find(l => {
-        const nameInSheet = (l.name || l.locationname || l.LocationName || "").toString().trim();
+        const nameInSheet = (l.name || l.LocationName || "").toString().trim();
         return nameInSheet === selectedLocName;
     });
 
-    // เงื่อนไข: ถ้าเป็น "ทำงานนอกสถานที่" ให้ผ่านได้เลย
-    if (!selectedLoc && selectedLocName !== "ทำงานนอกสถานที่") {
+    // เงื่อนไข: ถ้าเลือก "ทำงานนอกสถานที่" ให้ผ่านได้เลย ไม่ต้องเช็คพิกัด
+    if (selectedLocName === "ทำงานนอกสถานที่") {
+        // ให้ผ่านไปยังขั้นตอนบันทึกได้เลย
+    } else if (!selectedLoc) {
+        // ถ้าไม่ใช่ทำงานนอกสถานที่ และหาพิกัดไม่เจอ ให้แจ้งเตือน
         return alert("ไม่พบข้อมูลพิกัดของสถานที่: " + selectedLocName);
     }
 
     btnIn.disabled = true; btnOut.disabled = true;
 
     try {
+        // ขอพิกัดปัจจุบัน
         const pos = await new Promise((res, rej) => {
             navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 });
         });
@@ -467,22 +473,21 @@ async function finishAttendance(type) {
         const currentLat = pos.coords.latitude;
         const currentLng = pos.coords.longitude;
 
+        // เช็คระยะทาง (ยกเว้น "ทำงานนอกสถานที่")
         if (selectedLocName !== "ทำงานนอกสถานที่") {
-            // ดึงค่า Latitude, Longitude และ Radius ให้ตรงกับหัวตารางใน Sheet
-            const targetLat = selectedLoc.lat || selectedLoc.latitude || selectedLoc.Latitude;
-            const targetLng = selectedLoc.lng || selectedLoc.longitude || selectedLoc.Longitude;
-            const radius = selectedLoc.radius || selectedLoc['radius (meters)'] || selectedLoc['Radius (Meters)'];
+            const targetLat = selectedLoc.lat || selectedLoc.Latitude;
+            const targetLng = selectedLoc.lng || selectedLoc.Longitude;
+            const radius = selectedLoc.radius || selectedLoc['Radius (Meters)'] || 100;
 
             const distance = getDistance(currentLat, currentLng, targetLat, targetLng);
-            
             if (distance > radius) {
-                alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร (จำกัดในระยะ ${radius} เมตร)`);
+                alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร`);
                 btnIn.disabled = false; btnOut.disabled = false;
                 return;
             }
         }
 
-        // บันทึกข้อมูล (ใช้ action recordAttendanceUpdate ตาม Code.gs)
+        // บันทึกข้อมูลไปยัง Google Sheets
         const res = await apiCall({
             action: 'recordAttendanceUpdate', 
             data: [{
@@ -498,16 +503,19 @@ async function finishAttendance(type) {
         });
 
         if (res.success) {
+            if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
             alert("บันทึกสำเร็จ");
             location.reload();
+        } else {
+            alert("บันทึกผิดพลาด: " + res.message);
         }
+
     } catch (err) {
-        alert("ไม่สามารถบันทึกได้: " + err.message);
+        alert("ไม่สามารถเข้าถึงพิกัด GPS ได้ กรุณาเปิดตำแหน่งบนอุปกรณ์");
     } finally {
         btnIn.disabled = false; btnOut.disabled = false;
     }
 }
-
 // ฟังก์ชันคำนวณระยะทาง (ต้องมีใน Code ของคุณ)
 function getDistance(lat1, lon1, lat2, lon2) {
     const R = 6371e3; // รัศมีโลกในหน่วยเมตร
