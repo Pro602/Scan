@@ -447,48 +447,41 @@ async function finishAttendance(type) {
     const selectedLocName = select.options[select.selectedIndex].text.trim();
     const selectedLoc = locationList.find(l => (l.name || l.LocationName || "").toString().trim() === selectedLocName);
 
-    if (selectedLocName !== "ทำงานนอกสถานที่" && !selectedLoc) {
-        return alert("ไม่พบข้อมูลพิกัดของสถานที่: " + selectedLocName);
-    }
-
     btnIn.disabled = true; btnOut.disabled = true;
 
     try {
-        // 1. ขอพิกัด GPS
         const pos = await new Promise((res, rej) => {
-            navigator.geolocation.getCurrentPosition(res, rej, { 
-                enableHighAccuracy: true, 
-                timeout: 10000,
-                maximumAge: 0 
-            });
+            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 });
         });
         
         const currentLat = pos.coords.latitude;
         const currentLng = pos.coords.longitude;
 
-        // 2. เช็คระยะทาง (ถ้าไม่ใช่ทำงานนอกสถานที่)
         if (selectedLocName !== "ทำงานนอกสถานที่") {
             const targetLat = parseFloat(selectedLoc.lat || selectedLoc.Latitude);
             const targetLng = parseFloat(selectedLoc.lng || selectedLoc.Longitude);
             const radius = parseFloat(selectedLoc.radius || selectedLoc['Radius (Meters)'] || 100);
-
             const distance = getDistance(currentLat, currentLng, targetLat, targetLng);
             
             if (distance > radius) {
-                // แจ้งเตือนระยะทาง แล้วหยุดการทำงานตรงนี้ (Return ออกไปเลย)
-                alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร (จำกัด ${radius} เมตร)`);
+                alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร`);
                 btnIn.disabled = false; btnOut.disabled = false;
-                return; // *** สำคัญมาก ต้อง return เพื่อไม่ให้ไปทำงานส่วนบันทึก ***
+                return; 
             }
         }
 
-        // 3. ถ้าผ่านเงื่อนไขระยะทาง หรือเป็น "ทำงานนอกสถานที่" ให้มาทำส่วนบันทึก
+        // --- จุดที่แก้ไข: ป้องกัน Error null 'innerText' ---
+        // ตรวจสอบ ID ของ Element ที่แสดงชื่อและแผนกในหน้าจอของคุณอีกครั้ง
+        // หาก ID คือ res-name-display ให้เปลี่ยนตามนั้น หรือใช้คำสั่งป้องกันแบบด้านล่าง
+        const resName = document.getElementById('res-name') ? document.getElementById('res-name').innerText : "ไม่ทราบชื่อ";
+        const resClass = document.getElementById('res-class') ? document.getElementById('res-class').innerText : "-";
+
         const res = await apiCall({
             action: 'recordAttendanceUpdate', 
             data: [{
                 id: id, 
-                name: document.getElementById('res-name').innerText,
-                class: document.getElementById('res-class').innerText,
+                name: resName, 
+                class: resClass,
                 timestamp: new Date().toLocaleString('th-TH'),
                 location: `${currentLat},${currentLng}`,
                 location_name: selectedLocName, 
@@ -506,19 +499,14 @@ async function finishAttendance(type) {
         }
 
     } catch (err) {
-        // แก้ไขตรงนี้: ให้เช็คว่า error เกิดจาก GPS จริงหรือไม่
+        // ถ้าหลุดมาที่นี่ แสดงว่ามีปัญหาเรื่องสิทธิ์ GPS หรือ Error ใน Code
         console.error(err);
-        if (err.code === 1) {
-            alert("กรุณาอนุญาตสิทธิ์การเข้าถึงตำแหน่ง (GPS)");
-        } else if (err.code === 3) {
-            alert("สัญญาณ GPS หมดเวลา (Timeout) กรุณาลองใหม่อีกครั้ง");
-        } else {
-            alert("เกิดข้อผิดพลาด: " + err.message);
-        }
+        alert("เกิดข้อผิดพลาด: " + err.message);
     } finally {
         btnIn.disabled = false; btnOut.disabled = false;
     }
 }
+    
 // ฟังก์ชันคำนวณระยะทาง (ต้องมีใน Code ของคุณ)
 function getDistance(lat1, lon1, lat2, lon2) {
     const R = 6371e3; // รัศมีโลกในหน่วยเมตร
