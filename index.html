@@ -58,7 +58,7 @@
     <main class="max-w-7xl mx-auto p-4 md:p-6">
         <div id="content-dashboard" class="space-y-6">
             <div class="flex justify-between items-center border-b border-slate-700 pb-4">
-                <h2 class="text-lg font-bold text-slate-200 uppercase tracking-widest">Daily Summary</h2>
+                <h2 class="text-lg font-bold text-slate-200 uppercase tracking-widest">สรุปการเข้างานประจำวัน</h2>
                 <input type="date" id="dashboard-date" onchange="renderDashboard()" class="bg-slate-800 px-3 py-1.5 rounded-xl shadow-sm border border-slate-600 text-sm font-bold text-white outline-none">
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -249,6 +249,8 @@
 
 const createItem = (a, s) => {
     const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
+    
+    // ลองดึงจาก Location (คอลัมน์ E) เผื่อระบบเปลี่ยนเป็นพิมพ์เล็กพิมพ์ใหญ่
     const locValue = a.Location || a.location || "";
     const gMap = (locValue && locValue.includes(',')) ? `https://www.google.com/maps?q=${locValue}` : '#';
     
@@ -260,13 +262,13 @@ const createItem = (a, s) => {
                 <p class="font-bold text-slate-700 text-[10px] leading-tight">${a.name}</p>
                 <div class="flex items-center gap-1">
                     <p class="text-[9px] text-red-600 font-bold leading-tight">${a.location_name || '-'}</p>
-                    ${(locValue && locValue.includes(',')) ? `
-                    <a href="${gMap}" target="_blank" class="inline-block">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#dc2626" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                    
+                    <a href="${gMap}" target="_blank" class="flex items-center">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="red" stroke-width="2" fill="red" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                             <circle cx="12" cy="10" r="3" fill="white"></circle>
                         </svg>
-                    </a>` : ''}
+                    </a>
                 </div>
                 <p class="text-[9px] text-blue-700 font-bold font-mono leading-none">${time} น.</p>
             </div>
