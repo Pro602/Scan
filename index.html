@@ -234,7 +234,7 @@
     }
 
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
-    function renderDashboard() {
+  function renderDashboard() {
         const dateInput = document.getElementById('dashboard-date').value;
         const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
         const checkedInIds = new Set(daily.filter(a => a.type === 'IN').map(a => String(a.id)));
@@ -242,77 +242,73 @@
         const lists = { norm: document.getElementById('normal-list'), late: document.getElementById('late-list-display'), out: document.getElementById('out-list'), abs: document.getElementById('absent-list') };
         Object.values(lists).forEach(l => { if(l){ l.innerHTML = ''; l.classList.remove('scroll-container'); } });
 
-        // ตรวจสอบข้อมูล Pending เพื่อกระพริบปุ่ม (วงแดง 1)
         const hasPending = leaves.some(l => l.status === 'Pending' || l.status === 'รออนุมัติ');
         const approveBtn = document.getElementById('tab-approve');
         if(hasPending) approveBtn.classList.add('btn-pending-pulse');
         else approveBtn.classList.remove('btn-pending-pulse');
 
-const createItem = (a, s) => {
-    const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
-    
-    // ดึงค่า Latitude/Longitude จากข้อมูลที่บันทึก (ตรวจสอบว่าใช้ชื่อฟิลด์ lat หรือ location)
-    // หากบันทึกเป็น "lat,lng" ในฟิลด์ location ให้ใช้บรรทัดล่างนี้ครับ
-    const gMap = (a.location && a.location.includes(',')) ? `https://www.google.com/maps?q=${a.location}` : '#';
-    
-    return `
-    <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-1">
-        <div class="flex items-center gap-2">
-            <img src="${s?.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border">
-            <div>
-                <p class="font-bold text-slate-700 text-[11px] leading-tight">${a.name}</p>
-                
-                <div class="flex items-center gap-1 mt-0.5">
-                    <p class="text-[9px] text-red-600 font-bold">${a.location_name || '-'}</p>
-                    ${(a.location && a.location !== '0,0') ? `
-                    <a href="${gMap}" target="_blank" class="flex items-center">
-                        <i data-lucide="map-pin" class="w-3 h-3 text-red-600 fill-current"></i>
-                    </a>` : ''}
+        const createItem = (a, s) => {
+            const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
+            // ปรับ Link แผนที่ (ใช้ google.com/maps)
+            const gMap = (a.location && a.location.includes(',')) ? `https://www.google.com/maps?q=${a.location}` : '#';
+            
+            // ปรับ p-1 (ลด padding) และ mb-0.5 (ลดช่องว่างระหว่างบรรทัด) เพื่อคุมความสูง
+            return `
+            <div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5">
+                <div class="flex items-center gap-2">
+                    <img src="${s?.imagedatabase64 || ''}" class="w-8 h-8 rounded-lg object-cover border">
+                    <div>
+                        <p class="font-bold text-slate-700 text-[10px] leading-tight">${a.name}</p>
+                        <div class="flex items-center gap-1">
+                            <p class="text-[9px] text-red-600 font-bold leading-tight">${a.location_name || '-'}</p>
+                            ${(a.location && a.location !== '0,0') ? `
+                            <a href="${gMap}" target="_blank" class="flex items-center">
+                                <i data-lucide="map-pin" class="w-2.5 h-2.5 text-red-600 fill-current"></i>
+                            </a>` : ''}
+                        </div>
+                        <p class="text-[9px] text-blue-700 font-bold font-mono leading-none">${time} น.</p>
+                    </div>
                 </div>
-
-                <p class="text-[10px] text-blue-700 font-bold font-mono leading-none mt-1">${time} น.</p>
-            </div>
-        </div>
-        <span class="px-2 py-0.5 text-[8px] rounded-full font-bold ${a.type==='OUT'?'bg-blue-100 text-blue-600':(String(a.status).includes('สาย')?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">
-            ${a.type==='OUT'?'ออก':(String(a.status).includes('สาย')?'สาย':'ปกติ')}
-        </span>
-    </div>`;
-};
+                <span class="px-2 py-0.5 text-[8px] rounded-full font-bold ${a.type==='OUT'?'bg-blue-100 text-blue-600':(String(a.status).includes('สาย')?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">
+                    ${a.type==='OUT'?'ออก':(String(a.status).includes('สาย')?'สาย':'ปกติ')}
+                </span>
+            </div>`;
+        };
 
         daily.forEach(a => {
             const s = students.find(x => String(x.studentid) === String(a.id));
+            const statusVal = String(a.status || "");
             if (a.type === 'OUT') { lists.out.innerHTML += createItem(a, s); counts.out++; }
-            else if (a.status === 'สาย') { lists.late.innerHTML += createItem(a, s); counts.late++; }
+            else if (statusVal.includes('สาย')) { lists.late.innerHTML += createItem(a, s); counts.late++; }
             else { lists.norm.innerHTML += createItem(a, s); counts.in++; }
         });
 
-        // วงแดง 3: ปรับการแสดงผลการลาที่ Pending / Approve
         students.forEach(s => {
             if(!checkedInIds.has(String(s.studentid))) {
                 const leaveToday = leaves.find(l => String(l.id) === String(s.studentid) && l.date === dateInput);
                 let statusText = "WAITING";
-                let bgClass = "bg-orange-500 text-white shadow-sm"; // เปลี่ยนเป็นสีส้มสว่างเพื่อให้เด่นชัด
+                let bgClass = "bg-orange-500 text-white shadow-sm"; 
 
                 if (leaveToday) {
                     if (leaveToday.status === 'Pending' || leaveToday.status === 'รออนุมัติ') {
-                        statusText = "รอการอนุมัติการแจ้งลา";
-                        bgClass = "bg-yellow-400 text-black"; // แถบสีเหลือง
+                        statusText = "รออนุมัติการลา";
+                        bgClass = "bg-yellow-400 text-black"; 
                     } else {
                         statusText = leaveToday.type;
-                        bgClass = "bg-emerald-500 text-white"; // แถบสีเขียว (อนุมัติแล้ว)
+                        bgClass = "bg-emerald-500 text-white"; 
                     }
                 }
 
                 lists.abs.innerHTML += `
-                <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-1">
+                <div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5">
                     <div class="flex items-center gap-2">
-                        <img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border">
+                        <img src="${s.imagedatabase64}" class="w-8 h-8 rounded-lg object-cover border">
                         <div>
-                            <p class="font-bold text-slate-600 text-[10px]">${s.name}</p>
-                            <p class="text-[8px] text-blue-700 font-bold">${s.class || '-'}</p>
+                            <p class="font-bold text-slate-600 text-[10px] leading-tight">${s.name}</p>
+                            <p class="text-[8px] text-blue-700 font-bold leading-none">${s.class || '-'}</p>
                         </div>
                     </div>
-                    <span class="px-2 py-0.5 text-[8px] rounded-full font-bold ${bgClass}">${statusText}</span>
+                    <span class="px-2 py-0.5 text-[9px] rounded-full font-black tracking-wider ${bgClass}">${statusText}</span>
                 </div>`;
             }
         });
@@ -322,11 +318,13 @@ const createItem = (a, s) => {
         document.getElementById('stat-late').innerText = counts.late;
         document.getElementById('stat-out').innerText = counts.out;
         document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedInIds.size);
-        // --- เพิ่ม 2 บรรทัดนี้ที่ท้ายฟังก์ชัน ---
+        
+        // แก้ไข: ใช้ setTimeout เพื่อให้แน่ใจว่า HTML ถูกวาดเสร็จก่อนไอคอนจะทำงาน
         if(typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        } // <--- ตัวที่ 1: ปิดเงื่อนไข if
-    } // <--- ตัวที่ 2: ปิดฟังก์ชัน renderDashboard
+            setTimeout(() => { lucide.createIcons(); }, 100);
+        }
+    }
+    
     // --- ส่วนงานจัดการการอนุมัติ ---
     function renderApprovalList() {
         const container = document.getElementById('pending-list');
