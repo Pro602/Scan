@@ -514,19 +514,20 @@ async function finishAttendance(type) {
         }
 
         // --- 3. กำหนดช่วงเวลามาสาย (08:30 น.) ---
-        const now = new Date();
-        const hour = now.getHours();
-        const min = now.getMinutes();
-        const statusText = (hour > 8 || (hour === 8 && min > 30)) ? 'สาย' : 'ปกติ';
-
-        // --- 2. สร้าง Timestamp รูปแบบ YYYY-MM-DD HH:mm:ss (เพื่อให้ Dashboard กรองเจอ) ---
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        const hh = String(now.getHours()).padStart(2, '0');
-        const mm = String(now.getMinutes()).padStart(2, '0');
-        const ss = String(now.getSeconds()).padStart(2, '0');
-        const formattedTimestamp = `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+       const now = new Date();
+        // สร้าง timestamp แบบ YYYY-MM-DD HH:mm:ss (ค.ศ.)
+        const timestamp = now.toISOString().slice(0, 10) + " " + now.toTimeString().split(' ')[0];
+        
+        // --- 2. ตรรกะการเช็คสถานะ (อ้างอิงจากชุดเดิม) ---
+        // ถ้าเป็นเข้างาน (IN) และเกิน 08:30 ให้เป็น 'สาย' ถ้าไม่เกินให้เป็น 'มาปกติ'
+        // ถ้าเป็นออกงาน (OUT) ให้เป็น 'ออกงาน'
+        let statusText = "";
+        if (type === 'IN') {
+            const isLate = (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30));
+            statusText = isLate ? 'สาย' : 'มาปกติ';
+        } else {
+            statusText = 'ออกงาน';
+        }
 
         const displayName = resNameElement ? resNameElement.innerText.split('\n')[0].trim() : "";
 
@@ -536,7 +537,7 @@ async function finishAttendance(type) {
                 id: cleanId,
                 name: displayName, 
                 class: cleanClass, 
-                timestamp: formattedTimestamp, // เปลี่ยนจาก toLocaleString มาเป็นรูปแบบนี้
+                timestamp: timestamp, 
                 location: `${currentLat},${currentLng}`,
                 location_name: selectedLocName, 
                 status: statusText,
