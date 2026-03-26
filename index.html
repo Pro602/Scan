@@ -250,23 +250,17 @@
 const createItem = (a, s) => {
     const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
     
-    // 1. ดักชื่อตัวแปรทุกแบบ (ตัวเล็ก/ตัวใหญ่) เพราะ Sheets ชอบเปลี่ยนชื่อฟิลด์เอง
-    const locValue = (a.Location || a.location || "").toString().trim();
+    // ตรวจสอบพิกัด (ดึงจาก a.location ที่เราเพิ่มใน gs)
+    const locValue = (a.location || "").toString().trim();
     
-    // 2. ตรวจสอบพิกัด และสร้างปุ่ม (ต้องมีพิกัดจริงและไม่ใช่ชื่อออฟฟิศ)
-    let mapBtn = "";
-    if (locValue && locValue.includes(',') && locValue !== "THAISIAM Office") {
-        // ใช้รูปแบบ URL มาตรฐานที่บังคับเด้งออกไป Google Maps
-        const gMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locValue)}`;
-        
-        mapBtn = `
-        <a href="${gMapUrl}" target="_blank" rel="noopener noreferrer" class="flex items-center ml-1">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="red" stroke="red" stroke-width="2">
+    // สร้างปุ่มหมุด (ถ้ามีพิกัดและไม่ใช่ที่ออฟฟิศ)
+    let mapBtn = (locValue && locValue.includes(',') && a.location_name !== "THAISIAM Office") ? 
+        `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locValue)}" target="_blank" class="ml-1 flex items-center">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="red" stroke="red" stroke-width="2">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                 <circle cx="12" cy="10" r="3" fill="white"></circle>
             </svg>
-        </a>`;
-    }
+        </a>` : '';
 
     return `
     <div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5">
@@ -286,6 +280,7 @@ const createItem = (a, s) => {
         </span>
     </div>`;
 };
+      
         daily.forEach(a => {
             const s = students.find(x => String(x.studentid) === String(a.id));
             const statusVal = String(a.status || "");
