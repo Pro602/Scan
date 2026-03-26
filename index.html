@@ -513,25 +513,33 @@ async function finishAttendance(type) {
             }
         }
 
-        // --- 3. กำหนดสถานะ มาสาย/ปกติ (อิงตามเวลา 08:30) เพื่อให้ Dashboard นับยอดได้ ---
+        // --- 3. กำหนดช่วงเวลามาสาย (08:30 น.) ---
         const now = new Date();
         const hour = now.getHours();
         const min = now.getMinutes();
         const statusText = (hour > 8 || (hour === 8 && min > 30)) ? 'สาย' : 'ปกติ';
 
-        // ดึงชื่อพนักงาน (ตัดเอาเฉพาะบรรทัดแรก กรณีมีการแทรกชื่อสถานที่เข้าไป)
+        // --- 2. สร้าง Timestamp รูปแบบ YYYY-MM-DD HH:mm:ss (เพื่อให้ Dashboard กรองเจอ) ---
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const ss = String(now.getSeconds()).padStart(2, '0');
+        const formattedTimestamp = `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+
         const displayName = resNameElement ? resNameElement.innerText.split('\n')[0].trim() : "";
 
         const res = await apiCall({
             action: 'recordAttendanceUpdate', 
             data: [{
-                id: cleanId,           // รหัสพนักงานล้วนๆ (เช่น TS0057)
+                id: cleanId,
                 name: displayName, 
-                class: cleanClass,     // ชื่อแผนก
-                timestamp: now.toLocaleString('th-TH'),
+                class: cleanClass, 
+                timestamp: formattedTimestamp, // เปลี่ยนจาก toLocaleString มาเป็นรูปแบบนี้
                 location: `${currentLat},${currentLng}`,
                 location_name: selectedLocName, 
-                status: statusText,    // ส่งค่า 'สาย' หรือ 'ปกติ'
+                status: statusText,
                 type: type
             }]
         });
