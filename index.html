@@ -83,17 +83,21 @@
 
     <main class="max-w-7xl mx-auto p-4 md:p-6">
 <div id="content-dashboard" class="space-y-6">
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-700 pb-4 gap-2">
-        <div>
-            <h2 class="text-lg font-bold text-slate-200 uppercase tracking-widest">สรุปการเข้างานประจำวัน</h2>
-            <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Daily Attendance Overview</p>
+    <div class="flex flex-wrap items-center border-b border-slate-700 pb-4 gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-baseline gap-2">
+            <h2 class="text-lg font-bold text-slate-200 uppercase tracking-widest whitespace-nowrap">
+                สรุปการเข้างานประจำวันที่
+            </h2>
+            <div class="flex items-center gap-2 bg-slate-800/50 p-1 px-3 rounded-xl border border-slate-600 shadow-sm">
+                <span class="text-[10px] font-bold text-slate-400 uppercase">วันที่:</span>
+                <input type="date" id="dashboard-date" onchange="renderDashboard()" 
+                       class="bg-transparent text-sm font-bold text-emerald-400 outline-none cursor-pointer [color-scheme:dark]">
+            </div>
         </div>
         
-        <div class="flex items-center gap-2 bg-slate-800 p-1 px-3 rounded-xl border border-slate-600 shadow-inner">
-            <span class="text-[10px] font-bold text-slate-400 uppercase">วันที่:</span>
-            <input type="date" id="dashboard-date" onchange="renderDashboard()" 
-                   class="bg-transparent text-sm font-bold text-white outline-none cursor-pointer">
-        </div>
+        <p class="text-[10px] text-slate-500 uppercase tracking-tighter ml-auto hidden md:block">
+            Daily Attendance Overview
+        </p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
