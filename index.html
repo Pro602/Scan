@@ -250,9 +250,14 @@
 const createItem = (a, s) => {
     const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
     
-    // ลองดึงจาก Location (คอลัมน์ E) เผื่อระบบเปลี่ยนเป็นพิมพ์เล็กพิมพ์ใหญ่
-    const locValue = a.Location || a.location || "";
-    const gMap = (locValue && locValue.includes(',')) ? `https://www.google.com/maps?q=${locValue}` : '#';
+    // 1. ดึงพิกัด (ดึงจาก Location หรือ location) 
+    const locValue = (a.Location || a.location || "").toString().trim();
+    
+    // 2. สร้าง Link ใหม่ที่ถูกต้อง (ใช้ https://www.google.com/maps/search/?api=1&query=...)
+    // วิธีนี้จะบังคับเปิดแอปแผนที่หรือเว็บแผนที่แน่นอน
+    const gMap = (locValue && locValue.includes(',')) 
+                 ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locValue)}` 
+                 : "#";
     
     return `
     <div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5">
@@ -263,12 +268,13 @@ const createItem = (a, s) => {
                 <div class="flex items-center gap-1">
                     <p class="text-[9px] text-red-600 font-bold leading-tight">${a.location_name || '-'}</p>
                     
-                    <a href="${gMap}" target="_blank" class="flex items-center">
-                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="red" stroke-width="2" fill="red" stroke-linecap="round" stroke-linejoin="round">
+                    ${(locValue && locValue.includes(',')) ? `
+                    <a href="${gMap}" target="_blank" rel="noopener noreferrer" class="flex items-center">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="red" stroke-width="2" fill="red">
                             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                             <circle cx="12" cy="10" r="3" fill="white"></circle>
                         </svg>
-                    </a>
+                    </a>` : ''}
                 </div>
                 <p class="text-[9px] text-blue-700 font-bold font-mono leading-none">${time} น.</p>
             </div>
