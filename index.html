@@ -384,7 +384,7 @@ function renderDashboard() {
         if (!el) return;
 
         // คอลัมน์ abs (แจ้งลา) ใช้ 13 คน, คอลัมน์อื่น (norm, late, out) ใช้ 12 คน
-        const limit = (k === 'abs') ? 13 : 12;
+        const limit = (k === 'abs') ? 12 : 11;
 
         if (el.children.length > limit) {
             el.innerHTML += el.innerHTML; // Clone ข้อมูลเพื่อให้เลื่อนต่อเนื่อง
