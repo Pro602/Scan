@@ -322,8 +322,11 @@ const createItem = (a, s) => {
         document.getElementById('stat-late').innerText = counts.late;
         document.getElementById('stat-out').innerText = counts.out;
         document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedInIds.size);
-    }
-
+        // --- เพิ่ม 2 บรรทัดนี้ที่ท้ายฟังก์ชัน ---
+        if(typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        } // <--- ตัวที่ 1: ปิดเงื่อนไข if
+    } // <--- ตัวที่ 2: ปิดฟังก์ชัน renderDashboard
     // --- ส่วนงานจัดการการอนุมัติ ---
     function renderApprovalList() {
         const container = document.getElementById('pending-list');
