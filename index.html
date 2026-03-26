@@ -722,45 +722,51 @@ function getDistance(lat1, lon1, lat2, lon2) {
     // ฟังก์ชันถ่ายรูปพร้อมระบบ Auto-Crop ใบหน้า
     // ฟังก์ชันถ่ายรูปจากกล้อง (Snap)
     async function snapPhoto() {
-        const v = document.getElementById('modal-video');
-        const previewImg = document.getElementById('preview-img');
-        const cropCanvas = document.getElementById('crop-canvas');
-        const cropStatus = document.getElementById('crop-status');
-        
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = v.videoWidth;
-        tempCanvas.height = v.videoHeight;
-        tempCanvas.getContext('2d').drawImage(v, 0, 0);
-        
-        const base64 = tempCanvas.toDataURL('image/jpeg', 0.9);
-        previewImg.src = base64;
-        previewImg.classList.remove('hidden');
-        v.classList.add('hidden');
-        document.getElementById('face-guide').classList.add('hidden');
-        document.getElementById('btn-snap').classList.add('hidden');
-        stopCamera('modal-video');
+    const v = document.getElementById('modal-video');
+    const previewImg = document.getElementById('preview-img');
+    const cropCanvas = document.getElementById('crop-canvas');
+    const cropStatus = document.getElementById('crop-status');
+    
+    // 1. ตรวจจับใบหน้า "ก่อน" ที่จะปิดกล้อง (สำคัญมาก!)
+    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions());
 
-        document.getElementById('crop-preview-container').classList.remove('hidden');
-        const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions());
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = v.videoWidth;
+    tempCanvas.height = v.videoHeight;
+    const ctxTemp = tempCanvas.getContext('2d');
+    ctxTemp.drawImage(v, 0, 0);
+    
+    capturedImg = tempCanvas.toDataURL('image/jpeg', 0.9);
+    previewImg.src = capturedImg;
+    previewImg.classList.remove('hidden');
+    v.classList.add('hidden');
+    document.getElementById('face-guide').classList.add('hidden');
+    document.getElementById('btn-snap').classList.add('hidden');
 
-        cropCanvas.width = 200;
-        cropCanvas.height = 200;
-        const ctx = cropCanvas.getContext('2d');
+    // 2. ค่อยสั่งปิดกล้องหลังจากตรวจจับเสร็จแล้ว
+    stopCamera('modal-video');
 
-        if (detections) {
-            const { x, y, width, height } = detections.box;
-            const margin = width * 0.25;
-            ctx.drawImage(v, x - margin, y - margin, width + (margin * 2), height + (margin * 2), 0, 0, 200, 200);
-            croppedImg = cropCanvas.toDataURL('image/jpeg', 0.9);
-            cropStatus.innerText = "ตรวจพบใบหน้าชัดเจน";
-            cropStatus.className = "text-xs font-bold text-emerald-400";
-        } else {
-            ctx.drawImage(v, (v.videoWidth/2)-100, (v.videoHeight/2)-100, 200, 200, 0, 0, 200, 200);
-            croppedImg = base64;
-            cropStatus.innerText = "ไม่พบใบหน้า! แนะนำถ่ายใหม่";
-            cropStatus.className = "text-xs font-bold text-red-400";
-        }
+    document.getElementById('crop-preview-container').classList.remove('hidden');
+    cropCanvas.width = 200;
+    cropCanvas.height = 200;
+    const ctx = cropCanvas.getContext('2d');
+
+    if (detections) {
+        const { x, y, width, height } = detections.box;
+        const margin = width * 0.25;
+        // วาดรูปจากภาพที่เก็บไว้ใน tempCanvas (เพราะ video ปิดไปแล้ว)
+        ctx.drawImage(tempCanvas, x - margin, y - margin, width + (margin * 2), height + (margin * 2), 0, 0, 200, 200);
+        croppedImg = cropCanvas.toDataURL('image/jpeg', 0.9);
+        cropStatus.innerText = "ตรวจพบใบหน้าชัดเจน";
+        cropStatus.className = "text-xs font-bold text-emerald-400";
+    } else {
+        // หากไม่พบใบหน้า ให้ Crop ส่วนกลางของรูปไปใช้งานแทน
+        ctx.drawImage(tempCanvas, (tempCanvas.width/2)-150, (tempCanvas.height/2)-150, 300, 300, 0, 0, 200, 200);
+        croppedImg = cropCanvas.toDataURL('image/jpeg', 0.9);
+        cropStatus.innerText = "ไม่พบใบหน้า! (ลองขยับหน้าให้ชัดขึ้น)";
+        cropStatus.className = "text-xs font-bold text-red-400";
     }
+}
 
     // ฟังก์ชันบันทึกข้อมูล (ใช้รูปที่ Crop แล้ว)
     async function saveStudent() { 
