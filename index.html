@@ -250,11 +250,14 @@
 const createItem = (a, s) => {
     const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
     
-    // 1. ดึงพิกัด (ดึงจาก Location หรือ location) 
-    const locValue = (a.Location || a.location || "").toString().trim();
+    // 1. ลองดึงค่าพิกัดแบบไล่เช็คชื่อฟิลด์ที่อาจจะเป็นไปได้
+    // ถ้าดึงจากชื่อไม่มา ให้ลองใช้ a[4] (เผื่อส่งมาเป็น Array จากคอลัมน์ E)
+    let locValue = a.Location || a.location || a[4] || "";
     
-    // 2. สร้าง Link ใหม่ที่ถูกต้อง (ใช้ https://www.google.com/maps/search/?api=1&query=...)
-    // วิธีนี้จะบังคับเปิดแอปแผนที่หรือเว็บแผนที่แน่นอน
+    // ล้างค่าว่าง เผื่อมีช่องว่างติดมา
+    locValue = locValue.toString().trim();
+
+    // 2. สร้าง Link (ใช้รูปแบบสากลที่บังคับเปิด Google Maps)
     const gMap = (locValue && locValue.includes(',')) 
                  ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locValue)}` 
                  : "#";
