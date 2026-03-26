@@ -248,40 +248,35 @@
         else approveBtn.classList.remove('btn-pending-pulse');
 
 const createItem = (a, s) => {
+    // 1. ดึงเวลาและพิกัด (ใช้ a.location ตามแบบเดิมที่คุณเคยใช้แล้วเวิร์ก)
     const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
     
-    // 1. ลองดึงค่าพิกัดแบบไล่เช็คชื่อฟิลด์ที่อาจจะเป็นไปได้
-    // ถ้าดึงจากชื่อไม่มา ให้ลองใช้ a[4] (เผื่อส่งมาเป็น Array จากคอลัมน์ E)
-    let locValue = a.Location || a.location || a[4] || "";
-    
-    // ล้างค่าว่าง เผื่อมีช่องว่างติดมา
-    locValue = locValue.toString().trim();
+    // 2. สร้างปุ่มปักหมุด (ใช้รูปแบบ Link เดิมของคุณ)
+    // หมายเหตุ: ใช้ SVG แทน <i> เพื่อให้หมุดขึ้นแน่นอนโดยไม่ต้องรอ Library ครับ
+    let mapBtn = (a.location && a.location !== "THAISIAM Office") ? 
+        `<a href="https://www.google.com/maps?q=${a.location}" target="_blank" class="text-rose-500 hover:scale-125 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="red" stroke="red" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3" fill="white"></circle>
+            </svg>
+        </a>` : '';
 
-    // 2. สร้าง Link (ใช้รูปแบบสากลที่บังคับเปิด Google Maps)
-    const gMap = (locValue && locValue.includes(',')) 
-                 ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locValue)}` 
-                 : "#";
-    
     return `
     <div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5">
         <div class="flex items-center gap-2">
             <img src="${s?.imagedatabase64 || ''}" class="w-8 h-8 rounded-lg object-cover border">
             <div>
                 <p class="font-bold text-slate-700 text-[10px] leading-tight">${a.name}</p>
+                
                 <div class="flex items-center gap-1">
                     <p class="text-[9px] text-red-600 font-bold leading-tight">${a.location_name || '-'}</p>
-                    
-                    ${(locValue && locValue.includes(',')) ? `
-                    <a href="${gMap}" target="_blank" rel="noopener noreferrer" class="flex items-center">
-                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="red" stroke-width="2" fill="red">
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                            <circle cx="12" cy="10" r="3" fill="white"></circle>
-                        </svg>
-                    </a>` : ''}
+                    ${mapBtn}
                 </div>
+
                 <p class="text-[9px] text-blue-700 font-bold font-mono leading-none">${time} น.</p>
             </div>
         </div>
+
         <span class="px-2 py-0.5 text-[8px] rounded-full font-bold ${a.type==='OUT'?'bg-blue-100 text-blue-600':(String(a.status).includes('สาย')?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">
             ${a.type==='OUT'?'ออก':(String(a.status).includes('สาย')?'สาย':'ปกติ')}
         </span>
