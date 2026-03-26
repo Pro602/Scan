@@ -247,33 +247,34 @@
         if(hasPending) approveBtn.classList.add('btn-pending-pulse');
         else approveBtn.classList.remove('btn-pending-pulse');
 
-        const createItem = (a, s) => {
-            const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
-            // ปรับ Link แผนที่ (ใช้ google.com/maps)
-            const gMap = (a.location && a.location.includes(',')) ? `https://www.google.com/maps?q=${a.location}` : '#';
-            
-            // ปรับ p-1 (ลด padding) และ mb-0.5 (ลดช่องว่างระหว่างบรรทัด) เพื่อคุมความสูง
-            return `
-            <div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5">
-                <div class="flex items-center gap-2">
-                    <img src="${s?.imagedatabase64 || ''}" class="w-8 h-8 rounded-lg object-cover border">
-                    <div>
-                        <p class="font-bold text-slate-700 text-[10px] leading-tight">${a.name}</p>
-                        <div class="flex items-center gap-1">
-                            <p class="text-[9px] text-red-600 font-bold leading-tight">${a.location_name || '-'}</p>
-                            ${(a.location && a.location !== '0,0') ? `
-                            <a href="${gMap}" target="_blank" class="flex items-center">
-                                <i data-lucide="map-pin" class="w-2.5 h-2.5 text-red-600 fill-current"></i>
-                            </a>` : ''}
-                        </div>
-                        <p class="text-[9px] text-blue-700 font-bold font-mono leading-none">${time} น.</p>
-                    </div>
+const createItem = (a, s) => {
+    const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
+    
+    // ดึงค่าจากฟิลด์ Location หรือ location (เผื่อกรณีพิมพ์ใหญ่เล็กไม่ตรงกัน)
+    const locValue = a.Location || a.location || "";
+    const gMap = (locValue && locValue.includes(',')) ? `https://www.google.com/maps?q=${locValue}` : '#';
+    
+    return `
+    <div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5">
+        <div class="flex items-center gap-2">
+            <img src="${s?.imagedatabase64 || ''}" class="w-8 h-8 rounded-lg object-cover border">
+            <div>
+                <p class="font-bold text-slate-700 text-[10px] leading-tight">${a.name}</p>
+                <div class="flex items-center gap-1">
+                    <p class="text-[9px] text-red-600 font-bold leading-tight">${a.location_name || '-'}</p>
+                    ${(locValue && locValue.includes(',')) ? `
+                    <a href="${gMap}" target="_blank" class="flex items-center pointer-events-auto">
+                        <i data-lucide="map-pin" class="w-3 h-3 text-red-600 fill-current"></i>
+                    </a>` : ''}
                 </div>
-                <span class="px-2 py-0.5 text-[8px] rounded-full font-bold ${a.type==='OUT'?'bg-blue-100 text-blue-600':(String(a.status).includes('สาย')?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">
-                    ${a.type==='OUT'?'ออก':(String(a.status).includes('สาย')?'สาย':'ปกติ')}
-                </span>
-            </div>`;
-        };
+                <p class="text-[9px] text-blue-700 font-bold font-mono leading-none">${time} น.</p>
+            </div>
+        </div>
+        <span class="px-2 py-0.5 text-[8px] rounded-full font-bold ${a.type==='OUT'?'bg-blue-100 text-blue-600':(String(a.status).includes('สาย')?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">
+            ${a.type==='OUT'?'ออก':(String(a.status).includes('สาย')?'สาย':'ปกติ')}
+        </span>
+    </div>`;
+};
 
         daily.forEach(a => {
             const s = students.find(x => String(x.studentid) === String(a.id));
@@ -318,12 +319,14 @@
         document.getElementById('stat-late').innerText = counts.late;
         document.getElementById('stat-out').innerText = counts.out;
         document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedInIds.size);
-        
-        // แก้ไข: ใช้ setTimeout เพื่อให้แน่ใจว่า HTML ถูกวาดเสร็จก่อนไอคอนจะทำงาน
-        if(typeof lucide !== 'undefined') {
-            setTimeout(() => { lucide.createIcons(); }, 100);
+
+        // บังคับวาดไอคอนใหม่ (ย้ายมาไว้หลังจบการทำงานของ lists ทั้งหมด)
+        if (typeof lucide !== 'undefined') {
+            setTimeout(() => {
+                lucide.createIcons();
+            }, 150);
         }
-    }
+    } // ปิดฟังก์ชัน renderDashboard
     
     // --- ส่วนงานจัดการการอนุมัติ ---
     function renderApprovalList() {
