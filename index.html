@@ -264,7 +264,7 @@
         </div>
     </div>
 </div>
-</div> <div id="verify-modal" class="fixed inset-0 bg-black/90 hidden z-[110] flex items-center justify-center p-4">
+<div id="verify-modal" class="fixed inset-0 bg-black/90 hidden z-[110] flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
         <div class="p-6 space-y-4">
             <div class="flex justify-between items-center">
@@ -274,12 +274,31 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
                 <div class="flex flex-col items-center gap-2 justify-center border-b md:border-b-0 md:border-r border-slate-700 pb-4 md:pb-0">
-                    <img id="v-target-img" class="w-24 h-24 rounded-2xl object-cover border-2 border-emerald-500 shadow-lg bg-slate-700">
+                    <img id="v-target-img" src="" class="w-24 h-24 rounded-2xl object-cover border-2 border-emerald-500 shadow-lg bg-slate-700">
                     <div class="text-center">
                         <p id="v-target-name" class="font-bold text-white text-sm">ชื่อ-นามสกุล</p>
                         <p id="v-target-id" class="text-xs text-emerald-400 font-mono font-bold">ID: 0000</p>
                     </div>
                 </div>
+
+                <div class="relative aspect-square rounded-2xl overflow-hidden border-2 border-slate-700 bg-black">
+                    <video id="v-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                    <canvas id="v-canvas" class="hidden"></canvas>
+                    <div id="v-scan-status" class="absolute bottom-0 left-0 right-0 text-center text-white text-[10px] font-bold bg-black/50 py-1">
+                        READY TO SCAN
+                    </div>
+                </div>
+            </div>
+
+            <div id="v-action-zone" class="space-y-4 pt-2">
+                <div class="text-center text-slate-500 text-sm py-4">
+                    กำลังโหลดข้อมูลการบันทึกเวลา...
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
                 <div class="relative aspect-square bg-black rounded-2xl overflow-hidden border-2 border-slate-700 shadow-inner">
                     <video id="v-video" autoplay muted playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
                     <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
@@ -951,16 +970,37 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
 async function openVerifyModal(id, name, img) {
     currentVerifyId = id;
-    blinkDetected = false;
-    isVerifying = true;
     
-    // เติมข้อมูลลงใน Modal
+    // 1. ใส่ข้อมูลพนักงาน
     document.getElementById('v-target-id').innerText = "ID: " + id;
     document.getElementById('v-target-name').innerText = name;
     document.getElementById('v-target-img').src = img;
     
-    // แสดง Modal
+    // 2. สร้าง Dropdown สถานที่ และปุ่ม IN/OUT ลงใน v-action-zone
+    const actionZone = document.getElementById('v-action-zone');
+    actionZone.innerHTML = `
+        <div class="space-y-2">
+            <label class="text-slate-400 text-sm">📍 เลือกสถานที่ปฏิบัติงาน</label>
+            <select id="v-location" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500">
+                <option value="">-- เลือกสถานที่ --</option>
+                <option value="สำนักงานใหญ่">สำนักงานใหญ่</option>
+                <option value="ทำงานนอกสถานที่">ทำงานนอกสถานที่</option>
+            </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3 pt-2">
+            <button onclick="submitAttendance('IN')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 shadow-lg">
+                บันทึกเข้างาน (IN)
+            </button>
+            <button onclick="submitAttendance('OUT')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 shadow-lg">
+                บันทึกออกงาน (OUT)
+            </button>
+        </div>
+    `;
+
+    // 3. แสดง Modal และเริ่มกล้อง
     document.getElementById('verify-modal').classList.remove('hidden');
+    await startCamera('v-video'); 
+}
     
     // --- ส่วนที่เพิ่มใหม่: สร้าง Dropdown สถานที่และปุ่มใน Modal ---
     const actionZone = document.getElementById('v-action-zone'); // สร้าง div id นี้ไว้ใน modal html
