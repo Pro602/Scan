@@ -265,6 +265,58 @@
         </div>
     </div>
 </div>
+    <div class="flex gap-3">
+                <button onclick="saveStudent()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl">บันทึกข้อมูล</button>
+                <button onclick="closeStudentModal()" class="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+</div> <div id="verify-modal" class="fixed inset-0 bg-black/90 hidden z-[110] flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
+        <div class="p-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white uppercase tracking-wider">ยืนยันการเข้า-ออกงาน</h3>
+                <button onclick="closeVerifyModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
+                <div class="flex flex-col items-center gap-2 justify-center border-b md:border-b-0 md:border-r border-slate-700 pb-4 md:pb-0">
+                    <img id="v-target-img" class="w-24 h-24 rounded-2xl object-cover border-2 border-emerald-500 shadow-lg bg-slate-700">
+                    <div class="text-center">
+                        <p id="v-target-name" class="font-bold text-white text-sm">ชื่อ-นามสกุล</p>
+                        <p id="v-target-id" class="text-xs text-emerald-400 font-mono font-bold">ID: 0000</p>
+                    </div>
+                </div>
+                <div class="relative aspect-square bg-black rounded-2xl overflow-hidden border-2 border-slate-700 shadow-inner">
+                    <video id="v-video" autoplay muted playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
+                    <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        <div class="w-40 h-40 border-2 border-dashed border-emerald-400/50 rounded-full animate-pulse"></div>
+                        <div class="absolute top-2 bg-emerald-500 text-[10px] px-2 py-0.5 rounded-full text-black font-bold">READY TO SCAN</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="v-status-box" class="text-center p-3 rounded-xl bg-slate-800 border border-slate-700">
+                <p id="v-status-text" class="text-sm font-bold text-slate-300">กำลังเปิดกล้อง...</p>
+                <div id="v-blink-indicator" class="text-[10px] text-emerald-400 mt-1 hidden font-bold">✓ ตรวจพบการเคลื่อนไหว/กระพริบตา</div>
+            </div>
+
+            <div id="v-success-zone" class="hidden space-y-3">
+                <div class="space-y-1">
+                    <label class="text-[10px] text-slate-400 uppercase ml-1">เลือกสถานที่ปฏิบัติงาน:</label>
+                    <select id="v-location" class="w-full bg-slate-800 border border-emerald-500/50 rounded-xl px-4 py-3 text-white font-bold outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="THAISIAM Office">THAISIAM Office</option>
+                        <option value="SITE งานลูกค้า">SITE งานลูกค้า</option>
+                        <option value="อื่นๆ">อื่นๆ</option>
+                    </select>
+                </div>
+                <button onclick="submitAttendance()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black py-4 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all uppercase">
+                    ยืนยันบันทึกเวลา
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
     <canvas id="capture-canvas" class="hidden"></canvas>
     <audio id="snd-ok" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
@@ -347,6 +399,9 @@ function renderDashboard() {
             </a>` : '';
 
         return `
+        <div onclick="openVerifyModal('${a.id}', '${a.name}', '${s?.imagedatabase64 || ''}')" class="cursor-pointer hover:bg-slate-50 ...">
+        </div>`;
+};
         <div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5 min-h-[40px]">
             <div class="flex items-center gap-2">
                 <img src="${s?.imagedatabase64 || ''}" class="w-8 h-8 rounded-lg object-cover border">
@@ -818,7 +873,6 @@ function getDistance(lat1, lon1, lat2, lon2) {
         reader.onload = async function(e) {
             const img = new Image();
             img.onload = async function() {
-                // แสดงภาพที่เลือกในกรอบ Preview หลัก
                 const previewImg = document.getElementById('preview-img');
                 previewImg.src = e.target.result;
                 previewImg.classList.remove('hidden');
@@ -827,7 +881,6 @@ function getDistance(lat1, lon1, lat2, lon2) {
                 document.getElementById('btn-snap').classList.add('hidden');
                 stopCamera('modal-video');
 
-                // พยายาม Crop จากรูปที่อัปโหลด
                 const cropCanvas = document.getElementById('crop-canvas');
                 const cropStatus = document.getElementById('crop-status');
                 document.getElementById('crop-preview-container').classList.remove('hidden');
@@ -855,6 +908,89 @@ function getDistance(lat1, lon1, lat2, lon2) {
             img.src = e.target.result;
         };
         reader.readAsDataURL(file);
+    }
+
+    // ==========================================
+    // ส่วนที่เพิ่มใหม่: ระบบสแกนหน้าแบบระบุตัวตน (Liveness & Verify)
+    // ==========================================
+    let currentVerifyId = null;
+    let blinkDetected = false;
+    let isVerifying = false;
+
+    async function openVerifyModal(id, name, img) {
+        currentVerifyId = id;
+        blinkDetected = false;
+        isVerifying = true;
+        
+        document.getElementById('v-target-id').innerText = "ID: " + id;
+        document.getElementById('v-target-name').innerText = name;
+        document.getElementById('v-target-img').src = img;
+        document.getElementById('verify-modal').classList.remove('hidden');
+        document.getElementById('v-success-zone').classList.add('hidden');
+        document.getElementById('v-blink-indicator').classList.add('hidden');
+        document.getElementById('v-status-text').innerText = "กรุณากระพริบตาเพื่อยืนยันตัวตน";
+        document.getElementById('v-status-text').className = "text-sm font-bold text-slate-300";
+        
+        await startCamera('v-video');
+        runLivenessCheck(); 
+    }
+
+    async function runLivenessCheck() {
+        if(!isVerifying) return;
+        const video = document.getElementById('v-video');
+        
+        // ตรวจจับใบหน้าพร้อมจุด Landmarks เพื่อเช็คการกระพริบตา
+        const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                                       .withFaceLandmarks();
+
+        if (detection) {
+            const landmarks = detection.landmarks;
+            const leftEye = landmarks.getLeftEye();
+            const rightEye = landmarks.getRightEye();
+
+            // คำนวณความห่างเปลือกตาเพื่อเช็คการกระพริบตา (Blink Detection)
+            const getEyeHeight = (eye) => Math.abs(eye[1].y - eye[5].y) + Math.abs(eye[2].y - eye[4].y);
+            if (getEyeHeight(leftEye) < 3 || getEyeHeight(rightEye) < 3) {
+                blinkDetected = true;
+                document.getElementById('v-blink-indicator').classList.remove('hidden');
+            }
+
+            if (blinkDetected) {
+                const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+                
+                // ตรวจสอบว่าใบหน้าตรงกับ ID ที่เลือกหรือไม่ (1:1 Verification)
+                if (bestMatch.label === currentVerifyId && bestMatch.distance < 0.45) {
+                    document.getElementById('v-status-text').innerText = "ยืนยันตัวตนสำเร็จ!";
+                    document.getElementById('v-status-text').className = "text-sm font-bold text-emerald-400";
+                    document.getElementById('v-success-zone').classList.remove('hidden');
+                    speak("สแกนสำเร็จค่ะ");
+                    isVerifying = false; 
+                    return;
+                }
+            }
+        }
+        setTimeout(runLivenessCheck, 100);
+    }
+
+    function closeVerifyModal() {
+        isVerifying = false;
+        document.getElementById('verify-modal').classList.add('hidden');
+        stopCamera('v-video');
+    }
+
+    async function submitAttendance() {
+        const loc = document.getElementById('v-location').value;
+        const res = await apiCall({ 
+            action: 'checkInOut', 
+            data: { studentid: currentVerifyId, location: loc } 
+        });
+        
+        if(res.success) {
+            alert("บันทึกเวลาสำเร็จ");
+            location.reload();
+        } else {
+            alert("เกิดข้อผิดพลาดในการบันทึก");
+        }
     }
 </script>
 </body>
