@@ -90,7 +90,7 @@
             </h2>
             <div class="flex items-center gap-2 bg-slate-800/50 p-1 px-3 rounded-xl border border-slate-600 shadow-sm">
                 <span class="text-[10px] font-bold text-slate-400 uppercase">วันที่:</span>
-<input type="date" id="search-date" onchange="renderDashboard()" class="bg-transparent text-sm font-bold text-emerald-400 outline-none cursor-pointer [color-scheme:dark]">
+<input type="date" id="dashboard-date" onchange="renderDashboard()" class="bg-transparent text-sm font-bold text-emerald-400 outline-none cursor-pointer [color-scheme:dark]">
             </div>
         </div>
         <p class="text-[10px] text-slate-500 uppercase tracking-tighter">
@@ -325,41 +325,54 @@
     let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
     let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
-// 1. สร้างฟังก์ชัน refreshData ขึ้นมาใหม่
+    
+// ฟังก์ชันสำหรับดึงข้อมูลใหม่ตามวันที่ที่เลือก
 async function refreshData() {
-    // ดึงค่าวันที่จากช่อง input (ใช้ id "dashboard-date" ตาม HTML ล่าสุดของคุณ)
-    const searchDate = document.getElementById('dashboard-date').value;
+    const dateInput = document.getElementById('dashboard-date');
+    if (!dateInput) return;
     
-    // ส่งวันที่ไปที่ Server พร้อมกับการดึงข้อมูล
-    const [aRes, vRes] = await Promise.all([
-        apiCall({ action: 'getAttendance', date: searchDate }), 
-        apiCall({ action: 'getLeaves', date: searchDate })
-    ]);
+    const searchDate = dateInput.value;
+    console.log("Fetching data for:", searchDate); // ไว้เช็คใน Console
 
-    if (aRes.success) attendance = aRes.data;
-    if (vRes.success) leaves = vRes.data;
-    
-    // สั่งวาดหน้าจอใหม่ด้วยข้อมูลที่เพิ่งดึงมา
-    renderDashboard();
+    try {
+        // ดึงข้อมูล Attendance และ Leaves พร้อมกัน
+        const [aRes, vRes] = await Promise.all([
+            apiCall({ action: 'getAttendance', date: searchDate }), 
+            apiCall({ action: 'getLeaves', date: searchDate })
+        ]);
+
+        if (aRes.success) attendance = aRes.data;
+        if (vRes.success) leaves = vRes.data;
+        
+        // สั่งวาดข้อมูลลงใน 4 คอลัมน์
+        renderDashboard();
+    } catch (error) {
+        console.error("Refresh Data Error:", error);
+    }
 }
 
-// 2. ปรับปรุง window.onload เดิมของคุณ
+// ส่วนที่ทำงานเมื่อเปิดหน้าเว็บ
 window.onload = async () => {
+    // 1. สร้าง Icon
     lucide.createIcons();
     
-    // ตั้งค่าเริ่มต้นให้เป็นวันที่ปัจจุบัน
+    // 2. ตั้งค่าวันที่เริ่มต้นให้เป็น "วันนี้"
     const dateInput = document.getElementById('dashboard-date');
-    if (dateInput && !dateInput.value) {
-        dateInput.value = new Date().toISOString().split('T')[0];
+    if (dateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
     }
     
+    // 3. โหลดข้อมูลพื้นฐาน (ชื่อพนักงาน, สถานที่)
     await loadAllData(); 
+    
+    // 4. เริ่มระบบสแกนใบหน้า
     await initFaceAPI(); 
     
-    // เรียกใช้ refreshData ทันทีเมื่อโหลดหน้า
+    // 5. ดึงข้อมูลมาแสดงผลทันที
     await refreshData();
 
-    // ตั้งเวลาให้ refresh ทุกๆ 30 วินาที โดยใช้ฟังก์ชันที่เราสร้างไว้
+    // 6. ตั้งเวลา Refresh อัตโนมัติทุก 30 วินาที
     setInterval(refreshData, 30000);
 };
 
