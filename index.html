@@ -90,8 +90,7 @@
             </h2>
             <div class="flex items-center gap-2 bg-slate-800/50 p-1 px-3 rounded-xl border border-slate-600 shadow-sm">
                 <span class="text-[10px] font-bold text-slate-400 uppercase">วันที่:</span>
-                <input type="date" id="dashboard-date" onchange="renderDashboard()" 
-                       class="bg-transparent text-sm font-bold text-emerald-400 outline-none cursor-pointer [color-scheme:dark]">
+<input type="date" id="search-date" onchange="renderDashboard()" class="bg-transparent text-sm font-bold text-emerald-400 outline-none cursor-pointer [color-scheme:dark]">
             </div>
         </div>
         <p class="text-[10px] text-slate-500 uppercase tracking-tighter">
@@ -326,19 +325,43 @@
     let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
     let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
+// 1. สร้างฟังก์ชัน refreshData ขึ้นมาใหม่
+async function refreshData() {
+    // ดึงค่าวันที่จากช่อง input (ใช้ id "dashboard-date" ตาม HTML ล่าสุดของคุณ)
+    const searchDate = document.getElementById('dashboard-date').value;
+    
+    // ส่งวันที่ไปที่ Server พร้อมกับการดึงข้อมูล
+    const [aRes, vRes] = await Promise.all([
+        apiCall({ action: 'getAttendance', date: searchDate }), 
+        apiCall({ action: 'getLeaves', date: searchDate })
+    ]);
 
-    window.onload = async () => {
-        lucide.createIcons();
-        document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
-        await loadAllData(); 
-        await initFaceAPI(); 
-        setInterval(async () => {
-            const [aRes, vRes] = await Promise.all([apiCall({action:'getAttendance'}), apiCall({action:'getLeaves'})]);
-            if(aRes.success) attendance = aRes.data;
-            if(vRes.success) leaves = vRes.data;
-            renderDashboard();
-        }, 30000);
-    };
+    if (aRes.success) attendance = aRes.data;
+    if (vRes.success) leaves = vRes.data;
+    
+    // สั่งวาดหน้าจอใหม่ด้วยข้อมูลที่เพิ่งดึงมา
+    renderDashboard();
+}
+
+// 2. ปรับปรุง window.onload เดิมของคุณ
+window.onload = async () => {
+    lucide.createIcons();
+    
+    // ตั้งค่าเริ่มต้นให้เป็นวันที่ปัจจุบัน
+    const dateInput = document.getElementById('dashboard-date');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+    }
+    
+    await loadAllData(); 
+    await initFaceAPI(); 
+    
+    // เรียกใช้ refreshData ทันทีเมื่อโหลดหน้า
+    await refreshData();
+
+    // ตั้งเวลาให้ refresh ทุกๆ 30 วินาที โดยใช้ฟังก์ชันที่เราสร้างไว้
+    setInterval(refreshData, 30000);
+};
 
     async function apiCall(p) {
         try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
