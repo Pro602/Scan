@@ -327,52 +327,39 @@
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
     
 // ฟังก์ชันสำหรับดึงข้อมูลใหม่ตามวันที่ที่เลือก
+// เปลี่ยนชื่อฟังก์ชันจากที่หาไม่เจอ เป็น refreshData ให้ตรงตามระเบียบ
 async function refreshData() {
-    const dateInput = document.getElementById('dashboard-date');
-    if (!dateInput) return;
+    const dateEl = document.getElementById('dashboard-date');
+    if (!dateEl) return;
+    const dateInput = dateEl.value;
+
+    const [aRes, vRes] = await Promise.all([
+        apiCall({action:'getAttendance', date: dateInput}), 
+        apiCall({action:'getLeaves', date: dateInput})
+    ]);
     
-    const searchDate = dateInput.value;
-    console.log("Fetching data for:", searchDate); // ไว้เช็คใน Console
-
-    try {
-        // ดึงข้อมูล Attendance และ Leaves พร้อมกัน
-        const [aRes, vRes] = await Promise.all([
-            apiCall({ action: 'getAttendance', date: searchDate }), 
-            apiCall({ action: 'getLeaves', date: searchDate })
-        ]);
-
-        if (aRes.success) attendance = aRes.data;
-        if (vRes.success) leaves = vRes.data;
-        
-        // สั่งวาดข้อมูลลงใน 4 คอลัมน์
-        renderDashboard();
-    } catch (error) {
-        console.error("Refresh Data Error:", error);
-    }
+    if(aRes.success) attendance = aRes.data;
+    if(vRes.success) leaves = vRes.data;
+    
+    renderDashboard();
 }
 
-// ส่วนที่ทำงานเมื่อเปิดหน้าเว็บ
 window.onload = async () => {
-    // 1. สร้าง Icon
     lucide.createIcons();
     
-    // 2. ตั้งค่าวันที่เริ่มต้นให้เป็น "วันนี้"
-    const dateInput = document.getElementById('dashboard-date');
-    if (dateInput) {
-        const today = new Date().toISOString().split('T')[0];
-        dateInput.value = today;
+    // ตั้งค่าวันที่ให้เป็น "วันนี้" ทันทีที่โหลดหน้า
+    const dateEl = document.getElementById('dashboard-date');
+    if(dateEl) {
+        dateEl.value = new Date().toISOString().split('T')[0];
     }
-    
-    // 3. โหลดข้อมูลพื้นฐาน (ชื่อพนักงาน, สถานที่)
+
     await loadAllData(); 
-    
-    // 4. เริ่มระบบสแกนใบหน้า
     await initFaceAPI(); 
     
-    // 5. ดึงข้อมูลมาแสดงผลทันที
+    // เรียกดึงข้อมูลครั้งแรก
     await refreshData();
-
-    // 6. ตั้งเวลา Refresh อัตโนมัติทุก 30 วินาที
+    
+    // ตั้งเวลา Refresh ทุก 30 วินาที
     setInterval(refreshData, 30000);
 };
 
@@ -422,23 +409,15 @@ function renderDashboard() {
     else approveBtn.classList.remove('btn-pending-pulse');
 
     // ฟังก์ชันสร้าง Template รายการพนักงาน
-    const createItem = (a, s) => {
+const createItem = (a, s) => {
         const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
         const locValue = (a.location || "").toString().trim();
         
         let mapBtn = (locValue && locValue.includes(',') && a.location_name !== "THAISIAM Office") ? 
-            `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locValue)}" target="_blank" class="flex items-center hover:scale-110 transition-transform">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2a8 8 0 0 0-8 8c0 5.4 6 11.4 7.3 12.6a1 1 0 0 0 1.4 0C14 21.4 20 15.4 20 10a8 8 0 0 0-8-8z"></path>
-                    <circle cx="12" cy="10" r="3" fill="#ffffff"></circle>
-                </svg>
-            </a>` : '';
+            `<a href="https://www.google.com/maps?q=${encodeURIComponent(locValue)}" target="_blank" ...>...</a>` : '';
 
         return `
-        <div onclick="openVerifyModal('${a.id}', '${a.name}', '${s?.imagedatabase64 || ''}')" class="cursor-pointer hover:bg-slate-50 ...">
-        </div>`;
-};
-        <div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5 min-h-[40px]">
+        <div onclick="openVerifyModal('${a.id}', '${a.name}', '${s?.imagedatabase64 || ''}')" class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5 min-h-[40px] cursor-pointer hover:bg-slate-50">
             <div class="flex items-center gap-2">
                 <img src="${s?.imagedatabase64 || ''}" class="w-8 h-8 rounded-lg object-cover border">
                 <div class="flex flex-col">
