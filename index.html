@@ -264,12 +264,6 @@
         </div>
     </div>
 </div>
-    <div class="flex gap-3">
-                <button onclick="saveStudent()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl">บันทึกข้อมูล</button>
-                <button onclick="closeStudentModal()" class="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl">ยกเลิก</button>
-            </div>
-        </div>
-    </div>
 </div> <div id="verify-modal" class="fixed inset-0 bg-black/90 hidden z-[110] flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
         <div class="p-6 space-y-4">
@@ -544,20 +538,43 @@ async function approveAction(id, date) {
 }
 
     // --- ส่วน Logic พื้นฐาน (คงเดิม) ---
-    function switchTab(tab) {
-        if ((tab === 'approve' || tab === 'manage') && !isLoggedIn) { pendingAction = tab; document.getElementById('login-modal').classList.remove('hidden'); return; }
-        document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
-        document.getElementById(`content-${tab}`).classList.remove('hidden');
-        document.querySelectorAll('nav button').forEach(btn => {
-            btn.classList.remove('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
-            btn.classList.add('tab-inactive');
-        });
-        const activeTab = document.getElementById(`tab-${tab}`);
+   function switchTab(tab) {
+    // 1. ตรวจสอบการล็อกอินสำหรับเมนูจัดการ
+    if ((tab === 'approve' || tab === 'manage') && !isLoggedIn) { 
+        pendingAction = tab; 
+        document.getElementById('login-modal').classList.remove('hidden'); 
+        return; 
+    }
+
+    // 2. ปรับปรุง: ถ้ากดปุ่ม "สแกน" ให้เด้งกลับไปหน้า Dashboard เพื่อเลือกชื่อพนักงาน
+    if (tab === 'scan') {
+        alert("กรุณาเลือกรายชื่อพนักงานจากหน้า Dashboard เพื่อสแกนใบหน้า");
+        tab = 'dashboard'; // เปลี่ยนเป้าหมายไปที่ Dashboard แทน
+    }
+
+    // 3. จัดการการแสดงผลหน้า Content
+    document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
+    const targetContent = document.getElementById(`content-${tab}`);
+    if (targetContent) targetContent.classList.remove('hidden');
+
+    // 4. จัดการสีของปุ่มเมนู (Tab UI)
+    document.querySelectorAll('nav button').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
+        btn.classList.add('tab-inactive');
+    });
+
+    const activeTab = document.getElementById(`tab-${tab}`);
+    if (activeTab) {
         activeTab.classList.add('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
         activeTab.classList.remove('tab-inactive');
-        if (tab === 'scan') { startCamera('video'); setTimeout(startDetector, 1000); } else stopCamera('video');
-        if (tab === 'approve') renderApprovalList();
     }
+
+    // 5. ปิดกล้องหน้าสแกนแบบเก่าทิ้งเสมอ เพื่อไม่ให้กินทรัพยากรเครื่อง
+    stopCamera('video'); 
+    
+    // 6. โหลดข้อมูลหน้าอนุมัติถ้าเลือกแท็บนั้น
+    if (tab === 'approve') renderApprovalList();
+}
 
     async function saveLeave() {
         const id = document.getElementById('leave-student-select').value;
@@ -932,23 +949,36 @@ function getDistance(lat1, lon1, lat2, lon2) {
     let blinkDetected = false;
     let isVerifying = false;
 
-    async function openVerifyModal(id, name, img) {
-        currentVerifyId = id;
-        blinkDetected = false;
-        isVerifying = true;
-        
-        document.getElementById('v-target-id').innerText = "ID: " + id;
-        document.getElementById('v-target-name').innerText = name;
-        document.getElementById('v-target-img').src = img;
-        document.getElementById('verify-modal').classList.remove('hidden');
-        document.getElementById('v-success-zone').classList.add('hidden');
-        document.getElementById('v-blink-indicator').classList.add('hidden');
-        document.getElementById('v-status-text').innerText = "กรุณากระพริบตาเพื่อยืนยันตัวตน";
-        document.getElementById('v-status-text').className = "text-sm font-bold text-slate-300";
-        
-        await startCamera('v-video');
-        runLivenessCheck(); 
+async function openVerifyModal(id, name, img) {
+    currentVerifyId = id;
+    blinkDetected = false;
+    isVerifying = true;
+    
+    // เติมข้อมูลลงใน Modal
+    document.getElementById('v-target-id').innerText = "ID: " + id;
+    document.getElementById('v-target-name').innerText = name;
+    document.getElementById('v-target-img').src = img;
+    
+    // แสดง Modal
+    document.getElementById('verify-modal').classList.remove('hidden');
+    
+    // --- ส่วนที่เพิ่มใหม่: สร้าง Dropdown สถานที่และปุ่มใน Modal ---
+    const actionZone = document.getElementById('v-action-zone'); // สร้าง div id นี้ไว้ใน modal html
+    if (actionZone) {
+        actionZone.innerHTML = `
+            <select id="v-location" class="w-full p-3 rounded-xl border mb-3">
+                ${document.getElementById('location-select').innerHTML} 
+            </select>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="submitAttendance('IN')" class="bg-emerald-600 text-white p-3 rounded-xl font-bold">บันทึกเข้างาน (IN)</button>
+                <button onclick="submitAttendance('OUT')" class="bg-blue-600 text-white p-3 rounded-xl font-bold">บันทึกออกงาน (OUT)</button>
+            </div>
+        `;
     }
+
+    await startCamera('v-video');
+    runLivenessCheck(); 
+}
 
     async function runLivenessCheck() {
         if(!isVerifying) return;
@@ -993,20 +1023,26 @@ function getDistance(lat1, lon1, lat2, lon2) {
         stopCamera('v-video');
     }
 
-    async function submitAttendance() {
-        const loc = document.getElementById('v-location').value;
-        const res = await apiCall({ 
-            action: 'checkInOut', 
-            data: { studentid: currentVerifyId, location: loc } 
-        });
-        
-        if(res.success) {
-            alert("บันทึกเวลาสำเร็จ");
-            location.reload();
-        } else {
-            alert("เกิดข้อผิดพลาดในการบันทึก");
-        }
+    async function submitAttendance(type) {
+    const loc = document.getElementById('v-location').value;
+    if(!loc) return alert("กรุณาเลือกสถานที่");
+
+    const res = await apiCall({ 
+        action: 'checkInOut', 
+        data: { 
+            studentid: currentVerifyId, 
+            location: loc,
+            type: type // ส่งค่า IN หรือ OUT ไปด้วย
+        } 
+    });
+    
+    if(res.success) {
+        alert("บันทึกเวลาสำเร็จ");
+        location.reload();
+    } else {
+        alert("เกิดข้อผิดพลาด: " + res.message);
     }
+}
 </script>
 </body>
 </html>
