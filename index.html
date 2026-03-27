@@ -90,7 +90,8 @@
             </h2>
             <div class="flex items-center gap-2 bg-slate-800/50 p-1 px-3 rounded-xl border border-slate-600 shadow-sm">
                 <span class="text-[10px] font-bold text-slate-400 uppercase">วันที่:</span>
-<input type="date" id="dashboard-date" onchange="renderDashboard()" class="bg-transparent text-sm font-bold text-emerald-400 outline-none cursor-pointer [color-scheme:dark]">
+                <input type="date" id="dashboard-date" onchange="renderDashboard()" 
+                       class="bg-transparent text-sm font-bold text-emerald-400 outline-none cursor-pointer [color-scheme:dark]">
             </div>
         </div>
         <p class="text-[10px] text-slate-500 uppercase tracking-tighter">
@@ -257,69 +258,9 @@
                     <input type="file" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
                 </label>
             </div>
-    </div>
-</div>
-<div id="verify-modal" class="fixed inset-0 bg-black/90 hidden z-[110] flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
-        <div class="p-6 space-y-4">
-            <div class="flex justify-between items-center">
-                <h3 class="text-xl font-bold text-white uppercase tracking-wider">ยืนยันการเข้า-ออกงาน</h3>
-                <button onclick="closeVerifyModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
-                <div class="flex flex-col items-center gap-2 justify-center border-b md:border-b-0 md:border-r border-slate-700 pb-4 md:pb-0">
-                    <img id="v-target-img" src="" class="w-24 h-24 rounded-2xl object-cover border-2 border-emerald-500 shadow-lg bg-slate-700">
-                    <div class="text-center">
-                        <p id="v-target-name" class="font-bold text-white text-sm">ชื่อ-นามสกุล</p>
-                        <p id="v-target-id" class="text-xs text-emerald-400 font-mono font-bold">ID: 0000</p>
-                    </div>
-                </div>
-
-                <div class="relative aspect-square rounded-2xl overflow-hidden border-2 border-slate-700 bg-black">
-                    <video id="v-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
-                    <canvas id="v-canvas" class="hidden"></canvas>
-                    <div id="v-scan-status" class="absolute bottom-0 left-0 right-0 text-center text-white text-[10px] font-bold bg-black/50 py-1">
-                        READY TO SCAN
-                    </div>
-                </div>
-            </div>
-
-            <div id="v-action-zone" class="space-y-4 pt-2">
-                <div class="text-center text-slate-500 text-sm py-4">
-                    กำลังโหลดข้อมูลการบันทึกเวลา...
-                </div>
-            </div>
-            
-        </div>
-    </div>
-</div>
-                <div class="relative aspect-square bg-black rounded-2xl overflow-hidden border-2 border-slate-700 shadow-inner">
-                    <video id="v-video" autoplay muted playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
-                    <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-                        <div class="w-40 h-40 border-2 border-dashed border-emerald-400/50 rounded-full animate-pulse"></div>
-                        <div class="absolute top-2 bg-emerald-500 text-[10px] px-2 py-0.5 rounded-full text-black font-bold">READY TO SCAN</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="v-status-box" class="text-center p-3 rounded-xl bg-slate-800 border border-slate-700">
-                <p id="v-status-text" class="text-sm font-bold text-slate-300">กำลังเปิดกล้อง...</p>
-                <div id="v-blink-indicator" class="text-[10px] text-emerald-400 mt-1 hidden font-bold">✓ ตรวจพบการเคลื่อนไหว/กระพริบตา</div>
-            </div>
-
-            <div id="v-success-zone" class="hidden space-y-3">
-                <div class="space-y-1">
-                    <label class="text-[10px] text-slate-400 uppercase ml-1">เลือกสถานที่ปฏิบัติงาน:</label>
-                    <select id="v-location" class="w-full bg-slate-800 border border-emerald-500/50 rounded-xl px-4 py-3 text-white font-bold outline-none focus:ring-2 focus:ring-emerald-500">
-                        <option value="THAISIAM Office">THAISIAM Office</option>
-                        <option value="SITE งานลูกค้า">SITE งานลูกค้า</option>
-                        <option value="อื่นๆ">อื่นๆ</option>
-                    </select>
-                </div>
-                <button onclick="submitAttendance()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black py-4 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all uppercase">
-                    ยืนยันบันทึกเวลา
-                </button>
+            <div class="flex gap-3">
+                <button onclick="saveStudent()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl">บันทึกข้อมูล</button>
+                <button onclick="closeStudentModal()" class="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl">ยกเลิก</button>
             </div>
         </div>
     </div>
@@ -333,43 +274,19 @@
     let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
     let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
-    
-// ฟังก์ชันสำหรับดึงข้อมูลใหม่ตามวันที่ที่เลือก
-// เปลี่ยนชื่อฟังก์ชันจากที่หาไม่เจอ เป็น refreshData ให้ตรงตามระเบียบ
-async function refreshData() {
-    const dateEl = document.getElementById('dashboard-date');
-    if (!dateEl) return;
-    const dateInput = dateEl.value;
 
-    const [aRes, vRes] = await Promise.all([
-        apiCall({action:'getAttendance', date: dateInput}), 
-        apiCall({action:'getLeaves', date: dateInput})
-    ]);
-    
-    if(aRes.success) attendance = aRes.data;
-    if(vRes.success) leaves = vRes.data;
-    
-    renderDashboard();
-}
-
-window.onload = async () => {
-    lucide.createIcons();
-    
-    // ตั้งค่าวันที่ให้เป็น "วันนี้" ทันทีที่โหลดหน้า
-    const dateEl = document.getElementById('dashboard-date');
-    if(dateEl) {
-        dateEl.value = new Date().toISOString().split('T')[0];
-    }
-
-    await loadAllData(); 
-    await initFaceAPI(); 
-    
-    // เรียกดึงข้อมูลครั้งแรก
-    await refreshData();
-    
-    // ตั้งเวลา Refresh ทุก 30 วินาที
-    setInterval(refreshData, 30000);
-};
+    window.onload = async () => {
+        lucide.createIcons();
+        document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
+        await loadAllData(); 
+        await initFaceAPI(); 
+        setInterval(async () => {
+            const [aRes, vRes] = await Promise.all([apiCall({action:'getAttendance'}), apiCall({action:'getLeaves'})]);
+            if(aRes.success) attendance = aRes.data;
+            if(vRes.success) leaves = vRes.data;
+            renderDashboard();
+        }, 30000);
+    };
 
     async function apiCall(p) {
         try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
@@ -417,15 +334,20 @@ function renderDashboard() {
     else approveBtn.classList.remove('btn-pending-pulse');
 
     // ฟังก์ชันสร้าง Template รายการพนักงาน
-const createItem = (a, s) => {
+    const createItem = (a, s) => {
         const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
         const locValue = (a.location || "").toString().trim();
         
         let mapBtn = (locValue && locValue.includes(',') && a.location_name !== "THAISIAM Office") ? 
-            `<a href="https://www.google.com/maps?q=${encodeURIComponent(locValue)}" target="_blank" ...>...</a>` : '';
+            `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locValue)}" target="_blank" class="flex items-center hover:scale-110 transition-transform">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a8 8 0 0 0-8 8c0 5.4 6 11.4 7.3 12.6a1 1 0 0 0 1.4 0C14 21.4 20 15.4 20 10a8 8 0 0 0-8-8z"></path>
+                    <circle cx="12" cy="10" r="3" fill="#ffffff"></circle>
+                </svg>
+            </a>` : '';
 
         return `
-        <div onclick="openVerifyModal('${a.id}', '${a.name}', '${s?.imagedatabase64 || ''}')" class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5 min-h-[40px] cursor-pointer hover:bg-slate-50">
+        <div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5 min-h-[40px]">
             <div class="flex items-center gap-2">
                 <img src="${s?.imagedatabase64 || ''}" class="w-8 h-8 rounded-lg object-cover border">
                 <div class="flex flex-col">
@@ -552,12 +474,20 @@ async function approveAction(id, date) {
 }
 
     // --- ส่วน Logic พื้นฐาน (คงเดิม) ---
-<div class="flex gap-3">
-        <button onclick="saveStudent()" class="...">บันทึกข้อมูล</button>
-        <button onclick="closeStudentModal()" class="...">ยกเลิก</button>
-    </div>
-</div>
-</div>
+    function switchTab(tab) {
+        if ((tab === 'approve' || tab === 'manage') && !isLoggedIn) { pendingAction = tab; document.getElementById('login-modal').classList.remove('hidden'); return; }
+        document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
+        document.getElementById(`content-${tab}`).classList.remove('hidden');
+        document.querySelectorAll('nav button').forEach(btn => {
+            btn.classList.remove('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
+            btn.classList.add('tab-inactive');
+        });
+        const activeTab = document.getElementById(`tab-${tab}`);
+        activeTab.classList.add('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
+        activeTab.classList.remove('tab-inactive');
+        if (tab === 'scan') { startCamera('video'); setTimeout(startDetector, 1000); } else stopCamera('video');
+        if (tab === 'approve') renderApprovalList();
+    }
 
     async function saveLeave() {
         const id = document.getElementById('leave-student-select').value;
@@ -888,6 +818,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
         reader.onload = async function(e) {
             const img = new Image();
             img.onload = async function() {
+                // แสดงภาพที่เลือกในกรอบ Preview หลัก
                 const previewImg = document.getElementById('preview-img');
                 previewImg.src = e.target.result;
                 previewImg.classList.remove('hidden');
@@ -896,6 +827,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
                 document.getElementById('btn-snap').classList.add('hidden');
                 stopCamera('modal-video');
 
+                // พยายาม Crop จากรูปที่อัปโหลด
                 const cropCanvas = document.getElementById('crop-canvas');
                 const cropStatus = document.getElementById('crop-status');
                 document.getElementById('crop-preview-container').classList.remove('hidden');
@@ -924,129 +856,6 @@ function getDistance(lat1, lon1, lat2, lon2) {
         };
         reader.readAsDataURL(file);
     }
-
-    // ==========================================
-    // ส่วนที่เพิ่มใหม่: ระบบสแกนหน้าแบบระบุตัวตน (Liveness & Verify)
-    // ==========================================
-    let currentVerifyId = null;
-    let blinkDetected = false;
-    let isVerifying = false;
-
-async function openVerifyModal(id, name, img) {
-    currentVerifyId = id;
-    
-    // 1. ใส่ข้อมูลพนักงาน
-    document.getElementById('v-target-id').innerText = "ID: " + id;
-    document.getElementById('v-target-name').innerText = name;
-    document.getElementById('v-target-img').src = img;
-    
-    // 2. สร้าง Dropdown สถานที่ และปุ่ม IN/OUT ลงใน v-action-zone
-    const actionZone = document.getElementById('v-action-zone');
-    actionZone.innerHTML = `
-        <div class="space-y-2">
-            <label class="text-slate-400 text-sm">📍 เลือกสถานที่ปฏิบัติงาน</label>
-            <select id="v-location" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500">
-                <option value="">-- เลือกสถานที่ --</option>
-                <option value="สำนักงานใหญ่">สำนักงานใหญ่</option>
-                <option value="ทำงานนอกสถานที่">ทำงานนอกสถานที่</option>
-            </select>
-        </div>
-        <div class="grid grid-cols-2 gap-3 pt-2">
-            <button onclick="submitAttendance('IN')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 shadow-lg">
-                บันทึกเข้างาน (IN)
-            </button>
-            <button onclick="submitAttendance('OUT')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 shadow-lg">
-                บันทึกออกงาน (OUT)
-            </button>
-        </div>
-    `;
-
-    // 3. แสดง Modal และเริ่มกล้อง
-    document.getElementById('verify-modal').classList.remove('hidden');
-    await startCamera('v-video'); 
-}
-    
-    // --- ส่วนที่เพิ่มใหม่: สร้าง Dropdown สถานที่และปุ่มใน Modal ---
-    const actionZone = document.getElementById('v-action-zone'); // สร้าง div id นี้ไว้ใน modal html
-    if (actionZone) {
-        actionZone.innerHTML = `
-            <select id="v-location" class="w-full p-3 rounded-xl border mb-3">
-                ${document.getElementById('location-select').innerHTML} 
-            </select>
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="submitAttendance('IN')" class="bg-emerald-600 text-white p-3 rounded-xl font-bold">บันทึกเข้างาน (IN)</button>
-                <button onclick="submitAttendance('OUT')" class="bg-blue-600 text-white p-3 rounded-xl font-bold">บันทึกออกงาน (OUT)</button>
-            </div>
-        `;
-    }
-
-    await startCamera('v-video');
-    runLivenessCheck(); 
-}
-
-    async function runLivenessCheck() {
-        if(!isVerifying) return;
-        const video = document.getElementById('v-video');
-        
-        // ตรวจจับใบหน้าพร้อมจุด Landmarks เพื่อเช็คการกระพริบตา
-        const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-                                       .withFaceLandmarks();
-
-        if (detection) {
-            const landmarks = detection.landmarks;
-            const leftEye = landmarks.getLeftEye();
-            const rightEye = landmarks.getRightEye();
-
-            // คำนวณความห่างเปลือกตาเพื่อเช็คการกระพริบตา (Blink Detection)
-            const getEyeHeight = (eye) => Math.abs(eye[1].y - eye[5].y) + Math.abs(eye[2].y - eye[4].y);
-            if (getEyeHeight(leftEye) < 3 || getEyeHeight(rightEye) < 3) {
-                blinkDetected = true;
-                document.getElementById('v-blink-indicator').classList.remove('hidden');
-            }
-
-            if (blinkDetected) {
-                const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
-                
-                // ตรวจสอบว่าใบหน้าตรงกับ ID ที่เลือกหรือไม่ (1:1 Verification)
-                if (bestMatch.label === currentVerifyId && bestMatch.distance < 0.45) {
-                    document.getElementById('v-status-text').innerText = "ยืนยันตัวตนสำเร็จ!";
-                    document.getElementById('v-status-text').className = "text-sm font-bold text-emerald-400";
-                    document.getElementById('v-success-zone').classList.remove('hidden');
-                    speak("สแกนสำเร็จค่ะ");
-                    isVerifying = false; 
-                    return;
-                }
-            }
-        }
-        setTimeout(runLivenessCheck, 100);
-    }
-
-    function closeVerifyModal() {
-        isVerifying = false;
-        document.getElementById('verify-modal').classList.add('hidden');
-        stopCamera('v-video');
-    }
-
-    async function submitAttendance(type) {
-    const loc = document.getElementById('v-location').value;
-    if(!loc) return alert("กรุณาเลือกสถานที่");
-
-    const res = await apiCall({ 
-        action: 'checkInOut', 
-        data: { 
-            studentid: currentVerifyId, 
-            location: loc,
-            type: type // ส่งค่า IN หรือ OUT ไปด้วย
-        } 
-    });
-    
-    if(res.success) {
-        alert("บันทึกเวลาสำเร็จ");
-        location.reload();
-    } else {
-        alert("เกิดข้อผิดพลาด: " + res.message);
-    }
-}
 </script>
 </body>
 </html>
