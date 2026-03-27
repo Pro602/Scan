@@ -269,12 +269,11 @@
     <audio id="snd-ok" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
 <script>
-    // --- [คงเดิม] ตัวแปรหลัก ---
     const gasUrl = "https://script.google.com/macros/s/AKfycby9t947sFIvKCyxoLrFjLu0nNSGo95rdgFLarIfIVanE7kCKEDfglqgikUZCeFC_JAj/exec";
-    let students = [], attendance = [], locationList = [], leaves = [], faceMatcher = null, scanned = new Map(), capturedImg = null, croppedImg = null;
-    let isLoggedIn = false, pendingAction = null, currentUserName = "";
+    let students = [], attendance = [], locationList = [], leaves = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
+    let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
+    let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
-    let isVerifying = false, currentVerifyId = "";
 
     window.onload = async () => {
         lucide.createIcons();
@@ -299,71 +298,509 @@
             apiCall({action:'getStudents'}), apiCall({action:'getAttendance'}), 
             apiCall({action:'getLocations'}), apiCall({action:'getLeaves'})
         ]);
-        if(sRes.success) { students = sRes.data; renderLeaveDropdown(); renderStudentTable(); }
+        if(sRes.success) { students = sRes.data; renderLeaveDropdown(); }
         if(aRes.success) attendance = aRes.data;
         if(lRes.success) { locationList = lRes.data; renderLocationDropdown(); }
         if(vRes.success) leaves = vRes.data;
+        renderStudentTable();
         renderDashboard();
     }
 
-    // --- [แก้ไข] Dashboard: ซ่อมจุดที่ทำให้กดรูปภาพไม่ได้ ---
-    function renderDashboard() {
-        const dateInput = document.getElementById('dashboard-date').value;
-        const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
-        const checkedInIds = new Set(daily.filter(a => a.type === 'IN').map(a => String(a.id)));
-        const lists = { 
-            norm: document.getElementById('normal-list'), 
-            late: document.getElementById('late-list-display'), 
-            out: document.getElementById('out-list'), 
-            abs: document.getElementById('absent-list') 
-        };
+    // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
+function renderDashboard() {
+    const dateInput = document.getElementById('dashboard-date').value;
+    const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
+    const checkedInIds = new Set(daily.filter(a => a.type === 'IN').map(a => String(a.id)));
+    const counts = { in: 0, late: 0, out: 0 };
+    const lists = { 
+        norm: document.getElementById('normal-list'), 
+        late: document.getElementById('late-list-display'), 
+        out: document.getElementById('out-list'), 
+        abs: document.getElementById('absent-list') 
+    };
 
-        Object.values(lists).forEach(l => { if(l){ l.innerHTML = ''; l.classList.remove('auto-scroll-active'); } });
+    // ล้างข้อมูลเก่าและเอา Class เลื่อนออกก่อน Render ใหม่ทุกครั้ง
+    Object.values(lists).forEach(l => { 
+        if(l){ 
+            l.innerHTML = ''; 
+            l.classList.remove('auto-scroll-active'); 
+        } 
+    });
 
-        // ปุ่มกระพริบรออนุมัติ (คงเดิม)
-        const hasPending = leaves.some(l => l.status === 'Pending' || l.status === 'รออนุมัติ');
-        const approveBtn = document.getElementById('tab-approve');
-        if(approveBtn) hasPending ? approveBtn.classList.add('btn-pending-pulse') : approveBtn.classList.remove('btn-pending-pulse');
+    // ตรวจสอบรายการรออนุมัติ (ปุ่มกระพริบ)
+    const hasPending = leaves.some(l => l.status === 'Pending' || l.status === 'รออนุมัติ');
+    const approveBtn = document.getElementById('tab-approve');
+    if(hasPending) approveBtn.classList.add('btn-pending-pulse');
+    else approveBtn.classList.remove('btn-pending-pulse');
 
-        const createItem = (a, s, isAbsent = false) => {
-            if(!s) return '';
-            const safeName = s.name.replace(/'/g, "\\'");
-            const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
-            
-            // ส่วนสำคัญ: คืนค่าการกดที่รูปภาพ
-            const imgHtml = `<img src="${s.imagedatabase64}" class="w-8 h-8 rounded-lg object-cover border cursor-pointer hover:scale-110 transition-transform" onclick="openVerifyModal('${s.studentid}', '${safeName}', '${s.imagedatabase64}')">`;
-
-            if(isAbsent) {
-                return `<div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 mb-0.5"><div class="flex items-center gap-2">${imgHtml}<div><p class="font-bold text-slate-600 text-[10px]">${s.name}</p><p class="text-[8px] text-blue-700">${s.class || '-'}</p></div></div><span class="px-2 py-0.5 text-[9px] rounded-full font-black ${a.bgClass}">${a.statusText}</span></div>`;
-            }
-            return `<div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 mb-0.5 min-h-[40px]"><div class="flex items-center gap-2">${imgHtml}<div class="flex flex-col"><p class="font-bold text-slate-700 text-[10px]">${a.name}</p><p class="text-[9px] text-red-600 font-bold">${a.location_name || '-'}</p><p class="text-[9px] text-blue-700 font-mono">${time} น.</p></div></div><span class="px-2 py-0.5 text-[8px] rounded-full font-bold ${a.type==='OUT'?'bg-blue-100 text-blue-600':(String(a.status).includes('สาย')?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">${a.type==='OUT'?'ออก':(String(a.status).includes('สาย')?'สาย':'ปกติ')}</span></div>`;
-        };
+    // ฟังก์ชันสร้าง Template รายการพนักงาน
+    const createItem = (a, s) => {
+        const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
+        const locValue = (a.location || "").toString().trim();
         
-        daily.forEach(a => {
-            const s = students.find(x => String(x.studentid) === String(a.id));
-            if (a.type === 'OUT') lists.out.innerHTML += createItem(a, s);
-            else if (String(a.status).includes('สาย')) lists.late.innerHTML += createItem(a, s);
-            else lists.norm.innerHTML += createItem(a, s);
-        });
+        let mapBtn = (locValue && locValue.includes(',') && a.location_name !== "THAISIAM Office") ? 
+            `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locValue)}" target="_blank" class="flex items-center hover:scale-110 transition-transform">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a8 8 0 0 0-8 8c0 5.4 6 11.4 7.3 12.6a1 1 0 0 0 1.4 0C14 21.4 20 15.4 20 10a8 8 0 0 0-8-8z"></path>
+                    <circle cx="12" cy="10" r="3" fill="#ffffff"></circle>
+                </svg>
+            </a>` : '';
 
-        students.forEach(s => {
-            if(!checkedInIds.has(String(s.studentid))) {
-                const leaveToday = leaves.find(l => String(l.id) === String(s.studentid) && l.date === dateInput);
-                let statusText = "WAITING", bgClass = "bg-orange-500 text-white"; 
-                if (leaveToday) {
-                    if (leaveToday.status === 'Pending' || leaveToday.status === 'รออนุมัติ') { statusText = "รออนุมัติการลา"; bgClass = "bg-yellow-400 text-black"; }
-                    else { statusText = leaveToday.type; bgClass = "bg-emerald-500 text-white"; }
+        return `
+        <div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5 min-h-[40px]">
+            <div class="flex items-center gap-2">
+                <img src="${s?.imagedatabase64 || ''}" class="w-8 h-8 rounded-lg object-cover border">
+                <div class="flex flex-col">
+                    <p class="font-bold text-slate-700 text-[10px] leading-tight">${a.name}</p>
+                    <p class="text-[9px] text-red-600 font-bold leading-tight mt-0.5">${a.location_name || '-'}</p>
+                    <p class="text-[9px] text-blue-700 font-bold font-mono leading-none mt-0.5">${time} น.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+                ${mapBtn}
+                <span class="px-2 py-0.5 text-[8px] rounded-full font-bold whitespace-nowrap ${a.type==='OUT'?'bg-blue-100 text-blue-600':(String(a.status).includes('สาย')?'bg-amber-100 text-amber-600':'bg-emerald-100 text-emerald-600')}">
+                    ${a.type==='OUT'?'ออก':(String(a.status).includes('สาย')?'สาย':'ปกติ')}
+                </span>
+            </div>
+        </div>`;
+    };
+    
+    // แยกพนักงานลงตามคอลัมน์ (ปกติ, สาย, ออกงาน)
+    daily.forEach(a => {
+        const s = students.find(x => String(x.studentid) === String(a.id));
+        const statusVal = String(a.status || "");
+        if (a.type === 'OUT') { lists.out.innerHTML += createItem(a, s); counts.out++; }
+        else if (statusVal.includes('สาย')) { lists.late.innerHTML += createItem(a, s); counts.late++; }
+        else { lists.norm.innerHTML += createItem(a, s); counts.in++; }
+    });
+
+    // จัดการรายชื่อคนที่ไม่มา หรือ แจ้งลา
+    students.forEach(s => {
+        if(!checkedInIds.has(String(s.studentid))) {
+            const leaveToday = leaves.find(l => String(l.id) === String(s.studentid) && l.date === dateInput);
+            let statusText = "WAITING";
+            let bgClass = "bg-orange-500 text-white shadow-sm"; 
+
+            if (leaveToday) {
+                if (leaveToday.status === 'Pending' || leaveToday.status === 'รออนุมัติ') {
+                    statusText = "รออนุมัติการลา";
+                    bgClass = "bg-yellow-400 text-black"; 
+                } else {
+                    statusText = leaveToday.type;
+                    bgClass = "bg-emerald-500 text-white"; 
                 }
-                lists.abs.innerHTML += createItem({statusText, bgClass}, s, true);
             }
+
+            lists.abs.innerHTML += `
+            <div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5">
+                <div class="flex items-center gap-2">
+                    <img src="${s.imagedatabase64}" class="w-8 h-8 rounded-lg object-cover border">
+                    <div>
+                        <p class="font-bold text-slate-600 text-[10px] leading-tight">${s.name}</p>
+                        <p class="text-[8px] text-blue-700 font-bold leading-none">${s.class || '-'}</p>
+                    </div>
+                </div>
+                <span class="px-2 py-0.5 text-[9px] rounded-full font-black tracking-wider ${bgClass}">${statusText}</span>
+            </div>`;
+        }
+    });
+
+    // --- ส่วนเช็คเงื่อนไขการเลื่อนอัตโนมัติ (ปรับปรุงใหม่) ---
+    Object.keys(lists).forEach(k => {
+        const el = lists[k];
+        if (!el) return;
+
+        // คอลัมน์ abs (แจ้งลา) ใช้ 13 คน, คอลัมน์อื่น (norm, late, out) ใช้ 12 คน
+        const limit = (k === 'abs') ? 12 : 11;
+
+        if (el.children.length > limit) {
+            el.innerHTML += el.innerHTML; // Clone ข้อมูลเพื่อให้เลื่อนต่อเนื่อง
+            el.classList.add('auto-scroll-active');
+        } else {
+            el.classList.remove('auto-scroll-active');
+        }
+    });
+
+    // อัปเดตตัวเลขสรุปบนหน้าจอ
+    document.getElementById('stat-present').innerText = counts.in;
+    document.getElementById('stat-late').innerText = counts.late;
+    document.getElementById('stat-out').innerText = counts.out;
+    document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedInIds.size);
+
+    if (typeof lucide !== 'undefined') {
+        setTimeout(() => { lucide.createIcons(); }, 150);
+    }
+}
+    
+    // --- ส่วนงานจัดการการอนุมัติ ---
+    function renderApprovalList() {
+        const container = document.getElementById('pending-list');
+        container.innerHTML = '';
+        const pending = leaves.filter(l => l.status === 'Pending' || l.status === 'รออนุมัติ');
+        if(pending.length === 0) {
+            container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500 italic">ไม่มีรายการรออนุมัติ</div>';
+            return;
+        }
+        pending.forEach(l => {
+            const card = document.createElement('div');
+            card.className = "bg-white p-5 rounded-3xl shadow-lg border-l-8 border-amber-500 flex justify-between items-center";
+            card.innerHTML = `<div><h4 class="font-bold text-slate-800">${l.name}</h4><p class="text-xs text-slate-500">${l.type} | ${l.date}</p></div>
+                <button onclick="approveAction('${l.id}', '${l.date}')" class="bg-emerald-600 text-white px-6 py-2 rounded-2xl font-bold shadow-md">อนุมัติ</button>`;
+            container.appendChild(card);
         });
-        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
-    // --- [คืนค่า] ฟังก์ชันสำหรับปุ่มเพิ่มพนักงาน ---
+// วางทับของเดิมที่เป็นชื่อนี้ได้เลย
+async function approveAction(id, date) {
+    const approver = currentUserName || "Admin";
+    if(!confirm(`ยืนยันการอนุมัติโดยคุณ ${approver}?`)) return;
+
+    const res = await apiCall({ 
+        action: 'approveLeave', 
+        data: { 
+            id: id, 
+            date: date, 
+            approvedBy: approver // ส่งค่าชื่อไปที่ Google Sheets
+        } 
+    });
+
+    if(res.success) { 
+        alert("อนุมัติสำเร็จ"); 
+        await loadAllData(); 
+        renderApprovalList(); 
+    } else {
+        alert("ล้มเหลว");
+    }
+}
+
+    // --- ส่วน Logic พื้นฐาน (คงเดิม) ---
+    function switchTab(tab) {
+        if ((tab === 'approve' || tab === 'manage') && !isLoggedIn) { pendingAction = tab; document.getElementById('login-modal').classList.remove('hidden'); return; }
+        document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
+        document.getElementById(`content-${tab}`).classList.remove('hidden');
+        document.querySelectorAll('nav button').forEach(btn => {
+            btn.classList.remove('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
+            btn.classList.add('tab-inactive');
+        });
+        const activeTab = document.getElementById(`tab-${tab}`);
+        activeTab.classList.add('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
+        activeTab.classList.remove('tab-inactive');
+        if (tab === 'scan') { startCamera('video'); setTimeout(startDetector, 1000); } else stopCamera('video');
+        if (tab === 'approve') renderApprovalList();
+    }
+
+    async function saveLeave() {
+        const id = document.getElementById('leave-student-select').value;
+        const student = students.find(x => String(x.studentid) === String(id));
+        const date = document.getElementById('leave-date').value;
+        const type = document.getElementById('leave-type').value;
+        if(!id || !date) return alert("กรุณากรอกข้อมูลให้ครบ");
+        const res = await apiCall({ action: 'addLeave', data: {id, name: student.name, date, type, status: 'Pending'} });
+        if(res.success) { alert("ส่งคำขอสำเร็จ"); location.reload(); }
+        else alert("ล้มเหลว");
+    }
+
+    async function initFaceAPI() {
+        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+        try {
+            await Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL), faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)]);
+            const labeled = [];
+            for (const s of students) {
+                if (s.imagedatabase64) {
+                    try {
+                        const img = await faceapi.fetchImage(s.imagedatabase64);
+                        const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                        if (det) labeled.push(new faceapi.LabeledFaceDescriptors(String(s.studentid), [det.descriptor]));
+                    } catch(e) {}
+                }
+            }
+            if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.45);
+        } catch(e) {}
+    }
+
+    async function startDetector() {
+    const v = document.getElementById('video'), o = document.getElementById('overlay');
+    const dim = { width: v.clientWidth, height: v.clientHeight };
+    faceapi.matchDimensions(o, dim);
+    
+    setInterval(async () => {
+        if(v.paused || v.ended) return;
+        const dets = await faceapi.detectAllFaces(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptors();
+        const resized = faceapi.resizeResults(dets, dim);
+        o.getContext('2d').clearRect(0,0,o.width,o.height);
+        faceapi.draw.drawDetections(o, resized);
+        
+        if(faceMatcher && dets.length > 0) {
+            dets.forEach(d => {
+                const match = faceMatcher.findBestMatch(d.descriptor);
+                const s = students.find(x => String(x.studentid) === match.label);
+                
+                if(s && match.distance < 0.45 && !scanned.has(s.studentid)) {
+                    scanned.set(s.studentid, s);
+                    
+                    // 1. แสดงชื่อพนักงาน
+                    document.getElementById('res-name').innerText = s.name;
+                    
+                    // 2. แสดง ID (แบบมีคำว่า ID: เพื่อความสวยงามบนหน้าจอ)
+                    document.getElementById('res-id').innerText = `ID: ${s.studentid}`;
+                    
+                    // 3. จัดการเรื่อง Class (แผนก) - สำคัญมากสำหรับการบันทึกลง Sheet
+                    const classEl = document.getElementById('res-class');
+                    if(classEl) {
+                        classEl.innerText = s.class || "-";
+                    } else {
+                        // กรณีหา ID res-class ไม่เจอใน HTML ให้สร้าง hidden element ไว้เก็บค่าชั่วคราว
+                        let hiddenClass = document.createElement('span');
+                        hiddenClass.id = 'res-class';
+                        hiddenClass.style.display = 'none';
+                        hiddenClass.innerText = s.class || "-";
+                        document.body.appendChild(hiddenClass);
+                    }
+                    
+                    // 4. แสดงรูปภาพจากฐานข้อมูล
+                    document.getElementById('res-img').src = s.imagedatabase64;
+                    document.getElementById('res-img').classList.remove('hidden');
+                    document.getElementById('res-img-placeholder').classList.add('hidden');
+                    
+                    // 5. เสียงตอบรับ
+                    document.getElementById('snd-ok').play();
+                    speak(`สแกนสำเร็จค่ะ  ${s.name.split(' ')[0]}`);
+
+                    // 6. ดึงชื่อสถานที่มาแสดงใต้ชื่อพนักงาน (ตามที่ต้องการ)
+                    const select = document.getElementById('location-select');
+                    if (select && select.value) {
+                        const locName = select.options[select.selectedIndex].text.trim();
+                        // แทรกชื่อสถานที่ปฏิบัติงานใต้ชื่อพนักงาน
+                        document.getElementById('res-name').innerHTML = `${s.name}<br><span style="font-size: 0.7em; color: #fbbf24;">📍 ${locName}</span>`;
+                    }
+                }
+            });
+        }
+    }, 300);
+}
+
+async function finishAttendance(type) {
+    const resIdElement = document.getElementById('res-id');
+    const resNameElement = document.getElementById('res-name');
+    const resClassElement = document.getElementById('res-class');
+    const select = document.getElementById('location-select');
+    const btnIn = document.getElementById('btn-in'), btnOut = document.getElementById('btn-out');
+
+    if (!resIdElement || resIdElement.innerText === 'STANDING BY' || !select.value) {
+        return alert("กรุณาสแกนใบหน้าและเลือกสถานที่");
+    }
+
+    // --- 1. ล้างค่า ID ให้เหลือแค่รหัสล้วน (เช่น TS0057) เพื่อให้ Dashboard แมตช์ข้อมูลเจอ ---
+    const cleanId = resIdElement.innerText.replace(/ID:\s*/gi, '').trim(); 
+
+    // --- 2. ดึงค่า Class (แผนก) และล้างคำนำหน้าออก ---
+    let cleanClass = "-";
+    if (resClassElement) {
+        cleanClass = resClassElement.innerText.replace(/แผนก:\s*/gi, '').replace(/Class:\s*/gi, '').trim();
+    }
+
+    const selectedLocName = select.options[select.selectedIndex].text.trim();
+    const selectedLoc = locationList.find(l => (l.name || l.LocationName || "").toString().trim() === selectedLocName);
+
+    btnIn.disabled = true; btnOut.disabled = true;
+
+    try {
+        const pos = await new Promise((res, rej) => {
+            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 });
+        });
+        
+        const currentLat = pos.coords.latitude;
+        const currentLng = pos.coords.longitude;
+
+        if (selectedLocName !== "ทำงานนอกสถานที่") {
+            const targetLat = parseFloat(selectedLoc.lat || selectedLoc.Latitude);
+            const targetLng = parseFloat(selectedLoc.lng || selectedLoc.Longitude);
+            const radius = parseFloat(selectedLoc.radius || selectedLoc['Radius (Meters)'] || 100);
+            const distance = getDistance(currentLat, currentLng, targetLat, targetLng);
+            
+            if (distance > radius) {
+                alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร`);
+                btnIn.disabled = false; btnOut.disabled = false;
+                return; 
+            }
+        }
+
+        // --- 3. กำหนดช่วงเวลามาสาย (08:30 น.) ---
+       const now = new Date();
+        // สร้าง timestamp แบบ YYYY-MM-DD HH:mm:ss (ค.ศ.)
+        const timestamp = now.toISOString().slice(0, 10) + " " + now.toTimeString().split(' ')[0];
+        
+        // --- 2. ตรรกะการเช็คสถานะ (อ้างอิงจากชุดเดิม) ---
+        // ถ้าเป็นเข้างาน (IN) และเกิน 08:30 ให้เป็น 'สาย' ถ้าไม่เกินให้เป็น 'มาปกติ'
+        // ถ้าเป็นออกงาน (OUT) ให้เป็น 'ออกงาน'
+        let statusText = "";
+        if (type === 'IN') {
+            const isLate = (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30));
+            statusText = isLate ? 'สาย' : 'มาปกติ';
+        } else {
+            statusText = 'ออกงาน';
+        }
+
+        const displayName = resNameElement ? resNameElement.innerText.split('\n')[0].trim() : "";
+
+        const res = await apiCall({
+            action: 'recordAttendanceUpdate', 
+            data: [{
+                id: cleanId,
+                name: displayName, 
+                class: cleanClass, 
+                timestamp: timestamp, 
+                location: `${currentLat},${currentLng}`,
+                location_name: selectedLocName, 
+                status: statusText,
+                type: type
+            }]
+        });
+
+        if (res.success) {
+            if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
+            alert(`บันทึก${type}สำเร็จ! (สถานะ: ${statusText})`);
+            location.reload();
+        } else {
+            alert("บันทึกผิดพลาด: " + res.message);
+        }
+
+    } catch (err) {
+        alert("เกิดข้อผิดพลาด: " + err.message);
+    } finally {
+        btnIn.disabled = false; btnOut.disabled = false;
+    }
+}
+    
+// ฟังก์ชันคำนวณระยะทาง (ต้องมีใน Code ของคุณ)
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3; // รัศมีโลกในหน่วยเมตร
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // ระยะห่างเป็นเมตร
+}
+
+    function renderLocationDropdown() {
+        const select = document.getElementById('location-select');
+        select.innerHTML = '<option value="">-- เลือกสถานที่ --</option>';
+        locationList.forEach((loc, i) => { select.innerHTML += `<option value="${i}">${loc.name}</option>`; });
+    }
+
+    function renderLeaveDropdown() {
+        document.getElementById('leave-student-select').innerHTML = students.map(s => `<option value="${s.studentid}">${s.name}</option>`).join('');
+        document.getElementById('leave-date').value = new Date().toISOString().split('T')[0];
+    }
+
+    function renderStudentTable() {
+        document.getElementById('student-table-body').innerHTML = students.map(s => `<tr><td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td><td class="p-4 font-mono text-xs">${s.studentid}</td><td class="p-4 font-bold text-slate-700">${s.name}</td><td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td><td class="p-4 text-center"><button onclick="deleteStudent(${s.rowIndex})" class="text-rose-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td></tr>`).join('');
+        lucide.createIcons();
+    }
+
+    // --- วางตัวแปรไว้ด้านบนสุดของกลุ่มฟังก์ชัน ---
+    let croppedImg = null; 
+
+    async function startCamera(id) { try { document.getElementById(id).srcObject = await navigator.mediaDevices.getUserMedia({video:true}); } catch(e){} }
+    function stopCamera(id) { const v = document.getElementById(id); if(v?.srcObject) v.srcObject.getTracks().forEach(t => t.stop()); }
+    function speak(t) { const m = new SpeechSynthesisUtterance(t); m.lang = 'th-TH'; window.speechSynthesis.speak(m); }
+    function checkLogin() { const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value; if (AUTHORIZED_USERS[u] === p) { isLoggedIn = true; currentUserName = u; document.getElementById('login-modal').classList.add('hidden'); if(pendingAction) switchTab(pendingAction); } else alert("Error"); }
+    function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
+    
+    function startModalCamera() { 
+        startCamera('modal-video'); 
+        document.getElementById('modal-video').classList.remove('hidden'); 
+        document.getElementById('preview-img').classList.add('hidden'); 
+        document.getElementById('btn-snap').classList.remove('hidden'); 
+        document.getElementById('face-guide').classList.remove('hidden'); // แสดงเส้นไกด์
+    }
+
+    // ฟังก์ชันถ่ายรูปพร้อมระบบ Auto-Crop ใบหน้า
+    // ฟังก์ชันถ่ายรูปจากกล้อง (Snap)
+    async function snapPhoto() {
+    const v = document.getElementById('modal-video');
+    const previewImg = document.getElementById('preview-img');
+    const cropCanvas = document.getElementById('crop-canvas');
+    const cropStatus = document.getElementById('crop-status');
+    
+    // 1. ตรวจจับใบหน้า "ก่อน" ที่จะปิดกล้อง (สำคัญมาก!)
+    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions());
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = v.videoWidth;
+    tempCanvas.height = v.videoHeight;
+    const ctxTemp = tempCanvas.getContext('2d');
+    ctxTemp.drawImage(v, 0, 0);
+    
+    capturedImg = tempCanvas.toDataURL('image/jpeg', 0.9);
+    previewImg.src = capturedImg;
+    previewImg.classList.remove('hidden');
+    v.classList.add('hidden');
+    document.getElementById('face-guide').classList.add('hidden');
+    document.getElementById('btn-snap').classList.add('hidden');
+
+    // 2. ค่อยสั่งปิดกล้องหลังจากตรวจจับเสร็จแล้ว
+    stopCamera('modal-video');
+
+    document.getElementById('crop-preview-container').classList.remove('hidden');
+    cropCanvas.width = 200;
+    cropCanvas.height = 200;
+    const ctx = cropCanvas.getContext('2d');
+
+    if (detections) {
+        const { x, y, width, height } = detections.box;
+        const margin = width * 0.25;
+        // วาดรูปจากภาพที่เก็บไว้ใน tempCanvas (เพราะ video ปิดไปแล้ว)
+        ctx.drawImage(tempCanvas, x - margin, y - margin, width + (margin * 2), height + (margin * 2), 0, 0, 200, 200);
+        croppedImg = cropCanvas.toDataURL('image/jpeg', 0.9);
+        cropStatus.innerText = "ตรวจพบใบหน้าชัดเจน";
+        cropStatus.className = "text-xs font-bold text-emerald-400";
+    } else {
+        // หากไม่พบใบหน้า ให้ Crop ส่วนกลางของรูปไปใช้งานแทน
+        ctx.drawImage(tempCanvas, (tempCanvas.width/2)-150, (tempCanvas.height/2)-150, 300, 300, 0, 0, 200, 200);
+        croppedImg = cropCanvas.toDataURL('image/jpeg', 0.9);
+        cropStatus.innerText = "ไม่พบใบหน้า! (ลองขยับหน้าให้ชัดขึ้น)";
+        cropStatus.className = "text-xs font-bold text-red-400";
+    }
+}
+
+    // ฟังก์ชันบันทึกข้อมูล (ใช้รูปที่ Crop แล้ว)
+    async function saveStudent() { 
+        const sId = document.getElementById('modal-id').value;
+        const sName = document.getElementById('modal-name').value;
+        const sClass = document.getElementById('modal-class').value;
+        const finalImage = croppedImg || capturedImg;
+
+        if(!finalImage || !sId || !sName) return alert("กรุณาถ่ายรูปและกรอกข้อมูลให้ครบ"); 
+        
+        const res = await apiCall({ 
+            action: 'addStudent', 
+            data: {studentid: sId, name: sName, class: sClass, imagedatabase64: finalImage} 
+        }); 
+        
+        if(res.success) location.reload(); 
+        else alert("Error"); 
+    }
+
+    // ฟังก์ชันปิดหน้าต่างและรีเซ็ตค่า
+    function closeStudentModal() { 
+        document.getElementById('student-modal').classList.add('hidden'); 
+        stopCamera('modal-video'); 
+        document.getElementById('modal-video').classList.remove('hidden');
+        document.getElementById('preview-img').classList.add('hidden');
+        document.getElementById('btn-snap').classList.remove('hidden');
+        document.getElementById('crop-preview-container').classList.add('hidden');
+        croppedImg = null;
+    }
+
+   // แก้ไขฟังก์ชันเปิด Modal ให้กล้องทำงานทันที
     function openAddModal() {
         document.getElementById('student-modal').classList.remove('hidden');
-        startCamera('modal-video');
+        startCamera('modal-video'); // สั่งเปิดกล้องทันที
         document.getElementById('modal-video').classList.remove('hidden');
         document.getElementById('preview-img').classList.add('hidden');
         document.getElementById('face-guide').classList.remove('hidden');
@@ -372,105 +809,53 @@
         croppedImg = null;
     }
 
-    async function snapPhoto() {
-        const v = document.getElementById('modal-video');
-        const detection = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions());
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = v.videoWidth; tempCanvas.height = v.videoHeight;
-        tempCanvas.getContext('2d').drawImage(v, 0, 0);
-        capturedImg = tempCanvas.toDataURL('image/jpeg', 0.9);
-        
-        document.getElementById('preview-img').src = capturedImg;
-        document.getElementById('preview-img').classList.remove('hidden');
-        v.classList.add('hidden');
-        stopCamera('modal-video');
+    // ฟังก์ชันจัดการเมื่อเลือกไฟล์จากเครื่อง
+    async function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
 
-        if (detection) {
-            const cropCanvas = document.getElementById('crop-canvas');
-            cropCanvas.width = 200; cropCanvas.height = 200;
-            const { x, y, width, height } = detection.box;
-            cropCanvas.getContext('2d').drawImage(tempCanvas, x-20, y-20, width+40, height+40, 0, 0, 200, 200);
-            croppedImg = cropCanvas.toDataURL('image/jpeg', 0.9);
-            document.getElementById('crop-preview-container').classList.remove('hidden');
-        }
-    }
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const img = new Image();
+            img.onload = async function() {
+                // แสดงภาพที่เลือกในกรอบ Preview หลัก
+                const previewImg = document.getElementById('preview-img');
+                previewImg.src = e.target.result;
+                previewImg.classList.remove('hidden');
+                document.getElementById('modal-video').classList.add('hidden');
+                document.getElementById('face-guide').classList.add('hidden');
+                document.getElementById('btn-snap').classList.add('hidden');
+                stopCamera('modal-video');
 
-    async function saveStudent() {
-        const data = {
-            studentid: document.getElementById('modal-id').value,
-            name: document.getElementById('modal-name').value,
-            class: document.getElementById('modal-class').value,
-            imagedatabase64: croppedImg || capturedImg
+                // พยายาม Crop จากรูปที่อัปโหลด
+                const cropCanvas = document.getElementById('crop-canvas');
+                const cropStatus = document.getElementById('crop-status');
+                document.getElementById('crop-preview-container').classList.remove('hidden');
+
+                const detections = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions());
+                
+                cropCanvas.width = 200;
+                cropCanvas.height = 200;
+                const ctx = cropCanvas.getContext('2d');
+
+                if (detections) {
+                    const { x, y, width, height } = detections.box;
+                    const margin = width * 0.25;
+                    ctx.drawImage(img, x - margin, y - margin, width + (margin * 2), height + (margin * 2), 0, 0, 200, 200);
+                    croppedImg = cropCanvas.toDataURL('image/jpeg', 0.9);
+                    cropStatus.innerText = "ตรวจพบใบหน้าจากรูปภาพ";
+                    cropStatus.className = "text-xs font-bold text-emerald-400";
+                } else {
+                    ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 200, 200);
+                    croppedImg = e.target.result;
+                    cropStatus.innerText = "ไม่พบใบหน้าในรูป (ใช้ภาพเต็ม)";
+                    cropStatus.className = "text-xs font-bold text-red-400";
+                }
+            };
+            img.src = e.target.result;
         };
-        if(!data.studentid || !data.name || !data.imagedatabase64) return alert("กรุณากรอกข้อมูลและถ่ายรูป");
-        const res = await apiCall({ action: 'addStudent', data: data });
-        if(res.success) location.reload(); else alert("บันทึกไม่สำเร็จ");
+        reader.readAsDataURL(file);
     }
-
-    // --- [คงเดิม] ระบบสแกนหน้า Verify 1:1 ---
-    async function openVerifyModal(id, name, img) {
-        currentVerifyId = id;
-        document.getElementById('v-target-name').innerText = name;
-        document.getElementById('v-target-img').src = img;
-        document.getElementById('v-action-zone').innerHTML = '<p class="text-blue-400 animate-pulse text-center">กำลังสแกนใบหน้า...</p>';
-        document.getElementById('verify-modal').classList.remove('hidden');
-        await startCamera('v-video');
-        isVerifying = true;
-        runVerifyLoop();
-    }
-
-    async function runVerifyLoop() {
-        const v = document.getElementById('v-video');
-        if (!isVerifying || !v) return;
-        const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-        if (det && faceMatcher) {
-            const match = faceMatcher.findBestMatch(det.descriptor);
-            if (match.label === currentVerifyId && match.distance < 0.45) {
-                isVerifying = false;
-                speak("สแกนสำเร็จค่ะ");
-                showVerifyActions();
-                return;
-            }
-        }
-        setTimeout(runVerifyLoop, 200);
-    }
-
-    function showVerifyActions() {
-        const locOptions = locationList.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
-        document.getElementById('v-action-zone').innerHTML = `
-            <div class="space-y-3">
-                <select id="v-location" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white">${locOptions}<option value="ทำงานนอกสถานที่">ทำงานนอกสถานที่</option></select>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="submitVerifyAttendance('IN')" class="bg-emerald-600 text-white p-3 rounded-xl font-bold">เข้างาน (IN)</button>
-                    <button onclick="submitVerifyAttendance('OUT')" class="bg-blue-600 text-white p-3 rounded-xl font-bold">ออกงาน (OUT)</button>
-                </div>
-            </div>`;
-    }
-
-    // --- ฟังก์ชันช่วยเหลือ (คงเดิม) ---
-    async function startCamera(id) { try { document.getElementById(id).srcObject = await navigator.mediaDevices.getUserMedia({video:true}); } catch(e){} }
-    function stopCamera(id) { const v = document.getElementById(id); if(v?.srcObject) v.srcObject.getTracks().forEach(t => t.stop()); }
-    function speak(t) { const m = new SpeechSynthesisUtterance(t); m.lang = 'th-TH'; window.speechSynthesis.speak(m); }
-    function closeVerifyModal() { isVerifying = false; stopCamera('v-video'); document.getElementById('verify-modal').classList.add('hidden'); }
-    function closeStudentModal() { stopCamera('modal-video'); document.getElementById('student-modal').classList.add('hidden'); }
-    async function initFaceAPI() {
-        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-        await Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL), faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)]);
-        const labeled = [];
-        for (const s of students) {
-            if (s.imagedatabase64) {
-                try {
-                    const img = await faceapi.fetchImage(s.imagedatabase64);
-                    const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-                    if (det) labeled.push(new faceapi.LabeledFaceDescriptors(String(s.studentid), [det.descriptor]));
-                } catch(e) {}
-            }
-        }
-        if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.45);
-    }
-    function renderLocationDropdown() { document.getElementById('location-select').innerHTML = '<option value="">-- เลือกสถานที่ --</option>' + locationList.map((loc, i) => `<option value="${i}">${loc.name}</option>`).join(''); }
-    function renderLeaveDropdown() { document.getElementById('leave-student-select').innerHTML = students.map(s => `<option value="${s.studentid}">${s.name}</option>`).join(''); }
-    function renderStudentTable() { document.getElementById('student-table-body').innerHTML = students.map(s => `<tr><td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td><td class="p-4 font-mono text-xs">${s.studentid}</td><td class="p-4 font-bold text-slate-700">${s.name}</td><td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td><td class="p-4 text-center"><button class="text-rose-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td></tr>`).join(''); lucide.createIcons(); }
 </script>
 </body>
 </html>
