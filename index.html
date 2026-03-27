@@ -257,11 +257,6 @@
                     <input type="file" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
                 </label>
             </div>
-            <div class="flex gap-3">
-                <button onclick="saveStudent()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl">บันทึกข้อมูล</button>
-                <button onclick="closeStudentModal()" class="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl">ยกเลิก</button>
-            </div>
-        </div>
     </div>
 </div>
 <div id="verify-modal" class="fixed inset-0 bg-black/90 hidden z-[110] flex items-center justify-center p-4">
@@ -557,43 +552,12 @@ async function approveAction(id, date) {
 }
 
     // --- ส่วน Logic พื้นฐาน (คงเดิม) ---
-   function switchTab(tab) {
-    // 1. ตรวจสอบการล็อกอินสำหรับเมนูจัดการ
-    if ((tab === 'approve' || tab === 'manage') && !isLoggedIn) { 
-        pendingAction = tab; 
-        document.getElementById('login-modal').classList.remove('hidden'); 
-        return; 
-    }
-
-    // 2. ปรับปรุง: ถ้ากดปุ่ม "สแกน" ให้เด้งกลับไปหน้า Dashboard เพื่อเลือกชื่อพนักงาน
-    if (tab === 'scan') {
-        alert("กรุณาเลือกรายชื่อพนักงานจากหน้า Dashboard เพื่อสแกนใบหน้า");
-        tab = 'dashboard'; // เปลี่ยนเป้าหมายไปที่ Dashboard แทน
-    }
-
-    // 3. จัดการการแสดงผลหน้า Content
-    document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
-    const targetContent = document.getElementById(`content-${tab}`);
-    if (targetContent) targetContent.classList.remove('hidden');
-
-    // 4. จัดการสีของปุ่มเมนู (Tab UI)
-    document.querySelectorAll('nav button').forEach(btn => {
-        btn.classList.remove('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
-        btn.classList.add('tab-inactive');
-    });
-
-    const activeTab = document.getElementById(`tab-${tab}`);
-    if (activeTab) {
-        activeTab.classList.add('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
-        activeTab.classList.remove('tab-inactive');
-    }
-
-    // 5. ปิดกล้องหน้าสแกนแบบเก่าทิ้งเสมอ เพื่อไม่ให้กินทรัพยากรเครื่อง
-    stopCamera('video'); 
-    
-    // 6. โหลดข้อมูลหน้าอนุมัติถ้าเลือกแท็บนั้น
-    if (tab === 'approve') renderApprovalList();
-}
+<div class="flex gap-3">
+        <button onclick="saveStudent()" class="...">บันทึกข้อมูล</button>
+        <button onclick="closeStudentModal()" class="...">ยกเลิก</button>
+    </div>
+</div>
+</div>
 
     async function saveLeave() {
         const id = document.getElementById('leave-student-select').value;
