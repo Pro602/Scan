@@ -282,25 +282,30 @@
     window.onload = async () => {
         if(typeof lucide !== 'undefined') lucide.createIcons();
         
-        // ตรวจสอบ ID ของ Input วันที่ (รองรับทั้ง dash-date และ dashboard-date)
+        // ตรวจสอบช่องวันที่ (รองรับทั้ง dashboard-date และ dash-date)
         const dateEl = document.getElementById('dashboard-date') || document.getElementById('dash-date');
         if(dateEl && !dateEl.value) {
             dateEl.value = new Date().toISOString().split('T')[0];
         }
         
-        await loadAllData(); 
-        await initFaceAPI(); 
+        // โหลดข้อมูล และดัก Error กรณีข้อมูลไม่มา
+        try {
+            await loadAllData(); 
+            await initFaceAPI(); 
+        } catch (e) {
+            console.error("Initial Load Error:", e);
+        }
 
-        // Auto-refresh ทุก 30 วินาที
+        // Auto-refresh ทุก 45 วินาที
         setInterval(async () => {
             const [aRes, vRes] = await Promise.all([
                 apiCall({action:'getAttendance'}), 
                 apiCall({action:'getLeaves'})
             ]);
-            if(aRes.success) attendance = aRes.data;
-            if(vRes.success) leaves = vRes.data;
+            if(aRes && aRes.success) attendance = aRes.data || [];
+            if(vRes && vRes.success) leaves = vRes.data || [];
             renderDashboard();
-        }, 30000);
+        }, 45000);
     };
 
     async function apiCall(p) {
@@ -318,10 +323,16 @@
             apiCall({action:'getStudents'}), apiCall({action:'getAttendance'}), 
             apiCall({action:'getLocations'}), apiCall({action:'getLeaves'})
         ]);
-        if(sRes.success) { students = sRes.data; renderLeaveDropdown(); renderStudentTable(); }
-        if(aRes.success) attendance = aRes.data;
-        if(lRes.success) { locationList = lRes.data; renderLocationDropdown(); }
-        if(vRes.success) leaves = vRes.data;
+        
+        // เช็คและป้องกันข้อมูลพัง (Fallback to empty array)
+        students = (sRes && sRes.success) ? sRes.data : [];
+        attendance = (aRes && aRes.success) ? aRes.data : [];
+        locationList = (lRes && lRes.success) ? lRes.data : [];
+        leaves = (vRes && vRes.success) ? vRes.data : [];
+
+        renderLeaveDropdown(); 
+        renderStudentTable(); 
+        renderLocationDropdown();
         renderDashboard();
     }
 
@@ -345,13 +356,12 @@
             abs: document.getElementById('absent-list') 
         };
 
-        // ล้างข้อมูลหน้าจอ
         Object.values(lists).forEach(l => { if(l){ l.innerHTML = ''; l.classList.remove('auto-scroll-active'); } });
 
         const createItem = (a, s, isAbsent = false) => {
             if(!s) return '';
             const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
-            const safeName = s.name.replace(/'/g, "\\'");
+            const safeName = s.name ? s.name.replace(/'/g, "\\'") : 'Unknown';
             const imgHtml = `<img src="${s.imagedatabase64 || ''}" class="w-10 h-10 rounded-lg object-cover border-2 border-slate-200 cursor-pointer hover:scale-110 hover:border-blue-500 transition-all shadow-sm" onclick="openVerifyModal('${s.studentid}', '${safeName}', '${s.imagedatabase64}')">`;
             
             if(isAbsent) return `
@@ -401,7 +411,6 @@
             }
         });
 
-        // อัปเดตตัวเลข Stats
         const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
         setVal('stat-present', counts.in);
         setVal('stat-late', counts.late);
@@ -411,7 +420,7 @@
         if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 
-    // --- FACE API & VERIFICATION ---
+    // --- FACE API & SCANNING ---
     async function initFaceAPI() {
         const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
         try {
@@ -440,7 +449,7 @@
         if(imgEl) imgEl.src = img;
         
         const actionZone = document.getElementById('v-action-zone');
-        if(actionZone) actionZone.innerHTML = '<p class="text-center text-amber-400 animate-pulse py-4 text-sm">กรุณามองกล้องเพื่อยืนยันตัวตน...</p>';
+        if(actionZone) actionZone.innerHTML = '<p class="text-center text-amber-400 animate-pulse py-4 text-xs font-bold uppercase tracking-widest">Scanning Facial Data...</p>';
 
         const modal = document.getElementById('verify-modal');
         if(modal) modal.classList.remove('hidden');
@@ -454,35 +463,43 @@
         const video = document.getElementById('v-video');
         if (!isScanning || !video) return;
 
-        const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-        
-        if (detection && faceMatcher) {
-            const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
-            if (bestMatch.label === currentVerifyId) {
-                isScanning = false;
-                speak("ยืนยันตัวตนสำเร็จค่ะ");
-                showActionButtons();
-                return;
+        try {
+            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+            if (detection && faceMatcher) {
+                const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+                if (bestMatch.label === currentVerifyId) {
+                    isScanning = false;
+                    speak("ยืนยันตัวตนสำเร็จ");
+                    showActionButtons();
+                    return;
+                }
             }
-        }
+        } catch (e) { console.error("Recognition Loop Error:", e); }
+        
         if(isScanning) setTimeout(runFaceRecognition, 200);
     }
 
     function showActionButtons() {
         const actionZone = document.getElementById('v-action-zone');
         if(!actionZone) return;
+        
+        // เช็คว่า locationList มีข้อมูลไหม ถ้าไม่มีให้ใส่ค่า Default
+        const options = (locationList && locationList.length > 0) 
+            ? locationList.map(l => `<option value="${l.name}">${l.name}</option>`).join('')
+            : '<option value="สำนักงานใหญ่">สำนักงานใหญ่</option>';
+
         actionZone.innerHTML = `
-            <div class="space-y-3 animate-in fade-in zoom-in duration-300">
+            <div class="space-y-4 animate-in fade-in zoom-in duration-300">
                 <div class="space-y-1">
-                    <label class="text-slate-400 text-[10px] uppercase tracking-wider">📍 เลือกสถานที่</label>
-                    <select id="v-location" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm outline-none">
-                        ${locationList.map(l => `<option value="${l.name}">${l.name}</option>`).join('')}
+                    <label class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">📍 WORK LOCATION</label>
+                    <select id="v-location" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500 transition-all">
+                        ${options}
                         <option value="หน้างาน/นอกสถานที่">หน้างาน/นอกสถานที่</option>
                     </select>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
-                    <button id="btn-v-in" onclick="submitAttendance('IN')" class="bg-emerald-600 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all">เข้างาน (IN)</button>
-                    <button id="btn-v-out" onclick="submitAttendance('OUT')" class="bg-blue-600 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all">ออกงาน (OUT)</button>
+                    <button id="btn-v-in" onclick="submitAttendance('IN')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">บันทึกเข้างาน (IN)</button>
+                    <button id="btn-v-out" onclick="submitAttendance('OUT')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">บันทึกออกงาน (OUT)</button>
                 </div>
             </div>
         `;
@@ -501,7 +518,7 @@
             if(!v) return;
             const stream = await navigator.mediaDevices.getUserMedia({video: { facingMode: 'user' }});
             v.srcObject = stream; 
-        } catch(e){ alert("ไม่สามารถเปิดกล้องได้"); } 
+        } catch(e){ alert("ไม่สามารถเปิดกล้องได้ กรุณาเช็คการอนุญาตกล้อง"); } 
     }
     
     function stopCamera(id) { 
@@ -513,7 +530,9 @@
         const loc = document.getElementById('v-location');
         if(!loc) return;
         const locName = loc.value;
-        
+        const btnIn = document.getElementById('btn-v-in'), btnOut = document.getElementById('btn-v-out');
+        if(btnIn) btnIn.disabled = true; if(btnOut) btnOut.disabled = true;
+
         try {
             const pos = await new Promise((res, rej) => {
                 navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 5000 });
@@ -528,7 +547,7 @@
                 data: [{
                     id: currentVerifyId,
                     name: document.getElementById('v-target-name').innerText,
-                    class: students.find(s => String(s.studentid) === String(currentVerifyId))?.class || "-",
+                    class: (students.find(s => String(s.studentid) === String(currentVerifyId)) || {}).class || "-",
                     timestamp: timestamp,
                     location: `${pos.coords.latitude},${pos.coords.longitude}`,
                     location_name: locName,
@@ -537,28 +556,46 @@
                 }]
             });
 
-            if(res.success) {
-                speak("บันทึกสำเร็จค่ะ");
+            if(res && res.success) {
+                speak("บันทึกสำเร็จ");
                 alert(`บันทึก ${type} สำเร็จ!`);
                 closeVerifyModal();
                 loadAllData();
             } else {
-                alert("ผิดพลาด: " + res.message);
+                alert("ผิดพลาด: " + (res ? res.message : "ไม่มีการตอบกลับจาก Server"));
             }
         } catch (err) {
-            alert("กรุณาเปิด GPS ก่อนบันทึกเวลา");
+            alert("กรุณาเปิด GPS และอนุญาตการแชร์ตำแหน่ง");
+        } finally {
+            if(btnIn) btnIn.disabled = false; if(btnOut) btnOut.disabled = false;
         }
     }
 
-    // --- อื่นๆ ---
+    // --- OTHER UI RENDERERS ---
     function renderLocationDropdown() {
         const s = document.getElementById('location-select');
-        if(s) s.innerHTML = '<option value="">-- เลือกสถานที่ --</option>' + locationList.map((loc, i) => `<option value="${i}">${loc.name}</option>`).join('');
+        if(s) s.innerHTML = '<option value="">-- เลือกสถานที่ --</option>' + (locationList || []).map((loc, i) => `<option value="${i}">${loc.name}</option>`).join('');
     }
 
     function renderLeaveDropdown() {
         const s = document.getElementById('leave-student-select');
-        if(s) s.innerHTML = students.map(s => `<option value="${s.studentid}">${s.name}</option>`).join('');
+        if(s) s.innerHTML = (students || []).map(s => `<option value="${s.studentid}">${s.name}</option>`).join('');
+    }
+
+    function renderStudentTable() {
+        const tbody = document.getElementById('student-table-body');
+        if(!tbody) return;
+        tbody.innerHTML = (students || []).map(s => `
+            <tr>
+                <td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td>
+                <td class="p-4 font-mono text-xs">${s.studentid}</td>
+                <td class="p-4 font-bold text-slate-700">${s.name}</td>
+                <td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td>
+                <td class="p-4 text-center">
+                    <button onclick="deleteStudent(${s.rowIndex})" class="text-rose-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </td>
+            </tr>`).join('');
+        if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 
     function speak(t) { 
@@ -566,6 +603,21 @@
             const m = new SpeechSynthesisUtterance(t); 
             m.lang = 'th-TH'; 
             window.speechSynthesis.speak(m); 
+        }
+    }
+
+    function switchTab(tab) {
+        if (tab === 'scan') { alert("กรุณาคลิกที่รูปพนักงานใน Dashboard เพื่อสแกนใบหน้า"); return; }
+        document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
+        document.getElementById(`content-${tab}`).classList.remove('hidden');
+        document.querySelectorAll('nav button').forEach(btn => {
+            btn.classList.remove('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
+            btn.classList.add('tab-inactive');
+        });
+        const activeTab = document.getElementById(`tab-${tab}`);
+        if(activeTab) {
+            activeTab.classList.add('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
+            activeTab.classList.remove('tab-inactive');
         }
     }
 </script>
