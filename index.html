@@ -11,104 +11,51 @@
     <style>
     body { font-family: 'Kanit', sans-serif; background-color: #1a1c1e; color: #f8fafc; }
     .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; overflow: hidden; border-radius: 0.75rem; }
-    .logo-fade { animation: fadeInLogo 1.2s ease forwards; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)); }
+    .logo-fade { animation: fadeInLogo 1.2s ease forwards; }
     .logo-spin { animation: spin360 8s linear infinite; transform-style: preserve-3d; }
-    @keyframes fadeInLogo { from { opacity: 0; transform: translateY(-10px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes fadeInLogo { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes spin360 { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
-    
-    /* Animation สำหรับปุ่มอนุมัติ */
-    @keyframes pulse-orange {
-        0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); background-color: rgba(30, 41, 59, 1); }
-        50% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); background-color: rgba(245, 158, 11, 1); color: white; }
-        100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); background-color: rgba(30, 41, 59, 1); }
-    }
-    .btn-pending-pulse { animation: pulse-orange 2s infinite; border: 1px solid #f59e0b !important; }
 
-    /* --- ส่วนที่ปรับปรุงใหม่ --- */
-    
-    /* 1. คอนเทนเนอร์หลัก (ปิดการเลื่อนถาวรออก) */
-    .list-window { 
-        overflow: hidden; 
-        position: relative; 
+    /* ปรับตัวเลข Total Staff ให้เด่นและเรืองแสง */
+    #total-staff-count {
+        font-size: 4.5rem !important;
+        font-weight: 900;
+        line-height: 1;
+        background: linear-gradient(to bottom, #10b981, #34d399);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.4));
     }
 
-    /* 2. ตัวครอบรายการ (เตรียมพร้อมสำหรับการเลื่อน แต่ยังไม่เลื่อน) */
-    .scroll-container { 
-        display: flex; 
-        flex-direction: column; 
+    /* การเลื่อนรายชื่อพนักงานแบบลื่นไหล */
+    .staff-track {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        animation: smoothScrollStaff 40s linear infinite;
+    }
+    .staff-track:hover { animation-play-state: paused; }
+    @keyframes smoothScrollStaff {
+        0% { transform: translateY(0); }
+        100% { transform: translateY(-50%); }
     }
 
-    /* 3. Class พิเศษที่จะถูกใส่โดย JavaScript เมื่อข้อมูลล้น */
-    .auto-scroll-active { 
-        animation: scrollUp 20s linear infinite; 
+    /* จัดการ Modal หน้าสแกนให้ลอยทับเสมอ */
+    #scan-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0,0,0,0.85);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(8px);
     }
-    
-    /* หยุดเลื่อนเมื่อเอาเมาส์ไปวาง */
-    .auto-scroll-active:hover { 
-        animation-play-state: paused; 
-    } 
-
-    @keyframes scrollUp { 
-        0% { transform: translateY(0); } 
-        100% { transform: translateY(-50%); } 
-    }
-    /* ------------------------ */
 
     nav { background-color: #25282c !important; border-bottom: 1px solid #334155; }
     .tab-inactive { color: #94a3b8 !important; }
-        /* คอนเทนเนอร์คุมความสูงที่มองเห็น */
-.list-window-staff {
-    height: 580px; /* ปรับให้พอดีกับหน้าจอ */
-    overflow: hidden;
-    position: relative;
-}
-
-/* ตัวคอนเทนเนอร์ที่จะวิ่ง */
-.scroll-content-staff {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    animation: smoothScrollStaff 30s linear infinite; /* ปรับเลข 30s ให้ช้า/เร็วตามชอบ */
-}
-
-/* เมื่อเอาเมาส์วาง หรือกดค้าง ให้หยุดเลื่อน */
-.scroll-content-staff:hover {
-    animation-play-state: paused;
-}
-
-@keyframes smoothScrollStaff {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(-50%); } /* วิ่งไปครึ่งหนึ่งของความยาวทั้งหมด */
-}
-        /* ขยายตัวเลขพนักงานให้เด่น */
-#total-staff-count {
-    font-size: 4.5rem !important; /* ขนาดใหญ่พิเศษ */
-    font-weight: 900;
-    line-height: 1;
-    background: linear-gradient(to bottom, #10b981, #34d399);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.4)); /* เพิ่มเอฟเฟกต์เรืองแสง */
-}
-
-/* คุมระยะห่างระหว่างการ์ดรายงานใน Dashboard */
-.grid-cols-12 {
-    gap: 2.5rem !important; 
-}
-
-/* บีบคอลัมน์รายชื่อพนักงานให้แคบลงตามที่ต้องการ */
-#all-staff-scan-list-container {
-    max-width: 320px; /* บีบให้แคบลงเพื่อให้เกิด Gap */
-    margin-left: auto; /* ดันไปทางขวา */
-    height: 580px;
-    overflow: hidden;
-}
-
-/* ปรับระยะห่างระหว่าง Grid */
-.dashboard-grid {
-    gap: 3rem !important; /* เพิ่มช่องว่างระหว่างซ้าย-ขวา */
-}
 </style>
+
 </head>
 <body>
 
@@ -134,224 +81,120 @@
     </nav>
 
     <main class="max-w-[1600px] mx-auto p-4 md:p-6">
-    <div id="content-dashboard" class="space-y-6">
-        <div class="flex flex-col border-b border-slate-700 pb-4 gap-1">
-            <div class="flex flex-wrap items-center gap-3">
-                <h2 class="text-lg font-bold text-slate-200 uppercase tracking-widest whitespace-nowrap">
-                    สรุปการเข้างานประจำวันที่
-                </h2>
-                <div class="flex items-center gap-2 bg-slate-800/50 p-1 px-3 rounded-xl border border-slate-600 shadow-sm">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase">วันที่:</span>
-                    <input type="date" id="dashboard-date" onchange="renderDashboard()" 
-                           class="bg-transparent text-sm font-bold text-emerald-400 outline-none cursor-pointer [color-scheme:dark]">
-                </div>
-            </div>
-            <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Daily Attendance Overview</p>
-        </div>
-
-        <div class="grid grid-cols-12 gap-4">
-            
-            <div class="col-span-12 xl:col-span-9 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
-                    <div class="p-3 bg-emerald-50 border-b font-bold text-emerald-700 text-xs flex justify-between items-center">
-                        <span>มาปกติ (IN)</span>
-                        <span id="stat-present" class="bg-emerald-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
-                    </div>
-                    <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
-                        <div id="normal-list" class="p-2 space-y-1"></div>
+        <div id="content-dashboard" class="space-y-6">
+            <div class="flex flex-col border-b border-slate-700 pb-4 gap-1">
+                <div class="flex flex-wrap items-center gap-3">
+                    <h2 class="text-lg font-bold text-slate-200 uppercase tracking-widest whitespace-nowrap">สรุปการเข้างานประจำวันที่</h2>
+                    <div class="flex items-center gap-2 bg-slate-800/50 p-1 px-3 rounded-xl border border-slate-600 shadow-sm">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">วันที่:</span>
+                        <input type="date" id="dashboard-date" onchange="renderDashboard()" class="bg-transparent text-sm font-bold text-emerald-400 outline-none cursor-pointer [color-scheme:dark]">
                     </div>
                 </div>
+                <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Daily Attendance Overview</p>
+            </div>
 
-                <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
-                    <div class="p-3 bg-amber-50 border-b font-bold text-amber-700 text-xs flex justify-between items-center">
-                        <span>มาสาย (IN)</span>
-                        <span id="stat-late" class="bg-amber-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
+            <div class="grid grid-cols-12 gap-6">
+                <div class="col-span-12 xl:col-span-9 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
+                        <div class="p-3 bg-emerald-50 border-b font-bold text-emerald-700 text-xs flex justify-between items-center">
+                            <span>มาปกติ (IN)</span>
+                            <span id="stat-present" class="bg-emerald-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
+                        </div>
+                        <div id="normal-list" class="flex-grow bg-slate-50 overflow-y-auto p-2 space-y-1"></div>
                     </div>
-                    <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
-                        <div id="late-list-display" class="p-2 space-y-1"></div>
+
+                    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
+                        <div class="p-3 bg-amber-50 border-b font-bold text-amber-700 text-xs flex justify-between items-center">
+                            <span>มาสาย (IN)</span>
+                            <span id="stat-late" class="bg-amber-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
+                        </div>
+                        <div id="late-list-display" class="flex-grow bg-slate-50 overflow-y-auto p-2 space-y-1"></div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
+                        <div class="p-3 bg-blue-50 border-b font-bold text-blue-700 text-xs flex justify-between items-center">
+                            <span>สแกนออก (OUT)</span>
+                            <span id="stat-out" class="bg-blue-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
+                        </div>
+                        <div id="out-list" class="flex-grow bg-slate-50 overflow-y-auto p-2 space-y-1"></div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
+                        <div class="p-3 bg-rose-50 border-b font-bold text-rose-700 text-xs flex justify-between items-center">
+                            <span>ยังไม่สแกน/แจ้งลา</span>
+                            <span id="stat-absent" class="bg-rose-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
+                        </div>
+                        <div id="absent-list" class="flex-grow bg-slate-50 overflow-y-auto p-2 space-y-1"></div>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
-                    <div class="p-3 bg-blue-50 border-b font-bold text-blue-700 text-xs flex justify-between items-center">
-                        <span>สแกนออก (OUT)</span>
-                        <span id="stat-out" class="bg-blue-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
+                <div class="col-span-12 xl:col-span-3 flex flex-col h-[650px]">
+                    <div class="flex flex-col items-end mb-4 pr-4">
+                        <div class="flex flex-col items-end border-r-4 border-emerald-500 pr-4">
+                            <span class="text-[11px] text-slate-400 uppercase font-black tracking-widest">TOTAL STAFF</span>
+                            <div class="flex items-baseline gap-2">
+                                <span id="total-staff-count">0</span>
+                                <span class="text-sm text-slate-500 font-bold uppercase">คน</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
-                        <div id="out-list" class="p-2 space-y-1"></div>
+                    <div class="bg-slate-800/40 rounded-[2.5rem] p-5 border border-slate-600 shadow-2xl flex flex-col flex-grow overflow-hidden ml-auto w-full xl:max-w-[310px]">
+                        <div class="flex justify-between items-center mb-4 px-1">
+                            <h3 class="text-xs font-black text-emerald-400 flex items-center gap-2 uppercase">
+                                <i data-lucide="users" class="w-4 h-4"></i> รายชื่อพนักงาน
+                            </h3>
+                        </div>
+                        <div id="all-staff-scan-list" class="flex-grow overflow-hidden relative">
+                            </div>
                     </div>
                 </div>
+            </div> </div> <div id="content-approve" class="hidden space-y-4">...</div>
+        <div id="content-leave" class="hidden">...</div>
+        <div id="content-manage" class="hidden space-y-4">...</div>
+    </main>
 
-                <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
-                    <div class="p-3 bg-rose-50 border-b font-bold text-rose-700 text-xs flex justify-between items-center">
-                        <span>ยังไม่สแกน/แจ้งลา</span>
-                        <span id="stat-absent" class="bg-rose-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
-                    </div>
-                    <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
-                        <div id="absent-list" class="p-2 space-y-1"></div>
-                    </div>
-                </div>
-            </div>
-<div class="col-span-12 xl:col-span-3 flex flex-col h-[650px]">
-    
-    <div class="flex flex-col items-end mb-4 pr-4">
-        <div class="flex flex-col items-end border-r-4 border-emerald-500 pr-4">
-            <span class="text-[11px] text-slate-400 uppercase font-black tracking-widest">TOTAL STAFF</span>
-            <div class="flex items-baseline gap-2">
-                <span id="total-staff-count" class="text-5xl font-black text-emerald-500">0</span>
-                <span class="text-sm text-slate-500 font-bold uppercase">คน</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="bg-slate-800/40 rounded-[2.5rem] p-5 border border-slate-600 shadow-2xl flex flex-col flex-grow overflow-hidden ml-auto w-full xl:max-w-[320px]">
-        <div class="flex justify-between items-center mb-4 px-1">
-            <h3 class="text-xs font-black text-emerald-400 flex items-center gap-2 uppercase">
-                <i data-lucide="users" class="w-4 h-4"></i> รายชื่อพนักงาน
-            </h3>
-        </div>
-        
-        <div id="all-staff-scan-list" class="flex-grow overflow-hidden relative">
-            </div>
-    </div>
-</div>
-
-<div id="content-scan" class="hidden">
-        <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200 text-slate-800">
-            
-            <div class="mb-4">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">📍 เลือกสถานที่ปฏิบัติงาน</label>
-                <select id="location-select" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold outline-none ring-blue-500 focus:ring-2 transition-all">
-                </select>
-            </div>
-
-            <div class="relative aspect-video bg-slate-900 rounded-2xl overflow-hidden mb-4 border-4 border-slate-50 shadow-inner">
-                <video id="video" class="w-full h-full object-cover" autoplay muted playsinline></video>
-                <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
+    <div id="content-scan" class="hidden">
+        <div id="scan-modal-overlay">
+            <div class="max-w-md w-full bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200 text-slate-800 relative scale-in-center">
+                <button onclick="switchTab('dashboard')" class="absolute top-4 right-4 text-slate-400 hover:text-rose-500"><i data-lucide="x-circle"></i></button>
                 
-                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div class="w-44 h-56 border-2 border-dashed border-emerald-400 rounded-[3.5rem] opacity-60 shadow-[0_0_0_999px_rgba(0,0,0,0.5)]"></div>
-                    <div class="absolute top-1/4 text-emerald-400 text-[10px] font-bold uppercase tracking-widest bg-slate-900/80 px-2 py-1 rounded">วางใบหน้าในกรอบ</div>
+                <div class="mb-4">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">📍 เลือกสถานที่ปฏิบัติงาน</label>
+                    <select id="location-select" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold outline-none ring-blue-500 focus:ring-2"></select>
                 </div>
-            </div>
 
-            <div class="flex items-center space-x-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <img id="res-img" class="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-sm hidden">
-                <div id="res-img-placeholder" class="w-16 h-16 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400">
-                    <i data-lucide="user"></i>
-                </div>
-                <div class="overflow-hidden">
-                    <h3 id="res-name" class="text-lg font-bold italic text-slate-800 truncate leading-tight">พร้อมสแกน...</h3>
-                    <p id="res-id" class="text-blue-500 text-xs font-mono tracking-wider">STANDING BY</p>
-                </div>
-            </div>
-
-            <div id="wrong-face-actions" class="hidden my-4 text-center animate-bounce">
-                <button onclick="resetAndGoBack()" class="w-full bg-rose-50 text-rose-600 py-3 rounded-xl font-bold text-sm border border-rose-200 shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="x-circle" class="w-4 h-4"></i>
-                    ไม่ใช่ฉัน.. กลับไปเลือกชื่อใหม่
-                </button>
-            </div>
-            <div class="grid grid-cols-2 gap-3 mt-4">
-                <button id="btn-in" onclick="finishAttendance('IN')" class="bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all hover:bg-emerald-700">บันทึกเข้างาน (IN)</button>
-                <button id="btn-out" onclick="finishAttendance('OUT')" class="bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all hover:bg-blue-700">บันทึกออกงาน (OUT)</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="content-approve" class="hidden space-y-4">
-        <div class="text-center pb-2">
-            <h3 class="text-xl font-bold italic text-slate-200">Pending Approvals</h3>
-            <p class="text-[10px] text-slate-500 uppercase tracking-widest">รายการรออนุมัติการลา</p>
-        </div>
-        <div id="pending-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-    </div>
-
-    <div id="content-leave" class="hidden">
-        <div class="max-w-md mx-auto bg-white p-8 rounded-[2.5rem] shadow-2xl space-y-4 text-slate-800">
-            <div class="text-center pb-2">
-                <h3 class="text-xl font-bold italic text-slate-700">Leave Management</h3>
-                <p class="text-[10px] text-slate-400 uppercase tracking-widest">บันทึกข้อมูลการลา (Pending)</p>
-            </div>
-            <div><label class="text-[10px] font-bold text-slate-400 uppercase">เลือกพนักงาน</label><select id="leave-student-select" class="w-full p-3 rounded-xl border bg-slate-50 text-sm font-bold"></select></div>
-            <div><label class="text-[10px] font-bold text-slate-400 uppercase">วันที่ลา</label><input type="date" id="leave-date" class="w-full p-3 rounded-xl border bg-slate-50 text-sm font-bold"></div>
-            <div><label class="text-[10px] font-bold text-slate-400 uppercase">ประเภทการลา</label><select id="leave-type" class="w-full p-3 rounded-xl border bg-slate-50 text-sm font-bold"><option value="ลากิจ">ลากิจ (Personal Leave)</option><option value="ลาป่วย">ลาป่วย (Sick Leave)</option><option value="พักร้อน">พักร้อน (Annual Leave)</option><option value="วันหยุด">วันหยุด (Day Off)</option></select></div>
-            <button onclick="saveLeave()" class="w-full bg-slate-800 text-white py-4 rounded-xl font-bold shadow-md">ส่งคำขอการลา</button>
-        </div>
-    </div>
-
-    <div id="content-manage" class="hidden space-y-4">
-        <div class="flex justify-between items-center text-slate-200">
-            <h2 class="text-xl font-bold uppercase tracking-tighter">Employee List</h2>
-            <button onclick="openAddModal()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-md">+ เพิ่มพนักงาน</button>
-        </div>
-        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-x-auto">
-            <table class="w-full text-left text-sm text-slate-800 min-w-[600px]">
-                <thead class="bg-slate-50 text-slate-400 font-bold">
-                    <tr><th class="p-4">รูป</th><th class="p-4">รหัส</th><th class="p-4">ชื่อ</th><th class="p-4">แผนก</th><th class="p-4 text-center">จัดการ</th></tr>
-                </thead>
-                <tbody id="student-table-body" class="divide-y divide-slate-100"></tbody>
-            </table>
-        </div>
-    </div>
-</main>
-    <div id="login-modal" class="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center hidden backdrop-blur-md">
-        <div class="bg-white p-8 rounded-[2rem] max-w-xs w-full shadow-2xl space-y-4 text-slate-800">
-            <h3 class="text-lg font-bold text-center">ยืนยันสิทธิ์เข้าถึง</h3>
-            <input type="text" id="login-user" placeholder="Username" class="w-full border p-3 rounded-xl outline-none text-sm">
-            <input type="password" id="login-pass" placeholder="Password" class="w-full border p-3 rounded-xl outline-none text-sm">
-            <button onclick="checkLogin()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Login</button>
-            <button onclick="closeLoginModal()" class="w-full text-slate-400 text-xs text-center">ยกเลิก</button>
-        </div>
-    </div>
-
-   <div id="student-modal" class="fixed inset-0 bg-black/80 hidden z-[100] flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl">
-        <div class="p-6 space-y-4">
-            <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                <i data-lucide="user-plus" class="text-emerald-400"></i> เพิ่มพนักงานใหม่
-            </h3>
-            
-            <div class="relative aspect-video bg-black rounded-2xl overflow-hidden border-2 border-slate-700 shadow-inner">
-                <video id="modal-video" autoplay muted playsinline class="w-full h-full object-cover"></video>
-                <img id="preview-img" class="w-full h-full object-cover hidden">
-                <div id="face-guide" class="absolute inset-0 border-[3px] border-dashed border-emerald-400/50 rounded-[50%] m-8 pointer-events-none flex items-center justify-center">
-                    <span class="text-[10px] text-emerald-400 font-bold bg-slate-900/80 px-2 py-1 rounded">วางใบหน้าในกรอบ</span>
-                </div>
-            </div>
-
-            <div id="crop-preview-container" class="hidden space-y-2">
-                <div class="flex items-center gap-4 bg-slate-800/50 p-3 rounded-2xl border border-slate-700">
-                    <canvas id="crop-canvas" class="w-20 h-20 rounded-xl border-2 border-emerald-500 object-cover bg-slate-700"></canvas>
-                    <div class="flex-1">
-                        <p id="crop-status" class="text-xs font-bold text-emerald-400">ตรวจสอบใบหน้า...</p>
-                        <p class="text-[9px] text-slate-500">ระบบจะใช้ภาพที่ตัดแล้วนี้เป็นฐานข้อมูล</p>
+                <div class="relative aspect-video bg-slate-900 rounded-2xl overflow-hidden mb-4 border-4 border-slate-50 shadow-inner">
+                    <video id="video" class="w-full h-full object-cover" autoplay muted playsinline></video>
+                    <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div class="w-44 h-56 border-2 border-dashed border-emerald-400 rounded-[3.5rem] opacity-60 shadow-[0_0_0_999px_rgba(0,0,0,0.5)]"></div>
                     </div>
                 </div>
-            </div>
 
-            <div class="space-y-3">
-                <input type="text" id="modal-id" placeholder="รหัสพนักงาน" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white outline-none">
-                <input type="text" id="modal-name" placeholder="ชื่อ-นามสกุล" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white outline-none">
-                <input type="text" id="modal-class" placeholder="แผนก/ตำแหน่ง" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white outline-none">
-            </div>
+                <div class="flex items-center space-x-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <img id="res-img" class="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-sm hidden">
+                    <div id="res-img-placeholder" class="w-16 h-16 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400"><i data-lucide="user"></i></div>
+                    <div class="overflow-hidden">
+                        <h3 id="res-name" class="text-lg font-bold italic text-slate-800 truncate leading-tight">พร้อมสแกน...</h3>
+                        <p id="res-id" class="text-blue-500 text-xs font-mono tracking-wider">STANDING BY</p>
+                    </div>
+                </div>
 
-            <div class="grid grid-cols-2 gap-3 pt-2">
-                <button onclick="snapPhoto()" id="btn-snap" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
-                    ถ่ายรูป
-                </button>
-                <label class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer text-center">
-                    เลือกรูปภาพ
-                    <input type="file" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
-                </label>
-            </div>
-            <div class="flex gap-3">
-                <button onclick="saveStudent()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl">บันทึกข้อมูล</button>
-                <button onclick="closeStudentModal()" class="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl">ยกเลิก</button>
+                <div id="wrong-face-actions" class="hidden my-4 text-center animate-bounce">
+                    <button onclick="resetAndGoBack()" class="w-full bg-rose-50 text-rose-600 py-3 rounded-xl font-bold text-sm border border-rose-200 flex items-center justify-center gap-2">ไม่ใช่ฉัน.. กลับไปเลือกชื่อใหม่</button>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3 mt-4">
+                    <button id="btn-in" onclick="finishAttendance('IN')" class="bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-emerald-700 transition-all">บันทึกเข้างาน (IN)</button>
+                    <button id="btn-out" onclick="finishAttendance('OUT')" class="bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all">บันทึกออกงาน (OUT)</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+
+    <div id="login-modal" class="fixed inset-0 bg-slate-900/80 z-[300] hidden backdrop-blur-md flex items-center justify-center">...</div>
+    <div id="student-modal" class="fixed inset-0 bg-black/80 hidden z-[100] flex items-center justify-center p-4">...</div>
+
     <canvas id="capture-canvas" class="hidden"></canvas>
     <audio id="snd-ok" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
