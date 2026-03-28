@@ -80,6 +80,29 @@
     0% { transform: translateY(0); }
     100% { transform: translateY(-50%); } /* วิ่งไปครึ่งหนึ่งของความยาวทั้งหมด */
 }
+        /* ขยายตัวเลขพนักงานให้เด่น */
+#total-staff-count {
+    font-size: 2.8rem; /* ใหญ่สะใจ */
+    font-weight: 900;
+    line-height: 1;
+    background: linear-gradient(to bottom, #10b981, #059669);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+/* บีบคอลัมน์รายชื่อพนักงานให้แคบลงตามที่ต้องการ */
+#all-staff-scan-list-container {
+    max-width: 320px; /* บีบให้แคบลงเพื่อให้เกิด Gap */
+    margin-left: auto; /* ดันไปทางขวา */
+    height: 580px;
+    overflow: hidden;
+}
+
+/* ปรับระยะห่างระหว่าง Grid */
+.dashboard-grid {
+    gap: 3rem !important; /* เพิ่มช่องว่างระหว่างซ้าย-ขวา */
+}
 </style>
 </head>
 <body>
@@ -165,18 +188,29 @@
                 </div>
             </div>
 
-            <div class="col-span-12 xl:col-span-3 bg-slate-800/40 rounded-[2.5rem] p-4 border border-slate-600 shadow-2xl flex flex-col h-[650px]">
-                <div class="flex justify-between items-center mb-4 px-2">
-                    <h3 class="text-sm font-black text-emerald-400 flex items-center gap-2 uppercase">
-                        <i data-lucide="users" class="w-4 h-4"></i> รายชื่อพนักงาน
-                    </h3>
-                    <span id="total-staff-count" class="bg-slate-700 text-slate-300 text-[10px] px-2 py-1 rounded-full font-bold">0 คน</span>
-                </div>
-                <div id="all-staff-scan-list" class="flex-grow overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                    </div>
+          <div class="col-span-12 xl:col-span-3 flex flex-col h-[650px] ml-auto" style="max-width: 320px;"> 
+    
+    <div class="flex flex-col items-end mb-6 pr-4">
+        <div class="flex flex-col items-end border-r-4 border-emerald-500 pr-4">
+            <span class="text-[11px] text-slate-400 uppercase font-black tracking-[0.2em]">TOTAL STAFF</span>
+            <div class="flex items-baseline gap-2">
+                <span id="total-staff-count" style="font-size: 2.8rem; font-weight: 900; line-height: 1; color: #10b981; text-shadow: 0 2px 10px rgba(16, 185, 129, 0.2);">0</span>
+                <span class="text-sm text-slate-500 font-bold uppercase">คน</span>
             </div>
         </div>
     </div>
+
+    <div class="bg-slate-800/40 rounded-[2.5rem] p-4 border border-slate-600 shadow-2xl flex flex-col flex-grow overflow-hidden">
+        <div class="flex justify-between items-center mb-4 px-2">
+            <h3 class="text-xs font-black text-emerald-400 flex items-center gap-2 uppercase">
+                <i data-lucide="users" class="w-4 h-4"></i> รายชื่อพนักงาน
+            </h3>
+        </div>
+        
+        <div id="all-staff-scan-list" class="flex-grow overflow-hidden pr-2">
+            </div>
+    </div>
+</div>
 
 <div id="content-scan" class="hidden">
         <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200 text-slate-800">
@@ -608,76 +642,113 @@ async function approveAction(id, date) {
         } catch(e) {}
     }
 
+let wrongFaceCount = 0; // ตัวแปรสะสมแต้มหน้าไม่ตรง
+let hasBlinked = false; // ตัวแปรเช็คการกะพริบตา
+
 async function startDetector() {
     const v = document.getElementById('video'), o = document.getElementById('overlay');
     if (!v) return;
     const dim = { width: v.clientWidth, height: v.clientHeight };
     faceapi.matchDimensions(o, dim);
     
-    // สร้างตัวแปรล้างค่า Interval เก่าถ้ามี
+    // รีเซ็ตค่าใหม่ทุกครั้งที่เริ่มสแกน
     if(window.detectorInterval) clearInterval(window.detectorInterval);
+    wrongFaceCount = 0;
+    hasBlinked = false;
 
     window.detectorInterval = setInterval(async () => {
         if(v.paused || v.ended) return;
-        const dets = await faceapi.detectAllFaces(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptors();
-        const resized = faceapi.resizeResults(dets, dim);
-        o.getContext('2d').clearRect(0,0,o.width,o.height);
-        faceapi.draw.drawDetections(o, resized);
         
-        if(faceMatcher && dets.length > 0) {
-            dets.forEach(d => {
-                const match = faceMatcher.findBestMatch(d.descriptor);
-                
-                // ตรวจสอบพนักงานที่ล็อกเป้าไว้
-                const targetId = window.targetStaff ? String(window.targetStaff.studentid) : null;
+        // ใช้ detectSingleFace เพื่อความแม่นยำในการหา Landmarks
+        const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
+            .withFaceLandmarks()
+            .withFaceDescriptor();
+            
+        const ctx = o.getContext('2d');
+        ctx.clearRect(0,0,o.width,o.height);
+        
+        if(faceMatcher && det) {
+            const resized = faceapi.resizeResults(det, dim);
+            // วาดจุด Landmarks (Optional: ถ้าไม่อยากให้เห็นจุดบนหน้าให้ลบบรรทัดล่างนี้ออก)
+            // faceapi.draw.drawFaceLandmarks(o, resized);
 
-                if (targetId && match.label !== targetId) {
-                    // กรณีใบหน้าไม่ตรงกับที่เลือก
+            const match = faceMatcher.findBestMatch(det.descriptor);
+            const targetId = window.targetStaff ? String(window.targetStaff.studentid) : null;
+
+            // --- ส่วนที่ 1: ตรวจสอบการกะพริบตา (Liveness Detection) ---
+            const landmarks = det.landmarks;
+            const leftEye = landmarks.getLeftEye();
+            const rightEye = landmarks.getRightEye();
+
+            // EAR (Eye Aspect Ratio) แบบง่าย: วัดระยะห่างเปลือกตา
+            const getEAR = (eye) => {
+                const v1 = Math.abs(eye[1].y - eye[5].y);
+                const v2 = Math.abs(eye[2].y - eye[4].y);
+                const h = Math.abs(eye[0].x - eye[3].x);
+                return (v1 + v2) / (2 * h);
+            };
+
+            const ear = (getEAR(leftEye) + getEAR(rightEye)) / 2;
+            if (ear < 0.22) { hasBlinked = true; } // ต่ำกว่า 0.22 ถือว่าหลับตา/กะพริบตา
+
+            // --- ส่วนที่ 2: ตรวจสอบใบหน้า ---
+            if (targetId && match.label !== targetId) {
+                // กรณีใบหน้าไม่ตรง: สะสมแต้มไว้ก่อน (หน่วงเวลา)
+                wrongFaceCount++;
+                
+                if (wrongFaceCount >= 10) { // ประมาณ 3 วินาที (300ms * 10)
                     document.getElementById('res-name').innerText = "ใบหน้าไม่ตรงกับที่เลือก!";
-                    document.getElementById('res-name').style.color = "#f43f5e"; // สีแดง
-                    
-                    // แสดงปุ่ม "ไม่ใช่ฉัน/กลับไปเลือกใหม่"
+                    document.getElementById('res-name').style.color = "#f43f5e";
                     const wrongAction = document.getElementById('wrong-face-actions');
                     if(wrongAction) wrongAction.classList.remove('hidden');
 
-                    // ปิดปุ่มบันทึก
                     document.getElementById('btn-in').disabled = true;
                     document.getElementById('btn-out').disabled = true;
                     document.getElementById('btn-in').style.opacity = "0.5";
                     document.getElementById('btn-out').style.opacity = "0.5";
-                    return; 
                 }
-                
+            } else if (match.label === targetId && match.distance < 0.45) {
+                // กรณีใบหน้าถูกต้อง
+                wrongFaceCount = 0; // รีเซ็ตแต้มผิดพลาด
                 const s = students.find(x => String(x.studentid) === match.label);
-                
-                if(s && match.distance < 0.45 && !scanned.has(s.studentid)) {
-                    scanned.set(s.studentid, s);
-                    
-                    // ปลดล็อกปุ่มและคืนค่าสี
-                    document.getElementById('res-name').style.color = ""; 
-                    document.getElementById('btn-in').disabled = false;
-                    document.getElementById('btn-out').disabled = false;
-                    document.getElementById('btn-in').style.opacity = "1";
-                    document.getElementById('btn-out').style.opacity = "1";
-                    const wrongAction = document.getElementById('wrong-face-actions');
-                    if(wrongAction) wrongAction.classList.add('hidden');
 
-                    document.getElementById('res-name').innerText = s.name;
-                    document.getElementById('res-id').innerText = `ID: ${s.studentid}`;
-                    document.getElementById('res-img').src = s.imagedatabase64;
-                    document.getElementById('res-img').classList.remove('hidden');
-                    document.getElementById('res-img-placeholder').classList.add('hidden');
-                    
-                    document.getElementById('snd-ok').play();
-                    speak(`สแกนสำเร็จค่ะ ${s.name.split(' ')[0]}`);
+                if(s && !scanned.has(s.studentid)) {
+                    const resNameEl = document.getElementById('res-name');
+                    const btnIn = document.getElementById('btn-in');
+                    const btnOut = document.getElementById('btn-out');
 
-                    const select = document.getElementById('location-select');
-                    if (select && select.value) {
-                        const locName = select.options[select.selectedIndex].text.trim();
-                        document.getElementById('res-name').innerHTML = `${s.name}<br><span style="font-size: 0.7em; color: #fbbf24;">📍 ${locName}</span>`;
+                    // ตรวจสอบเงื่อนไข: ต้องหน้าตรง และกะพริบตาแล้ว
+                    if (!hasBlinked) {
+                        resNameEl.innerHTML = `<span style="color: #fbbf24;">✨ กรุณากะพริบตา 1 ครั้ง</span>`;
+                        btnIn.disabled = true; btnOut.disabled = true;
+                        btnIn.style.opacity = "0.5"; btnOut.style.opacity = "0.5";
+                    } else {
+                        // ผ่านฉลุย: ปลดล็อกทุกอย่าง
+                        scanned.set(s.studentid, s);
+                        resNameEl.style.color = ""; 
+                        btnIn.disabled = false; btnOut.disabled = false;
+                        btnIn.style.opacity = "1"; btnOut.style.opacity = "1";
+                        
+                        const wrongAction = document.getElementById('wrong-face-actions');
+                        if(wrongAction) wrongAction.classList.add('hidden');
+
+                        resNameEl.innerText = s.name;
+                        document.getElementById('res-id').innerText = `ID: ${s.studentid}`;
+                        document.getElementById('res-img').src = s.imagedatabase64;
+                        document.getElementById('res-img').classList.remove('hidden');
+                        document.getElementById('res-img-placeholder').classList.add('hidden');
+                        
+                        document.getElementById('snd-ok').play();
+                        speak(`สแกนสำเร็จค่ะ ${s.name.split(' ')[0]}`);
+
+                        const select = document.getElementById('location-select');
+                        if (select && select.value) {
+                            const locName = select.options[select.selectedIndex].text.trim();
+                            resNameEl.innerHTML = `${s.name}<br><span style="font-size: 0.7em; color: #10b981;">✅ ยืนยันตัวตนสำเร็จ (📍 ${locName})</span>`;
+                        }
                     }
                 }
-            });
+            }
         }
     }, 300);
 }
