@@ -154,29 +154,39 @@
         </div>
     </div>
 
-    <div id="content-scan" class="hidden">
+<div id="content-scan" class="hidden">
         <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200 text-slate-800">
+            
             <div class="mb-4">
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">📍 เลือกสถานที่ปฏิบัติงาน</label>
-                <select id="location-select" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold outline-none ring-blue-500 focus:ring-2">
-                    <option value="">-- กำลังโหลดสถานที่ --</option>
-                </select>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">📍 เลือกสถานที่ปฏิบัติงาน</label>
+                <select id="location-select" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold outline-none ring-blue-500 focus:ring-2 transition-all">
+                    </select>
             </div>
-            <div class="relative aspect-video bg-slate-900 rounded-2xl overflow-hidden mb-4 border-4 border-slate-50">
+
+            <div class="relative aspect-video bg-slate-900 rounded-2xl overflow-hidden mb-4 border-4 border-slate-50 shadow-inner">
                 <video id="video" class="w-full h-full object-cover" autoplay muted playsinline></video>
                 <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
+                
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="w-44 h-56 border-2 border-dashed border-emerald-400 rounded-[3.5rem] opacity-60 shadow-[0_0_0_999px_rgba(0,0,0,0.5)]"></div>
+                    <div class="absolute top-1/4 text-emerald-400 text-[10px] font-bold uppercase tracking-widest bg-slate-900/80 px-2 py-1 rounded">วางใบหน้าในกรอบ</div>
+                </div>
             </div>
-            <div class="flex items-center space-x-4 bg-slate-50 p-4 rounded-2xl border mb-6">
+
+            <div class="flex items-center space-x-4 bg-slate-50 p-4 rounded-2xl border mb-6 border-slate-100">
                 <img id="res-img" class="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-sm hidden">
-                <div id="res-img-placeholder" class="w-16 h-16 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400"><i data-lucide="user"></i></div>
-                <div>
-                    <h3 id="res-name" class="text-lg font-bold italic">พร้อมสแกน...</h3>
+                <div id="res-img-placeholder" class="w-16 h-16 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400">
+                    <i data-lucide="user"></i>
+                </div>
+                <div class="overflow-hidden">
+                    <h3 id="res-name" class="text-lg font-bold italic text-slate-800 truncate leading-tight">พร้อมสแกน...</h3>
                     <p id="res-id" class="text-blue-500 text-xs font-mono tracking-wider">STANDING BY</p>
                 </div>
             </div>
+
             <div class="grid grid-cols-2 gap-3">
-                <button id="btn-in" onclick="finishAttendance('IN')" class="bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg">บันทึกเข้างาน (IN)</button>
-                <button id="btn-out" onclick="finishAttendance('OUT')" class="bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg">บันทึกออกงาน (OUT)</button>
+                <button id="btn-in" onclick="finishAttendance('IN')" class="bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all hover:bg-emerald-700">บันทึกเข้างาน (IN)</button>
+                <button id="btn-out" onclick="finishAttendance('OUT')" class="bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all hover:bg-blue-700">บันทึกออกงาน (OUT)</button>
             </div>
         </div>
     </div>
@@ -531,7 +541,7 @@ async function approveAction(id, date) {
         } catch(e) {}
     }
 
-    async function startDetector() {
+async function startDetector() {
     const v = document.getElementById('video'), o = document.getElementById('overlay');
     const dim = { width: v.clientWidth, height: v.clientHeight };
     faceapi.matchDimensions(o, dim);
@@ -546,23 +556,48 @@ async function approveAction(id, date) {
         if(faceMatcher && dets.length > 0) {
             dets.forEach(d => {
                 const match = faceMatcher.findBestMatch(d.descriptor);
+                
+                // --- ส่วนที่เพิ่มใหม่: ตรวจสอบการล็อกเป้าหมาย ---
+                // ดึง ID ของคนที่ถูกคลิกเลือกมาจากหน้าแรก (window.targetStaff)
+                const targetId = window.targetStaff ? String(window.targetStaff.studentid) : null;
+
+                if (targetId && match.label !== targetId) {
+                    // กรณี 1: หน้าที่สแกนเจอ ไม่ตรงกับ ID ที่เลือกไว้
+                    document.getElementById('res-name').innerText = "ใบหน้าไม่ตรงกับที่เลือก!";
+                    document.getElementById('res-name').style.color = "#f43f5e"; // สีแดง Rose
+                    
+                    // ปิดปุ่มกด เพื่อป้องกันการบันทึกแทนกัน
+                    document.getElementById('btn-in').disabled = true;
+                    document.getElementById('btn-out').disabled = true;
+                    document.getElementById('btn-in').style.opacity = "0.5";
+                    document.getElementById('btn-out').style.opacity = "0.5";
+                    return; // หยุดการทำงานของรอบนี้
+                }
+                
+                // กรณี 2: หน้าตรงกัน หรือ ไม่ได้ระบุเป้าหมายไว้ (ให้ทำงานปกติ)
                 const s = students.find(x => String(x.studentid) === match.label);
                 
                 if(s && match.distance < 0.45 && !scanned.has(s.studentid)) {
                     scanned.set(s.studentid, s);
                     
+                    // ปลดล็อกปุ่มและคืนค่าสีตัวอักษร
+                    document.getElementById('res-name').style.color = ""; 
+                    document.getElementById('btn-in').disabled = false;
+                    document.getElementById('btn-out').disabled = false;
+                    document.getElementById('btn-in').style.opacity = "1";
+                    document.getElementById('btn-out').style.opacity = "1";
+
                     // 1. แสดงชื่อพนักงาน
                     document.getElementById('res-name').innerText = s.name;
                     
-                    // 2. แสดง ID (แบบมีคำว่า ID: เพื่อความสวยงามบนหน้าจอ)
+                    // 2. แสดง ID
                     document.getElementById('res-id').innerText = `ID: ${s.studentid}`;
                     
-                    // 3. จัดการเรื่อง Class (แผนก) - สำคัญมากสำหรับการบันทึกลง Sheet
+                    // 3. จัดการ Class (แผนก)
                     const classEl = document.getElementById('res-class');
                     if(classEl) {
                         classEl.innerText = s.class || "-";
                     } else {
-                        // กรณีหา ID res-class ไม่เจอใน HTML ให้สร้าง hidden element ไว้เก็บค่าชั่วคราว
                         let hiddenClass = document.createElement('span');
                         hiddenClass.id = 'res-class';
                         hiddenClass.style.display = 'none';
@@ -570,7 +605,7 @@ async function approveAction(id, date) {
                         document.body.appendChild(hiddenClass);
                     }
                     
-                    // 4. แสดงรูปภาพจากฐานข้อมูล
+                    // 4. แสดงรูปภาพ
                     document.getElementById('res-img').src = s.imagedatabase64;
                     document.getElementById('res-img').classList.remove('hidden');
                     document.getElementById('res-img-placeholder').classList.add('hidden');
@@ -579,11 +614,10 @@ async function approveAction(id, date) {
                     document.getElementById('snd-ok').play();
                     speak(`สแกนสำเร็จค่ะ  ${s.name.split(' ')[0]}`);
 
-                    // 6. ดึงชื่อสถานที่มาแสดงใต้ชื่อพนักงาน (ตามที่ต้องการ)
+                    // 6. แสดงสถานที่ปฏิบัติงาน
                     const select = document.getElementById('location-select');
                     if (select && select.value) {
                         const locName = select.options[select.selectedIndex].text.trim();
-                        // แทรกชื่อสถานที่ปฏิบัติงานใต้ชื่อพนักงาน
                         document.getElementById('res-name').innerHTML = `${s.name}<br><span style="font-size: 0.7em; color: #fbbf24;">📍 ${locName}</span>`;
                     }
                 }
@@ -870,7 +904,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
         reader.readAsDataURL(file);
     }
 
-    function renderAllStaffForScan() {
+   function renderAllStaffForScan() {
     const container = document.getElementById('all-staff-scan-list');
     const badge = document.getElementById('total-staff-count');
     if(!container) return;
@@ -882,27 +916,43 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
         students.forEach(s => {
             const card = document.createElement('div');
-            // ปรับ h-[60px] ให้ช่องเล็กลง และ shadow-sm ให้ดูสะอาดตา (รูปที่ 13)
+            // UI: ขนาดช่อง h-[60px] เล็กลง ตัวหนังสือชัด (ตามที่คุณต้องการ)
             card.className = "flex items-center gap-3 bg-white p-2 h-[60px] rounded-xl border border-slate-200 hover:border-emerald-500 cursor-pointer transition-all active:scale-95 shadow-sm group mb-2";
             
             card.onclick = () => {
-                // 1. ส่งข้อมูลไปที่หน้าสแกน (รูปที่ 15)
+                // --- [1. ล็อกเป้าหมายพนักงานที่จะสแกน] ---
+                // เก็บข้อมูลคนที่เราคลิกลงในตัวแปร Global เพื่อใช้เช็คตอนสแกนหน้า
+                window.targetStaff = s; 
+
+                // --- [2. ส่งข้อมูลไปแสดงในหน้าสแกนทันที] ---
                 const resName = document.getElementById('res-name');
                 const resId = document.getElementById('res-id');
                 const resImg = document.getElementById('res-img');
+                const resImgPlaceholder = document.getElementById('res-img-placeholder');
                 
-                if (resName) resName.innerText = s.name;
+                if (resName) {
+                    resName.innerText = s.name;
+                    resName.classList.remove('text-rose-500'); // ล้างสีแดงแจ้งเตือน (ถ้ามี)
+                }
                 if (resId) resId.innerText = `ID: ${s.studentid || s.id}`;
                 if (resImg) {
                     resImg.src = s.imagedatabase64 || s.image;
                     resImg.classList.remove('hidden');
                 }
+                if (resImgPlaceholder) resImgPlaceholder.classList.add('hidden');
 
-                // 2. เปลี่ยนหน้าไปที่หน้าสแกน
-                showTab('scan');
+                // --- [3. สั่งเปลี่ยนหน้าไปที่หน้าสแกน (Tab Scan) ทันที] ---
+                if (typeof showTab === 'function') {
+                    showTab('scan');
+                } else {
+                    // ถ้าฟังก์ชันเดิมของคุณใช้ชื่ออื่นในการสลับหน้า (เช่น switchTab) ให้เปลี่ยนตรงนี้
+                    console.log("ฟังก์ชัน showTab ไม่ทำงาน กรุณาเช็คชื่อฟังก์ชันสลับหน้า");
+                }
                 
-                // 3. เริ่มเปิดกล้อง
+                // --- [4. เริ่มเปิดกล้อง] ---
                 if (typeof startCamera === 'function') startCamera();
+                
+                console.log("Locked targets for scanning: " + s.name);
             };
 
             const staffImg = s.imagedatabase64 || s.image || 'https://via.placeholder.com/150';
@@ -911,7 +961,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
             card.innerHTML = `
                 <div class="relative flex-shrink-0">
-                    <img src="${staffImg}" class="w-11 h-11 rounded-lg object-cover border border-slate-100 shadow-sm">
+                    <img src="${staffImg}" class="w-11 h-11 rounded-lg object-cover border border-slate-100 shadow-sm group-hover:border-emerald-200 transition-colors">
                     <div class="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center">
                         <i data-lucide="camera" class="w-2 h-2 text-white"></i>
                     </div>
@@ -919,7 +969,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
                 <div class="flex flex-col overflow-hidden leading-tight">
                     <p class="text-[9px] text-blue-600 font-black font-mono tracking-tighter">${staffId}</p>
                     <p class="text-[13px] font-bold text-slate-800 truncate" style="line-height: 1.2;">${s.name}</p>
-                    <p class="text-[10px] text-slate-500 font-medium">แผนก: ${staffDept}</p>
+                    <p class="text-[10px] text-slate-500 font-medium italic">แผนก: ${staffDept}</p>
                 </div>
             `;
             container.appendChild(card);
