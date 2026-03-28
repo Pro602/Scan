@@ -944,51 +944,30 @@ function renderAllStaffForScan() {
     container.innerHTML = '';
     
     if (typeof students !== 'undefined' && students.length > 0) {
-        // ปรับตัวเลขจำนวนพนักงานให้เด่นชัด (เพิ่ม Class)
-        if(badge) {
-            badge.innerText = `${students.length} คน`;
-            badge.className = "bg-emerald-500 text-white text-[12px] font-black px-3 py-1 rounded-full shadow-lg";
-        }
+        if(badge) badge.innerText = `${students.length} คน`;
 
         students.forEach(s => {
             const card = document.createElement('div');
-            // ปรับความสูง h-[60px] และตัวหนังสือชัดเจน
             card.className = "flex items-center gap-3 bg-white p-2 h-[60px] rounded-xl border border-slate-200 hover:border-emerald-500 cursor-pointer transition-all active:scale-95 shadow-sm group mb-2";
             
             card.onclick = () => {
-                // 1. ล็อกเป้าหมายพนักงานที่จะสแกน
+                // 1. ล็อกเป้าหมาย
                 window.targetStaff = s; 
 
-                // 2. ส่งข้อมูลไปแสดงในหน้าสแกน
-                const resName = document.getElementById('res-name');
-                const resId = document.getElementById('res-id');
+                // 2. ส่งข้อมูลไปหน้าสแกน
+                document.getElementById('res-name').innerText = s.name;
+                document.getElementById('res-id').innerText = `ID: ${s.studentid || s.id}`;
                 const resImg = document.getElementById('res-img');
-                const resImgPlaceholder = document.getElementById('res-img-placeholder');
-                const wrongFaceAction = document.getElementById('wrong-face-actions');
-                
-                if (resName) {
-                    resName.innerText = s.name;
-                    resName.style.color = ""; // ล้างสีแดง
-                }
-                if (resId) resId.innerText = `ID: ${s.studentid || s.id}`;
-                if (resImg) {
-                    resImg.src = s.imagedatabase64 || s.image;
-                    resImg.classList.remove('hidden');
-                }
-                if (resImgPlaceholder) resImgPlaceholder.classList.add('hidden');
-                if (wrongFaceAction) wrongFaceAction.classList.add('hidden'); // ซ่อนปุ่มยกเลิกก่อน
+                resImg.src = s.imagedatabase64 || s.image;
+                resImg.classList.remove('hidden');
+                document.getElementById('res-img-placeholder').classList.add('hidden');
+                document.getElementById('wrong-face-actions').classList.add('hidden');
 
-                // 3. บังคับเปลี่ยนหน้าไปที่หน้าสแกนทันที
-                showTab('scan');
-                
-                // 4. เริ่มเปิดกล้อง
-                if (typeof startCamera === 'function') startCamera();
+                // 3. เปลี่ยนหน้า (ต้องใช้ switchTab ให้ตรงกับระบบเดิมของคุณ)
+                switchTab('scan'); 
             };
 
             const staffImg = s.imagedatabase64 || s.image || 'https://via.placeholder.com/150';
-            const staffId = s.studentid || s.id || 'N/A';
-            const staffDept = s.class || s.dept || '-';
-
             card.innerHTML = `
                 <div class="relative flex-shrink-0">
                     <img src="${staffImg}" class="w-11 h-11 rounded-lg object-cover border border-slate-100 shadow-sm">
@@ -997,19 +976,17 @@ function renderAllStaffForScan() {
                     </div>
                 </div>
                 <div class="flex flex-col overflow-hidden leading-tight">
-                    <p class="text-[9px] text-blue-600 font-black font-mono tracking-tighter">${staffId}</p>
+                    <p class="text-[9px] text-blue-600 font-black font-mono tracking-tighter">${s.studentid || s.id || 'N/A'}</p>
                     <p class="text-[13px] font-bold text-slate-800 truncate" style="line-height: 1.2;">${s.name}</p>
-                    <p class="text-[10px] text-slate-500 font-medium italic">แผนก: ${staffDept}</p>
+                    <p class="text-[10px] text-slate-500 font-medium">แผนก: ${s.class || s.dept || '-'}</p>
                 </div>
             `;
             container.appendChild(card);
         });
+        
+        // สั่งให้เริ่มวิ่งเลื่อนข้อมูล (ถ้ามีมากกว่า 8 รายการ)
+        setTimeout(initStaffScroll, 1000);
 
-        // ตรวจสอบถ้ามีเกิน 8 คน ให้เริ่มวิ่งเลื่อน (ถ้าต้องการให้เลื่อนอัตโนมัติ)
-        if (students.length > 8) {
-            container.parentElement.style.overflowY = "auto"; 
-            // หมายเหตุ: การทำ Autoscroll ต้องใช้ฟังก์ชันแยก แต่เบื้องต้นเปิดให้ Scroll ได้ครับ
-        }
     } else {
         container.innerHTML = '<p class="text-center text-slate-500 text-xs py-10">ไม่พบข้อมูลรายชื่อพนักงาน</p>';
     }
@@ -1020,6 +997,37 @@ function renderAllStaffForScan() {
     if(window.detectorInterval) clearInterval(window.detectorInterval);
     stopCamera();
     showTab('dashboard'); // กลับหน้าหลัก
+}
+    // ฟังก์ชันทำให้รายชื่อพนักงานเลื่อนอัตโนมัติ (แก้ไขจุดที่ 1)
+function initStaffScroll() {
+    const container = document.getElementById('all-staff-scan-list');
+    if (!container || students.length <= 8) return;
+
+    // ล้าง Interval เก่าก่อนเริ่มใหม่
+    if (window.staffScrollInterval) clearInterval(window.staffScrollInterval);
+
+    window.staffScrollInterval = setInterval(() => {
+        const firstChild = container.firstElementChild;
+        if (!firstChild) return;
+
+        // ค่อยๆ เลื่อนขึ้น
+        container.style.transition = "margin-top 0.8s ease-in-out";
+        container.style.marginTop = `-${firstChild.offsetHeight + 8}px`;
+
+        setTimeout(() => {
+            container.style.transition = "none";
+            container.style.marginTop = "0px";
+            container.appendChild(firstChild); // ย้ายตัวบนสุดไปต่อท้าย
+        }, 800);
+    }, 3000); // ทุกๆ 3 วินาที
+}
+
+// ฟังก์ชันปุ่มกดยกเลิก กลับไปเลือกใหม่ (แก้ไขจุดที่ 3)
+function resetAndGoBack() {
+    window.targetStaff = null; // ล้างพนักงานที่เลือก
+    stopCamera('video'); // ปิดกล้อง
+    if (window.detectorInterval) clearInterval(window.detectorInterval); // หยุดตัวตรวจจับหน้า
+    switchTab('dashboard'); // กลับหน้าหลัก
 }
 </script>
 </body>
