@@ -693,13 +693,14 @@ async function finishAttendance(type) {
         return alert("กรุณาสแกนใบหน้าและเลือกสถานที่");
     }
 
-    // --- 1. ล้างค่า ID ให้เหลือแค่รหัสล้วน (เช่น TS0057) เพื่อให้ Dashboard แมตช์ข้อมูลเจอ ---
+// --- 1. ล้างค่า ID ให้เหลือแค่รหัสล้วน ---
     const cleanId = resIdElement.innerText.replace(/ID:\s*/gi, '').trim(); 
 
-    // --- 2. ดึงค่า Class (แผนก) และล้างคำนำหน้าออก ---
+    // --- 2. ดึงค่า Class (แผนก) จากตัวแปรพนักงานที่เลือกไว้โดยตรง (แทนที่ชุดเก่า) ---
     let cleanClass = "-";
-    if (resClassElement) {
-        cleanClass = resClassElement.innerText.replace(/แผนก:\s*/gi, '').replace(/Class:\s*/gi, '').trim();
+    if (window.targetStaff) {
+        // ดึงจากค่า class หรือ dept ที่อยู่ในข้อมูลพนักงาน
+        cleanClass = window.targetStaff.class || window.targetStaff.dept || "-";
     }
 
     const selectedLocName = select.options[select.selectedIndex].text.trim();
