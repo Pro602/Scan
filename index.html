@@ -302,19 +302,22 @@
         catch(e) { return {success:false}; }
     }
 
-    async function loadAllData() {
-        const [sRes, aRes, lRes, vRes] = await Promise.all([
-            apiCall({action:'getStudents'}), apiCall({action:'getAttendance'}), 
-            apiCall({action:'getLocations'}), apiCall({action:'getLeaves'})
-        ]);
-        if(sRes.success) { students = sRes.data; renderLeaveDropdown(); }
-        if(aRes.success) attendance = aRes.data;
-        if(lRes.success) { locationList = lRes.data; renderLocationDropdown(); }
-        if(vRes.success) leaves = vRes.data;
-        renderStudentTable();
-        renderDashboard();
-        renderAllStaffForScan();
-    }
+async function loadAllData() {
+    const [sRes, aRes, lRes, vRes] = await Promise.all([
+        apiCall({action:'getStudents'}), apiCall({action:'getAttendance'}), 
+        apiCall({action:'getLocations'}), apiCall({action:'getLeaves'})
+    ]);
+    if(sRes.success) { students = sRes.data; renderLeaveDropdown(); }
+    if(aRes.success) attendance = aRes.data;
+    if(lRes.success) { locationList = lRes.data; renderLocationDropdown(); }
+    if(vRes.success) leaves = vRes.data;
+
+    // ตรวจสอบว่ามีฟังก์ชันนี้ก่อนเรียกใช้ เพื่อป้องกัน Error (รูปที่ 2)
+    if (typeof renderStudentTable === 'function') renderStudentTable();
+    
+    renderDashboard();
+    renderAllStaffForScan(); // บรรทัดนี้จะทำงานได้แล้ว
+}
 
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
 function renderDashboard() {
@@ -866,62 +869,64 @@ function getDistance(lat1, lon1, lat2, lon2) {
         };
         reader.readAsDataURL(file);
     }
-   function renderAllStaffForScan() {
+
+    function renderAllStaffForScan() {
     const container = document.getElementById('all-staff-scan-list');
+    const badge = document.getElementById('total-staff-count');
     if(!container) return;
     
     container.innerHTML = '';
     
-    // ตรวจสอบว่ามีข้อมูลใน students หรือไม่
     if (typeof students !== 'undefined' && students.length > 0) {
-        document.getElementById('total-staff-count').innerText = `${students.length} คน`;
+        if(badge) badge.innerText = `${students.length} คน`;
 
         students.forEach(s => {
-           const card = document.createElement('div');
-// ปรับ p-2 (ลด padding) และ h-16 (กำหนดความสูงคงที่ให้ดูเล็กลง)
-card.className = "flex items-center gap-3 bg-white p-2 h-16 rounded-xl border border-slate-200 hover:border-emerald-500 cursor-pointer transition-all shadow-sm group";
+            const card = document.createElement('div');
+            // ปรับ h-[60px] ให้ช่องเล็กลง และ shadow-sm ให้ดูสะอาดตา (รูปที่ 13)
+            card.className = "flex items-center gap-3 bg-white p-2 h-[60px] rounded-xl border border-slate-200 hover:border-emerald-500 cursor-pointer transition-all active:scale-95 shadow-sm group mb-2";
             
-card.onclick = () => {
-    // 1. เก็บข้อมูลพนักงานที่เลือกลงในตัวแปร Global (เพื่อให้หน้าสแกนดึงไปใช้ได้)
-    window.selectedStaffForScan = s; 
+            card.onclick = () => {
+                // 1. ส่งข้อมูลไปที่หน้าสแกน (รูปที่ 15)
+                const resName = document.getElementById('res-name');
+                const resId = document.getElementById('res-id');
+                const resImg = document.getElementById('res-img');
+                
+                if (resName) resName.innerText = s.name;
+                if (resId) resId.innerText = `ID: ${s.studentid || s.id}`;
+                if (resImg) {
+                    resImg.src = s.imagedatabase64 || s.image;
+                    resImg.classList.remove('hidden');
+                }
 
-    // 2. แสดงชื่อและรูปพนักงานในหน้าสแกนทันที (อ้างอิง ID จากโครงสร้างเดิมของคุณ)
-    const resName = document.getElementById('res-name');
-    const resId = document.getElementById('res-id');
-    const resImg = document.getElementById('res-img');
-    const resPlaceholder = document.getElementById('res-img-placeholder');
+                // 2. เปลี่ยนหน้าไปที่หน้าสแกน
+                showTab('scan');
+                
+                // 3. เริ่มเปิดกล้อง
+                if (typeof startCamera === 'function') startCamera();
+            };
 
-    if (resName) resName.innerText = s.name;
-    if (resId) resId.innerText = s.studentid || s.id;
-    if (resImg) {
-        resImg.src = s.imagedatabase64 || s.image;
-        resImg.classList.remove('hidden');
-    }
-    if (resPlaceholder) resPlaceholder.classList.add('hidden');
+            const staffImg = s.imagedatabase64 || s.image || 'https://via.placeholder.com/150';
+            const staffId = s.studentid || s.id || 'N/A';
+            const staffDept = s.class || s.dept || '-';
 
-    // 3. สลับหน้าไปที่เมนูสแกน
-    showTab('scan');
-
-    // 4. สั่งเปิดกล้อง (ถ้าฟังก์ชันเดิมของคุณชื่อ startCamera หรือเรียกใช้ผ่าน switchTab)
-    // ปกติในระบบของคุณ showTab มักจะไปเรียกเปิดกล้องให้อยู่แล้วครับ
-};
-
-card.innerHTML = `
-    <div class="relative flex-shrink-0">
-        <img src="${staffImg}" class="w-11 h-11 rounded-lg object-cover border border-slate-100">
-    </div>
-    <div class="flex flex-col overflow-hidden leading-tight">
-        <p class="text-[10px] text-blue-600 font-bold font-mono">${staffId}</p>
-        <p class="text-sm font-bold text-slate-800 truncate">${s.name}</p>
-        <p class="text-[10px] text-slate-500 font-medium">แผนก: ${staffDept}</p>
-    </div>
-`;
+            card.innerHTML = `
+                <div class="relative flex-shrink-0">
+                    <img src="${staffImg}" class="w-11 h-11 rounded-lg object-cover border border-slate-100 shadow-sm">
+                    <div class="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center">
+                        <i data-lucide="camera" class="w-2 h-2 text-white"></i>
+                    </div>
+                </div>
+                <div class="flex flex-col overflow-hidden leading-tight">
+                    <p class="text-[9px] text-blue-600 font-black font-mono tracking-tighter">${staffId}</p>
+                    <p class="text-[13px] font-bold text-slate-800 truncate" style="line-height: 1.2;">${s.name}</p>
+                    <p class="text-[10px] text-slate-500 font-medium">แผนก: ${staffDept}</p>
+                </div>
+            `;
             container.appendChild(card);
         });
     } else {
-        container.innerHTML = '<p class="text-center text-slate-500 text-xs py-10">กำลังโหลดข้อมูล...</p>';
+        container.innerHTML = '<p class="text-center text-slate-500 text-xs py-10">ไม่พบข้อมูลรายชื่อพนักงาน</p>';
     }
-    
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 </script>
