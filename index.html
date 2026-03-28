@@ -313,6 +313,7 @@
         if(vRes.success) leaves = vRes.data;
         renderStudentTable();
         renderDashboard();
+        renderAllStaffForScan();
     }
 
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
@@ -865,38 +866,51 @@ function getDistance(lat1, lon1, lat2, lon2) {
         };
         reader.readAsDataURL(file);
     }
-    function renderAllStaffForScan() {
+   function renderAllStaffForScan() {
     const container = document.getElementById('all-staff-scan-list');
     if(!container) return;
     
     container.innerHTML = '';
-    document.getElementById('total-staff-count').innerText = `${students.length} คน`;
+    
+    // ตรวจสอบว่ามีข้อมูลใน students หรือไม่
+    if (typeof students !== 'undefined' && students.length > 0) {
+        document.getElementById('total-staff-count').innerText = `${students.length} คน`;
 
-    students.forEach(s => {
-        const card = document.createElement('div');
-        // ปรับขนาดช่องให้สูงขึ้น (p-3) และตัวหนังสือชัดเจน
-        card.className = "flex items-center gap-3 bg-white p-3 rounded-2xl border-2 border-transparent hover:border-emerald-500 cursor-pointer transition-all active:scale-95 shadow-md group";
-        
-        card.onclick = () => {
-            // ฟังก์ชันคลิกที่รูปภาพเพื่อเตรียมสแกน (รอปรับ Step ถัดไป)
-            alert(`เลือก: ${s.name}\nกรุณากดที่เมนู "SCAN" เพื่อสแกนใบหน้า`);
-        };
+        students.forEach(s => {
+            const card = document.createElement('div');
+            // ปรับดีไซน์ให้เป็นบัตรสีขาว สะอาดตา เห็นรูปชัดเจน
+            card.className = "flex items-center gap-3 bg-white p-3 rounded-2xl border-2 border-transparent hover:border-emerald-500 cursor-pointer transition-all active:scale-95 shadow-md group";
+            
+            card.onclick = () => {
+                // เมื่อคลิกแล้วให้เด้งไปหน้าสแกนทันที
+                showTab('scan');
+                // ถ้ามีระบบเลือกพนักงานอัตโนมัติสามารถใส่คำสั่งเพิ่มตรงนี้ได้
+            };
 
-        card.innerHTML = `
-            <div class="relative">
-                <img src="${s.imagedatabase64}" class="w-14 h-14 rounded-xl object-cover border-2 border-slate-100 shadow-sm group-hover:border-emerald-200">
-                <div class="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center">
-                    <i data-lucide="camera" class="w-2 h-2 text-white"></i>
+            // ตรวจสอบชื่อตัวแปร: ถ้าในระบบใช้ s.imagedatabase64 ให้ใช้ตามนั้น หรือ s.image
+            const staffImg = s.imagedatabase64 || s.image || 'https://via.placeholder.com/150';
+            const staffId = s.studentid || s.id || 'N/A';
+            const staffDept = s.class || s.dept || '-';
+
+            card.innerHTML = `
+                <div class="relative">
+                    <img src="${staffImg}" class="w-14 h-14 rounded-xl object-cover border-2 border-slate-100 shadow-sm group-hover:border-emerald-200">
+                    <div class="absolute -bottom-1 -right-1 bg-emerald-500 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center">
+                        <i data-lucide="camera" class="w-2.5 h-2.5 text-white"></i>
+                    </div>
                 </div>
-            </div>
-            <div class="flex flex-col overflow-hidden">
-                <p class="text-[9px] text-blue-600 font-mono font-bold leading-none mb-1">${s.studentid}</p>
-                <p class="text-xs font-black text-slate-800 truncate">${s.name}</p>
-                <p class="text-[10px] text-slate-500 font-bold">แผนก: ${s.class || '-'}</p>
-            </div>
-        `;
-        container.appendChild(card);
-    });
+                <div class="flex flex-col overflow-hidden">
+                    <p class="text-[9px] text-blue-600 font-mono font-bold leading-none mb-1">${staffId}</p>
+                    <p class="text-xs font-black text-slate-800 truncate">${s.name}</p>
+                    <p class="text-[10px] text-slate-500 font-bold">แผนก: ${staffDept}</p>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    } else {
+        container.innerHTML = '<p class="text-center text-slate-500 text-xs py-10">กำลังโหลดข้อมูล...</p>';
+    }
+    
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 </script>
