@@ -696,13 +696,13 @@ async function startDetector() {
     if(window.detectorInterval) clearInterval(window.detectorInterval);
     wrongFaceCount = 0;
     hasBlinked = false;
-    moveDetected = false; // รีเซ็ตการตรวจจับการเคลื่อนไหว
+    moveDetected = false; 
 
     window.detectorInterval = setInterval(async () => {
         if(v.paused || v.ended) return;
         
-        // ใช้ detectSingleFace พร้อมหา Landmarks และ Expression/Angle
-        const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+        // --- [จุดแก้ไข 1: ปรับ inputSize เป็น 160 เพื่อให้ประมวลผลไวขึ้นมาก] ---
+        const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
             .withFaceLandmarks()
             .withFaceDescriptor();
             
@@ -713,13 +713,11 @@ async function startDetector() {
             const match = faceMatcher.findBestMatch(det.descriptor);
             const targetId = window.targetStaff ? String(window.targetStaff.studentid) : null;
 
-            // --- 1. ตรวจสอบ Liveness (กะพริบตา + ขยับหน้า) ---
             const landmarks = det.landmarks;
             const leftEye = landmarks.getLeftEye();
             const rightEye = landmarks.getRightEye();
             const nose = landmarks.getNose();
             
-            // EAR (Eye Aspect Ratio)
             const getEAR = (eye) => {
                 const v1 = Math.abs(eye[1].y - eye[5].y);
                 const v2 = Math.abs(eye[2].y - eye[4].y);
@@ -729,45 +727,54 @@ async function startDetector() {
             const ear = (getEAR(leftEye) + getEAR(rightEye)) / 2;
             if (ear < 0.20) hasBlinked = true;
 
-            // ตรวจจับการขยับหน้า (ป้องกันรูปนิ่ง)
             const currentNoseX = nose[0].x;
             if (Math.abs(currentNoseX - lastAngle) > 2) moveDetected = true;
             lastAngle = currentNoseX;
 
-            // --- 2. ตรวจสอบใบหน้าตรงกับชื่อ ---
             const resNameEl = document.getElementById('res-name');
             const btnIn = document.getElementById('btn-in');
             const btnOut = document.getElementById('btn-out');
+            const wrongAction = document.getElementById('wrong-face-actions'); // ดึงค่าปุ่มเตือน
 
             if (targetId && match.label !== targetId) {
                 wrongFaceCount++;
-                if (wrongFaceCount >= 5) { // เตือนไวขึ้น
+                if (wrongFaceCount >= 5) { 
                     resNameEl.innerText = "❌ ใบหน้าไม่ตรงกับพนักงานที่เลือก!";
                     resNameEl.style.color = "#f43f5e";
                     btnIn.disabled = true; btnOut.disabled = true;
+                    // --- [จุดแก้ไข 2: สั่งให้ปุ่ม "ไม่ใช่ฉัน" แสดงผลออกมาเมื่อหน้าไม่ตรง] ---
+                    if(wrongAction) wrongAction.classList.remove('hidden');
                 }
             } else if (match.label === targetId && match.distance < 0.45) {
                 wrongFaceCount = 0;
                 
-                // --- 3. เงื่อนไขการปลดล็อก (ต้องผ่านทั้งกะพริบตาและขยับหน้า) ---
                 if (!hasBlinked || !moveDetected) {
                     resNameEl.innerHTML = `<span style="color: #fbbf24;">✨ กรุณากะพริบตาและขยับหน้าเล็กน้อย</span>`;
                     btnIn.disabled = true; btnOut.disabled = true;
                 } else {
-                    // ผ่านการสแกนจริง
+                    // --- [จุดแก้ไข 3: เมื่อผ่านเงื่อนไข ให้เล่นเสียงและพูดแจ้งเตือน] ---
+                    if (btnIn.disabled) { // เช็คเพื่อให้ทำงานแค่ครั้งเดียวตอนปลดล็อก
+                        if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
+                        speak("สแกนใบหน้าสำเร็จค่ะ");
+                    }
+
                     btnIn.disabled = false; btnOut.disabled = false;
                     btnIn.style.opacity = "1"; btnOut.style.opacity = "1";
                     resNameEl.innerText = window.targetStaff.name;
                     resNameEl.style.color = "#10b981";
                     
-                    // แสดงข้อมูลพนักงาน
                     document.getElementById('res-id').innerText = `ID: ${match.label}`;
-                    document.getElementById('res-img').src = window.targetStaff.imagedatabase64;
-                    document.getElementById('res-img').classList.remove('hidden');
+                    if(window.targetStaff.imagedatabase64) {
+                        document.getElementById('res-img').src = window.targetStaff.imagedatabase64;
+                        document.getElementById('res-img').classList.remove('hidden');
+                    }
+                    
+                    // เมื่อสแกนผ่านสำเร็จ ให้ซ่อนปุ่ม "ไม่ใช่ฉัน" ไปด้วย
+                    if(wrongAction) wrongAction.classList.add('hidden');
                 }
             }
         }
-    }, 200); // ปรับความเร็วเป็น 200ms เพื่อให้ตอบสนองไวขึ้น
+    }, 200); 
 }
 
 async function finishAttendance(type) {
