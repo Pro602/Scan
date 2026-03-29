@@ -771,60 +771,53 @@ async function startDetector() {
 }
 
 async function finishAttendance(type) {
-    const resIdElement = document.getElementById('res-id');
-    const resNameElement = document.getElementById('res-name');
-    const resClassElement = document.getElementById('res-class');
+    const btnIn = document.getElementById('btn-in');
+    const btnOut = document.getElementById('btn-out');
     const select = document.getElementById('location-select');
-    const btnIn = document.getElementById('btn-in'), btnOut = document.getElementById('btn-out');
 
-    if (!resIdElement || resIdElement.innerText === 'STANDING BY' || !select.value) {
-        return alert("กรุณาสแกนใบหน้าและเลือกสถานที่");
+    // --- ตรวจสอบความพร้อมก่อนบันทึก ---
+    // ถ้าปุ่มยังโดน Disabled อยู่ (สแกนไม่ผ่าน/ไม่ขยับหน้า) จะกดไม่ได้
+    if (btnIn.disabled && btnOut.disabled) {
+        return alert("⚠️ ระบบยังสแกนใบหน้าไม่สำเร็จ หรือยังไม่ได้ยืนยันตัวตนด้วยการขยับหน้า/กะพริบตาค่ะ");
     }
 
-// --- 1. ล้างค่า ID ให้เหลือแค่รหัสล้วน ---
-    const cleanId = resIdElement.innerText.replace(/ID:\s*/gi, '').trim(); 
-
-    // --- 2. ดึงค่า Class (แผนก) จากตัวแปรพนักงานที่เลือกไว้โดยตรง (แทนที่ชุดเก่า) ---
-    let cleanClass = "-";
-    if (window.targetStaff) {
-        // ดึงจากค่า class หรือ dept ที่อยู่ในข้อมูลพนักงาน
-        cleanClass = window.targetStaff.class || window.targetStaff.dept || "-";
+    if (!window.targetStaff || !select.value) {
+        return alert("กรุณาเลือกสถานที่ปฏิบัติงานให้ถูกต้อง");
     }
+
+    const cleanId = String(window.targetStaff.studentid || window.targetStaff.id).trim();
+    const cleanClass = window.targetStaff.class || window.targetStaff.dept || "-";
+    const displayName = window.targetStaff.name;
 
     const selectedLocName = select.options[select.selectedIndex].text.trim();
-    const selectedLoc = locationList.find(l => (l.name || l.LocationName || "").toString().trim() === selectedLocName);
+    const selectedLoc = locationList[select.value]; // ใช้ index จาก value ตรงๆ
 
     btnIn.disabled = true; btnOut.disabled = true;
 
     try {
         const pos = await new Promise((res, rej) => {
-            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 });
+            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 });
         });
         
         const currentLat = pos.coords.latitude;
         const currentLng = pos.coords.longitude;
 
-        if (selectedLocName !== "ทำงานนอกสถานที่") {
+        if (selectedLocName !== "ทำงานนอกสถานที่" && selectedLoc) {
             const targetLat = parseFloat(selectedLoc.lat || selectedLoc.Latitude);
             const targetLng = parseFloat(selectedLoc.lng || selectedLoc.Longitude);
             const radius = parseFloat(selectedLoc.radius || selectedLoc['Radius (Meters)'] || 100);
             const distance = getDistance(currentLat, currentLng, targetLat, targetLng);
             
             if (distance > radius) {
-                alert(`❌ อยู่นอกพื้นที่!\nห่างจากจุดที่กำหนด ${Math.round(distance)} เมตร`);
+                alert(`❌ อยู่นอกพื้นที่!\nคุณห่างจากจุดตั้งแจ้ง ${Math.round(distance)} เมตร (รัศมีที่อนุญาต ${radius} ม.)`);
                 btnIn.disabled = false; btnOut.disabled = false;
                 return; 
             }
         }
 
-        // --- 3. กำหนดช่วงเวลามาสาย (08:30 น.) ---
-       const now = new Date();
-        // สร้าง timestamp แบบ YYYY-MM-DD HH:mm:ss (ค.ศ.)
+        const now = new Date();
         const timestamp = now.toISOString().slice(0, 10) + " " + now.toTimeString().split(' ')[0];
         
-        // --- 2. ตรรกะการเช็คสถานะ (อ้างอิงจากชุดเดิม) ---
-        // ถ้าเป็นเข้างาน (IN) และเกิน 08:30 ให้เป็น 'สาย' ถ้าไม่เกินให้เป็น 'มาปกติ'
-        // ถ้าเป็นออกงาน (OUT) ให้เป็น 'ออกงาน'
         let statusText = "";
         if (type === 'IN') {
             const isLate = (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30));
@@ -832,8 +825,6 @@ async function finishAttendance(type) {
         } else {
             statusText = 'ออกงาน';
         }
-
-        const displayName = resNameElement ? resNameElement.innerText.split('\n')[0].trim() : "";
 
         const res = await apiCall({
             action: 'recordAttendanceUpdate', 
@@ -851,14 +842,14 @@ async function finishAttendance(type) {
 
         if (res.success) {
             if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
-            alert(`บันทึก${type}สำเร็จ! (สถานะ: ${statusText})`);
+            alert(`✅ บันทึก ${type} สำเร็จ!\nพนักงาน: ${displayName}\nสถานะ: ${statusText}`);
             location.reload();
         } else {
             alert("บันทึกผิดพลาด: " + res.message);
         }
 
     } catch (err) {
-        alert("เกิดข้อผิดพลาด: " + err.message);
+        alert("⚠️ บันทึกไม่ได้: กรุณาเปิด GPS และอนุญาตให้เข้าถึงตำแหน่งที่ตั้ง");
     } finally {
         btnIn.disabled = false; btnOut.disabled = false;
     }
@@ -913,20 +904,19 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
     // ฟังก์ชันถ่ายรูปพร้อมระบบ Auto-Crop ใบหน้า
     // ฟังก์ชันถ่ายรูปจากกล้อง (Snap)
-    async function snapPhoto() {
+   async function snapPhoto() {
     const v = document.getElementById('modal-video');
     const previewImg = document.getElementById('preview-img');
     const cropCanvas = document.getElementById('crop-canvas');
     const cropStatus = document.getElementById('crop-status');
     
-    // 1. ตรวจจับใบหน้า "ก่อน" ที่จะปิดกล้อง (สำคัญมาก!)
-    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions());
+    // ตรวจจับด้วย Score ที่สูงขึ้นเพื่อความชัดเจน
+    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.6 }));
 
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = v.videoWidth;
     tempCanvas.height = v.videoHeight;
-    const ctxTemp = tempCanvas.getContext('2d');
-    ctxTemp.drawImage(v, 0, 0);
+    tempCanvas.getContext('2d').drawImage(v, 0, 0);
     
     capturedImg = tempCanvas.toDataURL('image/jpeg', 0.9);
     previewImg.src = capturedImg;
@@ -935,28 +925,27 @@ function getDistance(lat1, lon1, lat2, lon2) {
     document.getElementById('face-guide').classList.add('hidden');
     document.getElementById('btn-snap').classList.add('hidden');
 
-    // 2. ค่อยสั่งปิดกล้องหลังจากตรวจจับเสร็จแล้ว
     stopCamera('modal-video');
 
     document.getElementById('crop-preview-container').classList.remove('hidden');
-    cropCanvas.width = 200;
-    cropCanvas.height = 200;
+    cropCanvas.width = 250; // ขยายขนาดรูปโปรไฟล์ให้ชัดขึ้น
+    cropCanvas.height = 250;
     const ctx = cropCanvas.getContext('2d');
 
     if (detections) {
         const { x, y, width, height } = detections.box;
-        const margin = width * 0.25;
-        // วาดรูปจากภาพที่เก็บไว้ใน tempCanvas (เพราะ video ปิดไปแล้ว)
-        ctx.drawImage(tempCanvas, x - margin, y - margin, width + (margin * 2), height + (margin * 2), 0, 0, 200, 200);
+        // เพิ่มระยะขอบ (Margin) ให้เห็นใบหน้าและไหล่เล็กน้อยเพื่อความสวยงาม
+        const margin = width * 0.3;
+        ctx.drawImage(tempCanvas, x - margin, y - margin, width + (margin * 2), height + (margin * 2), 0, 0, 250, 250);
         croppedImg = cropCanvas.toDataURL('image/jpeg', 0.9);
-        cropStatus.innerText = "ตรวจพบใบหน้าชัดเจน";
+        cropStatus.innerText = "✅ ตรวจพบใบหน้าชัดเจน (แนะนำให้ใช้รูปนี้)";
         cropStatus.className = "text-xs font-bold text-emerald-400";
     } else {
-        // หากไม่พบใบหน้า ให้ Crop ส่วนกลางของรูปไปใช้งานแทน
-        ctx.drawImage(tempCanvas, (tempCanvas.width/2)-150, (tempCanvas.height/2)-150, 300, 300, 0, 0, 200, 200);
+        // หากไม่พบใบหน้า สุ่ม Crop ตรงกลาง
+        ctx.drawImage(tempCanvas, (tempCanvas.width/2)-150, (tempCanvas.height/2)-150, 300, 300, 0, 0, 250, 250);
         croppedImg = cropCanvas.toDataURL('image/jpeg', 0.9);
-        cropStatus.innerText = "ไม่พบใบหน้า! (ลองขยับหน้าให้ชัดขึ้น)";
-        cropStatus.className = "text-xs font-bold text-red-400";
+        cropStatus.innerText = "⚠️ ไม่พบใบหน้าในตำแหน่งที่ถูกต้อง";
+        cropStatus.className = "text-xs font-bold text-amber-400";
     }
 }
 
@@ -1120,11 +1109,18 @@ function selectStaffForScan(staffData) {
     // เปลี่ยนหน้าไปหน้าสแกน
     switchTab('scan');
 }
-    function resetAndGoBack() {
-    window.targetStaff = null; // ล้างพนักงานที่เลือกไว้
-    if(window.detectorInterval) clearInterval(window.detectorInterval);
-    stopCamera();
-    showTab('dashboard'); // กลับหน้าหลัก
+function resetAndGoBack() {
+    window.targetStaff = null; 
+    stopCamera('video'); 
+    if (window.detectorInterval) clearInterval(window.detectorInterval); 
+    
+    // รีเซ็ตปุ่มบันทึกให้กลับไปล็อกเสมอ
+    const btnIn = document.getElementById('btn-in');
+    const btnOut = document.getElementById('btn-out');
+    if(btnIn) { btnIn.disabled = true; btnIn.style.opacity = "0.5"; }
+    if(btnOut) { btnOut.disabled = true; btnOut.style.opacity = "0.5"; }
+    
+    switchTab('dashboard'); 
 }
     // ฟังก์ชันทำให้รายชื่อพนักงานเลื่อนอัตโนมัติ (แก้ไขจุดที่ 1)
 function initStaffScroll() {
