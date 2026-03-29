@@ -80,6 +80,32 @@
     0% { transform: translateY(0); }
     100% { transform: translateY(-50%); } /* วิ่งไปครึ่งหนึ่งของความยาวทั้งหมด */
 }
+        /* ขยายตัวเลขจำนวนพนักงานในแถบสีเข้ม */
+#total-staff-count {
+    font-size: 1.25rem !important; /* ปรับขนาดตามความเหมาะสม */
+    font-weight: 800;
+    color: #34d399; /* สีเขียวสว่าง */
+    letter-spacing: 0.05em;
+}
+        /* เพิ่มระยะห่างระหว่างคอลัมน์ใน Grid หลัก */
+.grid-cols-12 {
+    gap: 2rem !important; /* เพิ่มช่องว่างจากเดิม 1rem เป็น 2rem */
+}
+
+/* บีบคอลัมน์รายชื่อพนักงาน (ฝั่งขวาสุด) ให้แคบลง */
+.xl\:col-span-3 {
+    max-width: 320px; /* จำกัดความกว้างไม่ให้แผ่กว้างเกินไป */
+    margin-left: auto; /* ดันไปทางขวาเพื่อให้เกิดช่องว่างตรงกลาง */
+}
+
+/* ปรับแต่ง Scrollbar ของรายชื่อพนักงานให้ดูทันสมัย */
+#all-staff-scan-list-container::-webkit-scrollbar {
+    width: 6px;
+}
+#all-staff-scan-list-container::-webkit-scrollbar-thumb {
+    background-color: #475569;
+    border-radius: 10px;
+}
 </style>
 </head>
 <body>
