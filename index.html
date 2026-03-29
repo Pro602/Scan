@@ -599,11 +599,10 @@ async function approveAction(id, date) {
 }
 
     // --- ส่วน Logic พื้นฐาน (คงเดิม) ---
-    function switchTab(tab) {
-    // --- [เพิ่มส่วนตรวจสอบ: ถ้ากดไปหน้าสแกนโดยไม่เลือกชื่อก่อน] ---
+function switchTab(tab) {
+    // 1. ตรวจสอบ: ถ้าจะสแกนแต่ยังไม่ได้เลือกชื่อพนักงาน
     if (tab === 'scan' && !window.targetStaff) {
         alert("⚠️ กรุณากดเลือกรายชื่อพนักงานที่ 'รายชื่อพนักงาน' ก่อนเข้าหน้าสแกนค่ะ");
-        // ถ้ามาจากหน้า Dashboard อยู่แล้วก็ไม่ต้องทำอะไร แต่ถ้ามาจากหน้าอื่นให้ตีกลับไป Dashboard
         const dashContent = document.getElementById('content-dashboard');
         if (dashContent && dashContent.classList.contains('hidden')) {
             switchTab('dashboard'); 
@@ -611,19 +610,19 @@ async function approveAction(id, date) {
         return; 
     }
 
-    // --- ส่วนเดิมของคุณ: ตรวจสอบการ Login ---
+    // 2. ตรวจสอบการ Login สำหรับหน้าจัดการ
     if ((tab === 'approve' || tab === 'manage') && !isLoggedIn) { 
         pendingAction = tab; 
         document.getElementById('login-modal').classList.remove('hidden'); 
         return; 
     }
 
-    // สลับการแสดงผลหน้าเนื้อหา
+    // 3. สลับการแสดงผลหน้าเนื้อหา (Hidden/Show)
     document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
     const targetContent = document.getElementById(`content-${tab}`);
     if (targetContent) targetContent.classList.remove('hidden');
 
-    // ปรับแต่งสถานะปุ่มเมนู (Active/Inactive)
+    // 4. ปรับสีปุ่มเมนูให้ Active
     document.querySelectorAll('nav button').forEach(btn => {
         btn.classList.remove('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
         btn.classList.add('tab-inactive');
@@ -634,17 +633,22 @@ async function approveAction(id, date) {
         activeTab.classList.remove('tab-inactive');
     }
 
-    // จัดการเปิด/ปิดกล้อง
+    // 5. จัดการระบบกล้องและ "ล็อกปุ่มบันทึก" ทันทีที่เข้าหน้าสแกน
     if (tab === 'scan') { 
-        // เมื่อเข้าหน้าสแกน ให้ล้างปุ่มแจ้งเตือนใบหน้าไม่ตรงออกก่อน (ถ้ามีค้างอยู่)
+        // --- ส่วนที่เพิ่มเข้าไปใหม่ ---
+        document.getElementById('btn-in').disabled = true;
+        document.getElementById('btn-out').disabled = true;
+        document.getElementById('btn-in').style.opacity = "0.5";
+        document.getElementById('btn-out').style.opacity = "0.5";
+        
         const wrongAction = document.getElementById('wrong-face-actions');
         if(wrongAction) wrongAction.classList.add('hidden');
-        
+        // ------------------------
+
         startCamera('video'); 
         setTimeout(startDetector, 1000); 
     } else {
         stopCamera('video');
-        // หยุด Interval ของการตรวจจับหน้าเมื่อออกจากหน้าสแกน
         if(window.detectorInterval) clearInterval(window.detectorInterval);
     }
 
@@ -680,8 +684,8 @@ async function approveAction(id, date) {
         } catch(e) {}
     }
 
-let wrongFaceCount = 0; // ตัวแปรสะสมแต้มหน้าไม่ตรง
-let hasBlinked = false; // ตัวแปรเช็คการกะพริบตา
+let lastAngle = 0;
+let moveDetected = false;
 
 async function startDetector() {
     const v = document.getElementById('video'), o = document.getElementById('overlay');
@@ -689,16 +693,16 @@ async function startDetector() {
     const dim = { width: v.clientWidth, height: v.clientHeight };
     faceapi.matchDimensions(o, dim);
     
-    // รีเซ็ตค่าใหม่ทุกครั้งที่เริ่มสแกน
     if(window.detectorInterval) clearInterval(window.detectorInterval);
     wrongFaceCount = 0;
     hasBlinked = false;
+    moveDetected = false; // รีเซ็ตการตรวจจับการเคลื่อนไหว
 
     window.detectorInterval = setInterval(async () => {
         if(v.paused || v.ended) return;
         
-        // ใช้ detectSingleFace เพื่อความแม่นยำในการหา Landmarks
-        const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
+        // ใช้ detectSingleFace พร้อมหา Landmarks และ Expression/Angle
+        const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
             .withFaceLandmarks()
             .withFaceDescriptor();
             
@@ -706,89 +710,64 @@ async function startDetector() {
         ctx.clearRect(0,0,o.width,o.height);
         
         if(faceMatcher && det) {
-            const resized = faceapi.resizeResults(det, dim);
-            // วาดจุด Landmarks (Optional: ถ้าไม่อยากให้เห็นจุดบนหน้าให้ลบบรรทัดล่างนี้ออก)
-            // faceapi.draw.drawFaceLandmarks(o, resized);
-
             const match = faceMatcher.findBestMatch(det.descriptor);
             const targetId = window.targetStaff ? String(window.targetStaff.studentid) : null;
 
-            // --- ส่วนที่ 1: ตรวจสอบการกะพริบตา (Liveness Detection) ---
+            // --- 1. ตรวจสอบ Liveness (กะพริบตา + ขยับหน้า) ---
             const landmarks = det.landmarks;
             const leftEye = landmarks.getLeftEye();
             const rightEye = landmarks.getRightEye();
-
-            // EAR (Eye Aspect Ratio) แบบง่าย: วัดระยะห่างเปลือกตา
+            const nose = landmarks.getNose();
+            
+            // EAR (Eye Aspect Ratio)
             const getEAR = (eye) => {
                 const v1 = Math.abs(eye[1].y - eye[5].y);
                 const v2 = Math.abs(eye[2].y - eye[4].y);
                 const h = Math.abs(eye[0].x - eye[3].x);
                 return (v1 + v2) / (2 * h);
             };
-
             const ear = (getEAR(leftEye) + getEAR(rightEye)) / 2;
-            if (ear < 0.22) { hasBlinked = true; } // ต่ำกว่า 0.22 ถือว่าหลับตา/กะพริบตา
+            if (ear < 0.20) hasBlinked = true;
 
-            // --- ส่วนที่ 2: ตรวจสอบใบหน้า ---
+            // ตรวจจับการขยับหน้า (ป้องกันรูปนิ่ง)
+            const currentNoseX = nose[0].x;
+            if (Math.abs(currentNoseX - lastAngle) > 2) moveDetected = true;
+            lastAngle = currentNoseX;
+
+            // --- 2. ตรวจสอบใบหน้าตรงกับชื่อ ---
+            const resNameEl = document.getElementById('res-name');
+            const btnIn = document.getElementById('btn-in');
+            const btnOut = document.getElementById('btn-out');
+
             if (targetId && match.label !== targetId) {
-                // กรณีใบหน้าไม่ตรง: สะสมแต้มไว้ก่อน (หน่วงเวลา)
                 wrongFaceCount++;
-                
-                if (wrongFaceCount >= 10) { // ประมาณ 3 วินาที (300ms * 10)
-                    document.getElementById('res-name').innerText = "ใบหน้าไม่ตรงกับที่เลือก!";
-                    document.getElementById('res-name').style.color = "#f43f5e";
-                    const wrongAction = document.getElementById('wrong-face-actions');
-                    if(wrongAction) wrongAction.classList.remove('hidden');
-
-                    document.getElementById('btn-in').disabled = true;
-                    document.getElementById('btn-out').disabled = true;
-                    document.getElementById('btn-in').style.opacity = "0.5";
-                    document.getElementById('btn-out').style.opacity = "0.5";
+                if (wrongFaceCount >= 5) { // เตือนไวขึ้น
+                    resNameEl.innerText = "❌ ใบหน้าไม่ตรงกับพนักงานที่เลือก!";
+                    resNameEl.style.color = "#f43f5e";
+                    btnIn.disabled = true; btnOut.disabled = true;
                 }
             } else if (match.label === targetId && match.distance < 0.45) {
-                // กรณีใบหน้าถูกต้อง
-                wrongFaceCount = 0; // รีเซ็ตแต้มผิดพลาด
-                const s = students.find(x => String(x.studentid) === match.label);
-
-                if(s && !scanned.has(s.studentid)) {
-                    const resNameEl = document.getElementById('res-name');
-                    const btnIn = document.getElementById('btn-in');
-                    const btnOut = document.getElementById('btn-out');
-
-                    // ตรวจสอบเงื่อนไข: ต้องหน้าตรง และกะพริบตาแล้ว
-                    if (!hasBlinked) {
-                        resNameEl.innerHTML = `<span style="color: #fbbf24;">✨ กรุณากะพริบตา 1 ครั้ง</span>`;
-                        btnIn.disabled = true; btnOut.disabled = true;
-                        btnIn.style.opacity = "0.5"; btnOut.style.opacity = "0.5";
-                    } else {
-                        // ผ่านฉลุย: ปลดล็อกทุกอย่าง
-                        scanned.set(s.studentid, s);
-                        resNameEl.style.color = ""; 
-                        btnIn.disabled = false; btnOut.disabled = false;
-                        btnIn.style.opacity = "1"; btnOut.style.opacity = "1";
-                        
-                        const wrongAction = document.getElementById('wrong-face-actions');
-                        if(wrongAction) wrongAction.classList.add('hidden');
-
-                        resNameEl.innerText = s.name;
-                        document.getElementById('res-id').innerText = `ID: ${s.studentid}`;
-                        document.getElementById('res-img').src = s.imagedatabase64;
-                        document.getElementById('res-img').classList.remove('hidden');
-                        document.getElementById('res-img-placeholder').classList.add('hidden');
-                        
-                        document.getElementById('snd-ok').play();
-                        speak(`สแกนสำเร็จค่ะ ${s.name.split(' ')[0]}`);
-
-                        const select = document.getElementById('location-select');
-                        if (select && select.value) {
-                            const locName = select.options[select.selectedIndex].text.trim();
-                            resNameEl.innerHTML = `${s.name}<br><span style="font-size: 0.7em; color: #10b981;">✅ ยืนยันตัวตนสำเร็จ (📍 ${locName})</span>`;
-                        }
-                    }
+                wrongFaceCount = 0;
+                
+                // --- 3. เงื่อนไขการปลดล็อก (ต้องผ่านทั้งกะพริบตาและขยับหน้า) ---
+                if (!hasBlinked || !moveDetected) {
+                    resNameEl.innerHTML = `<span style="color: #fbbf24;">✨ กรุณากะพริบตาและขยับหน้าเล็กน้อย</span>`;
+                    btnIn.disabled = true; btnOut.disabled = true;
+                } else {
+                    // ผ่านการสแกนจริง
+                    btnIn.disabled = false; btnOut.disabled = false;
+                    btnIn.style.opacity = "1"; btnOut.style.opacity = "1";
+                    resNameEl.innerText = window.targetStaff.name;
+                    resNameEl.style.color = "#10b981";
+                    
+                    // แสดงข้อมูลพนักงาน
+                    document.getElementById('res-id').innerText = `ID: ${match.label}`;
+                    document.getElementById('res-img').src = window.targetStaff.imagedatabase64;
+                    document.getElementById('res-img').classList.remove('hidden');
                 }
             }
         }
-    }, 300);
+    }, 200); // ปรับความเร็วเป็น 200ms เพื่อให้ตอบสนองไวขึ้น
 }
 
 async function finishAttendance(type) {
