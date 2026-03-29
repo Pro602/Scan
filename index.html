@@ -701,7 +701,6 @@ async function startDetector() {
     window.detectorInterval = setInterval(async () => {
         if(v.paused || v.ended) return;
         
-        // --- [จุดแก้ไข 1: ใช้ 160 เพื่อความรวดเร็วในการประมวลผล] ---
         const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
             .withFaceLandmarks()
             .withFaceDescriptor();
@@ -718,7 +717,6 @@ async function startDetector() {
             const rightEye = landmarks.getRightEye();
             const nose = landmarks.getNose();
             
-            // --- [จุดแก้ไข 2: ปรับค่า EAR เป็น 0.25 ให้กะพริบตาติดง่ายขึ้น] ---
             const getEAR = (eye) => {
                 const v1 = Math.abs(eye[1].y - eye[5].y);
                 const v2 = Math.abs(eye[2].y - eye[4].y);
@@ -729,7 +727,7 @@ async function startDetector() {
             if (ear < 0.25) hasBlinked = true; 
 
             const currentNoseX = nose[0].x;
-            if (Math.abs(currentNoseX - lastAngle) > 1.5) moveDetected = true; // ปรับความไวการขยับหน้า
+            if (Math.abs(currentNoseX - lastAngle) > 1.5) moveDetected = true;
             lastAngle = currentNoseX;
 
             const resNameEl = document.getElementById('res-name');
@@ -748,8 +746,6 @@ async function startDetector() {
             } else if (match.label === targetId && match.distance < 0.45) {
                 wrongFaceCount = 0;
                 
-                // --- [จุดแก้ไข 3: เพิ่มเงื่อนไขพิเศษ ถ้าหน้าตรงมาก (Very Close Match) ให้ผ่านได้เลย] ---
-                // ช่วยแก้ปัญหาเวลาแสงไม่พอแล้ว AI จับการกะพริบตาไม่ได้
                 const isVeryCloseMatch = match.distance < 0.35;
 
                 if ((!hasBlinked || !moveDetected) && !isVeryCloseMatch) {
@@ -757,11 +753,12 @@ async function startDetector() {
                     btnIn.disabled = true; btnOut.disabled = true;
                     btnIn.style.opacity = "0.5"; btnOut.style.opacity = "0.5";
                 } else {
-                    // ผ่านการสแกนสำเร็จ
-                    if (btnIn.disabled) { 
-                        if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
-                        speak("สแกนใบหน้าสำเร็จค่ะ");
-                    }
+                    // --- [จุดที่แก้ไข: สั่งหยุดสแกนทันทีเมื่อเงื่อนไขครบ] ---
+                    clearInterval(window.detectorInterval); 
+                    window.detectorInterval = null; 
+
+                    if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
+                    speak("สแกนใบหน้าสำเร็จค่ะ");
 
                     btnIn.disabled = false; btnOut.disabled = false;
                     btnIn.style.opacity = "1"; btnOut.style.opacity = "1";
