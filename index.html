@@ -701,7 +701,7 @@ async function startDetector() {
     window.detectorInterval = setInterval(async () => {
         if(v.paused || v.ended) return;
         
-        // --- [จุดแก้ไข 1: ปรับ inputSize เป็น 160 เพื่อให้ประมวลผลไวขึ้นมาก] ---
+        // --- [จุดแก้ไข 1: ใช้ 160 เพื่อความรวดเร็วในการประมวลผล] ---
         const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
             .withFaceLandmarks()
             .withFaceDescriptor();
@@ -718,6 +718,7 @@ async function startDetector() {
             const rightEye = landmarks.getRightEye();
             const nose = landmarks.getNose();
             
+            // --- [จุดแก้ไข 2: ปรับค่า EAR เป็น 0.25 ให้กะพริบตาติดง่ายขึ้น] ---
             const getEAR = (eye) => {
                 const v1 = Math.abs(eye[1].y - eye[5].y);
                 const v2 = Math.abs(eye[2].y - eye[4].y);
@@ -725,16 +726,16 @@ async function startDetector() {
                 return (v1 + v2) / (2 * h);
             };
             const ear = (getEAR(leftEye) + getEAR(rightEye)) / 2;
-            if (ear < 0.20) hasBlinked = true;
+            if (ear < 0.25) hasBlinked = true; 
 
             const currentNoseX = nose[0].x;
-            if (Math.abs(currentNoseX - lastAngle) > 2) moveDetected = true;
+            if (Math.abs(currentNoseX - lastAngle) > 1.5) moveDetected = true; // ปรับความไวการขยับหน้า
             lastAngle = currentNoseX;
 
             const resNameEl = document.getElementById('res-name');
             const btnIn = document.getElementById('btn-in');
             const btnOut = document.getElementById('btn-out');
-            const wrongAction = document.getElementById('wrong-face-actions'); // ดึงค่าปุ่มเตือน
+            const wrongAction = document.getElementById('wrong-face-actions');
 
             if (targetId && match.label !== targetId) {
                 wrongFaceCount++;
@@ -742,18 +743,22 @@ async function startDetector() {
                     resNameEl.innerText = "❌ ใบหน้าไม่ตรงกับพนักงานที่เลือก!";
                     resNameEl.style.color = "#f43f5e";
                     btnIn.disabled = true; btnOut.disabled = true;
-                    // --- [จุดแก้ไข 2: สั่งให้ปุ่ม "ไม่ใช่ฉัน" แสดงผลออกมาเมื่อหน้าไม่ตรง] ---
                     if(wrongAction) wrongAction.classList.remove('hidden');
                 }
             } else if (match.label === targetId && match.distance < 0.45) {
                 wrongFaceCount = 0;
                 
-                if (!hasBlinked || !moveDetected) {
-                    resNameEl.innerHTML = `<span style="color: #fbbf24;">✨ กรุณากะพริบตาและขยับหน้าเล็กน้อย</span>`;
+                // --- [จุดแก้ไข 3: เพิ่มเงื่อนไขพิเศษ ถ้าหน้าตรงมาก (Very Close Match) ให้ผ่านได้เลย] ---
+                // ช่วยแก้ปัญหาเวลาแสงไม่พอแล้ว AI จับการกะพริบตาไม่ได้
+                const isVeryCloseMatch = match.distance < 0.35;
+
+                if ((!hasBlinked || !moveDetected) && !isVeryCloseMatch) {
+                    resNameEl.innerHTML = `<span style="color: #fbbf24;">✨ กรุณากะพริบตาหรือขยับหน้าเล็กน้อย</span>`;
                     btnIn.disabled = true; btnOut.disabled = true;
+                    btnIn.style.opacity = "0.5"; btnOut.style.opacity = "0.5";
                 } else {
-                    // --- [จุดแก้ไข 3: เมื่อผ่านเงื่อนไข ให้เล่นเสียงและพูดแจ้งเตือน] ---
-                    if (btnIn.disabled) { // เช็คเพื่อให้ทำงานแค่ครั้งเดียวตอนปลดล็อก
+                    // ผ่านการสแกนสำเร็จ
+                    if (btnIn.disabled) { 
                         if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
                         speak("สแกนใบหน้าสำเร็จค่ะ");
                     }
@@ -768,8 +773,6 @@ async function startDetector() {
                         document.getElementById('res-img').src = window.targetStaff.imagedatabase64;
                         document.getElementById('res-img').classList.remove('hidden');
                     }
-                    
-                    // เมื่อสแกนผ่านสำเร็จ ให้ซ่อนปุ่ม "ไม่ใช่ฉัน" ไปด้วย
                     if(wrongAction) wrongAction.classList.add('hidden');
                 }
             }
