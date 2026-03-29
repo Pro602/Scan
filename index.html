@@ -686,6 +686,7 @@ function switchTab(tab) {
 
 let lastAngle = 0;
 let moveDetected = false;
+let isFacePassed = false; // --- [เพิ่มตัวล็อกสถานะป้องกันการทำงานซ้ำ] ---
 
 async function startDetector() {
     const v = document.getElementById('video'), o = document.getElementById('overlay');
@@ -697,9 +698,10 @@ async function startDetector() {
     wrongFaceCount = 0;
     hasBlinked = false;
     moveDetected = false; 
+    isFacePassed = false; // รีเซ็ตสถานะทุกครั้งที่เริ่มสแกนใหม่
 
     window.detectorInterval = setInterval(async () => {
-        if(v.paused || v.ended) return;
+        if(v.paused || v.ended || isFacePassed) return; // --- [ถ้าผ่านแล้ว ให้เด้งออกทันที ไม่ต้องทำข้างล่าง] ---
         
         const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
             .withFaceLandmarks()
@@ -753,7 +755,8 @@ async function startDetector() {
                     btnIn.disabled = true; btnOut.disabled = true;
                     btnIn.style.opacity = "0.5"; btnOut.style.opacity = "0.5";
                 } else {
-                    // --- [จุดที่แก้ไข: สั่งหยุดสแกนทันทีเมื่อเงื่อนไขครบ] ---
+                    // --- [จุดสำคัญ: ล็อกสถานะทันทีที่ผ่านเงื่อนไข] ---
+                    isFacePassed = true; 
                     clearInterval(window.detectorInterval); 
                     window.detectorInterval = null; 
 
