@@ -879,15 +879,12 @@ function getDistance(lat1, lon1, lat2, lon2) {
     }
 
 // 1. ปรับปรุงปุ่มลบในตาราง
+// ในไฟล์ HTML ส่วนที่สร้างตาราง
 function renderStudentTable() {
     document.getElementById('student-table-body').innerHTML = students.map(s => `
         <tr>
-            <td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td>
-            <td class="p-4 font-mono text-xs">${s.studentid}</td>
-            <td class="p-4 font-bold text-slate-700">${s.name}</td>
-            <td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td>
             <td class="p-4 text-center">
-                <button onclick="deleteStudent(${s.rowIndex}, '${s.name}')" class="text-rose-500">
+                <button onclick="confirmDeleteStudent(${s.rowIndex}, '${s.name}')" class="text-rose-500">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </td>
@@ -1285,23 +1282,32 @@ function updateLeaveDisplay(allLeaves, selectedDate) {
     container.innerHTML += renderLeaveCard(item);
   });
 }
-function deleteStudent(index, name) {
+function confirmDeleteStudent(rowIndex, name) {
     if (confirm(`⚠️ ยืนยันการลบรายชื่อ: ${name} ?`)) {
+        // สร้างข้อมูลเพื่อส่งไปที่ doPost
         const payload = {
             action: 'deleteStudent',
-            data: { rowIndex: index } // ส่งค่า rowIndex ไปตามที่ doPost ต้องการ
+            data: { rowIndex: rowIndex }
         };
 
-        fetch(scriptUrl, { // scriptUrl คือ URL ของ Web App ของคุณ
+        // ส่งข้อมูล (ตรวจสอบว่าตัวแปร scriptUrl ของคุณถูกต้อง)
+        fetch(scriptUrl, { 
             method: 'POST',
             body: JSON.stringify(payload)
         })
         .then(res => res.json())
         .then(res => {
             if (res.success) {
-                alert('ลบข้อมูลเรียบร้อยแล้ว');
-                handleGetStudents(); // เรียกฟังก์ชันดึงข้อมูลใหม่เพื่ออัปเดตหน้าจอ
+                alert('✅ ลบข้อมูลพนักงานเรียบร้อยแล้ว');
+                // เรียกฟังก์ชันดึงข้อมูลใหม่เพื่ออัปเดตหน้าจอทันที
+                handleGetStudents(); 
+            } else {
+                alert('❌ ลบไม่สำเร็จ: ' + (res.error || 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์'));
             }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
         });
     }
 }
