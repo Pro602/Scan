@@ -210,13 +210,14 @@
 
     <div id="content-leave" class="hidden">
         <div class="max-w-md mx-auto bg-white p-8 rounded-[2.5rem] shadow-2xl space-y-4 text-slate-800">
-            <h3 class="text-xl font-bold text-center">Leave Management</h3>
-            <select id="leave-student-select" class="w-full p-3 rounded-xl border bg-slate-50 font-bold"></select>
-            <input type="date" id="leave-date" class="w-full p-3 rounded-xl border bg-slate-50 font-bold">
-            <select id="leave-type" class="w-full p-3 rounded-xl border bg-slate-50 font-bold">
-                <option value="ลากิจ">ลากิจ</option><option value="ลาป่วย">ลาป่วย</option><option value="พักร้อน">พักร้อน</option>
-            </select>
-            <button onclick="saveLeave()" class="w-full bg-slate-800 text-white py-4 rounded-xl font-bold">ส่งคำขอการลา</button>
+            <div class="text-center pb-2">
+                <h3 class="text-xl font-bold italic text-slate-700">Leave Management</h3>
+                <p class="text-[10px] text-slate-400 uppercase tracking-widest">บันทึกข้อมูลการลา (Pending)</p>
+            </div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase">เลือกพนักงาน</label><select id="leave-student-select" class="w-full p-3 rounded-xl border bg-slate-50 text-sm font-bold"></select></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase">วันที่ลา</label><input type="date" id="leave-date" class="w-full p-3 rounded-xl border bg-slate-50 text-sm font-bold"></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase">ประเภทการลา</label><select id="leave-type" class="w-full p-3 rounded-xl border bg-slate-50 text-sm font-bold"><option value="ลากิจ">ลากิจ (Personal Leave)</option><option value="ลาป่วย">ลาป่วย (Sick Leave)</option><option value="พักร้อน">พักร้อน (Annual Leave)</option><option value="วันหยุด">วันหยุด (Day Off)</option></select></div>
+            <button onclick="saveLeave()" class="w-full bg-slate-800 text-white py-4 rounded-xl font-bold shadow-md">ส่งคำขอการลา</button>
         </div>
     </div>
 
