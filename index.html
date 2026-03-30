@@ -227,8 +227,6 @@
                 </div>
             </div>
 
-        </div>
-
 <div id="content-scan" class="hidden">
         <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200 text-slate-800">
             
@@ -579,37 +577,30 @@ async function approveAction(id, date) {
 
     // --- ส่วน Logic พื้นฐาน (คงเดิม) ---
 function switchTab(tab) {
-    // 1. ตรวจสอบ: ถ้าจะสแกนแต่ยังไม่ได้เลือกชื่อพนักงาน
+    // 1 & 2. เช็คเงื่อนไข Scan และ Login (คงเดิม)
     if (tab === 'scan' && !window.targetStaff) {
         alert("⚠️ กรุณากดเลือกรายชื่อพนักงานที่ 'รายชื่อพนักงาน' ก่อนเข้าหน้าสแกนค่ะ");
         return; 
     }
-
-    // 2. ตรวจสอบการ Login สำหรับหน้าจัดการ
     if ((tab === 'approve' || tab === 'manage') && !isLoggedIn) { 
         pendingAction = tab; 
         document.getElementById('login-modal').classList.remove('hidden'); 
         return; 
     }
 
-    // --- 3. แก้ไขจุดนี้: สลับการแสดงผลหน้าเนื้อหา (Hidden/Show) ---
-    // ซ่อนก้อน Dashboard ใหม่
-    const dashContainer = document.querySelector('.dashboard-container');
-    if (dashContainer) dashContainer.classList.add('hidden');
-    
-    // ซ่อน div อื่นๆ ใน main
-    document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
+    // --- 3. แก้ไขจุดสลับหน้าจอ (แก้ปัญหาหน้าหาย) ---
+    // สั่งซ่อนทุก div ที่เป็นลูกโดยตรงของ main
+    document.querySelectorAll('main > div').forEach(div => {
+        div.classList.add('hidden');
+    });
 
-    // แสดงหน้าที่เลือก
-    if (tab === 'dashboard') {
-        if (dashContainer) dashContainer.classList.remove('hidden');
-    } else {
-        const targetContent = document.getElementById(`content-${tab}`);
-        if (targetContent) targetContent.classList.remove('hidden');
+    // แสดงหน้าที่เลือก (โดยใช้ ID content-...)
+    const targetContent = document.getElementById(`content-${tab}`);
+    if (targetContent) {
+        targetContent.classList.remove('hidden');
     }
-    // ------------------------------------------------------
 
-    // 4. ปรับสีปุ่มเมนูให้ Active (เหมือนเดิม)
+    // 4. ปรับสีปุ่มเมนูให้ Active (คงเดิม)
     document.querySelectorAll('nav button').forEach(btn => {
         btn.classList.remove('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
         btn.classList.add('tab-inactive');
@@ -620,16 +611,10 @@ function switchTab(tab) {
         activeTab.classList.remove('tab-inactive');
     }
 
-    // 5. จัดการระบบกล้อง
+    // 5. จัดการระบบกล้อง (คงเดิม)
     if (tab === 'scan') { 
         document.getElementById('btn-in').disabled = true;
         document.getElementById('btn-out').disabled = true;
-        document.getElementById('btn-in').style.opacity = "0.5";
-        document.getElementById('btn-out').style.opacity = "0.5";
-        
-        const wrongAction = document.getElementById('wrong-face-actions');
-        if(wrongAction) wrongAction.classList.add('hidden');
-
         startCamera('video'); 
         setTimeout(startDetector, 1000); 
     } else {
@@ -637,6 +622,11 @@ function switchTab(tab) {
         if(window.detectorInterval) clearInterval(window.detectorInterval);
     }
 
+    // โหลดข้อมูลใหม่เมื่อกลับมาหน้า Dashboard
+    if (tab === 'dashboard') {
+        renderDashboard();       // ฟังก์ชันเดิมของคุณ
+        renderUpcomingLeaves();  // ฟังก์ชันใหม่ที่เพิ่มมา
+    }
     if (tab === 'approve') renderApprovalList();
 }
 
@@ -1170,93 +1160,49 @@ function resetAndGoBack() {
 }
 
     // ฟังก์ชันสำหรับแสดงผลรายงานที่ 5
-async function renderUpcomingLeaves() {
+// ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลลาล่วงหน้า
+function renderUpcomingLeaves() {
+    const listEl = document.getElementById('upcoming-leave-list');
+    const badge = document.getElementById('count-upcoming');
+    
+    if (!listEl) return;
+
+    // เรียกฟังก์ชันจาก Code.gs
     google.script.run.withSuccessHandler(function(result) {
-        if (result.success) {
-            const listEl = document.getElementById('upcoming-leave-list');
-            document.getElementById('count-upcoming').innerText = result.data.length;
-            listEl.innerHTML = '';
+        if (result.success && result.data) {
+            badge.innerText = result.data.length;
             
             if (result.data.length === 0) {
-                listEl.innerHTML = '<div class="text-slate-500 text-center py-10 text-xs">ไม่มีข้อมูลการลาล่วงหน้า</div>';
+                listEl.innerHTML = '<div class="text-slate-500 text-center py-10 text-[10px]">ไม่มีข้อมูลการลาล่วงหน้า</div>';
                 return;
             }
 
+            let html = '';
             result.data.forEach(item => {
-                listEl.innerHTML += `
-                    <div class="leave-card bg-slate-800/60 p-3 rounded-xl border border-slate-700 shadow-sm mb-2">
-                        <div class="flex items-center gap-3">
-                            <img src="${item.image || 'https://via.placeholder.com/40'}" class="w-10 h-10 rounded-full object-cover border border-slate-600">
+                html += `
+                    <div class="leave-card bg-slate-800/60 p-2 rounded-xl border border-slate-700 shadow-sm mb-2">
+                        <div class="flex items-center gap-2">
+                            <img src="${item.image || 'https://via.placeholder.com/40'}" class="w-8 h-8 rounded-full object-cover border border-slate-600">
                             <div class="overflow-hidden">
-                                <div class="text-white text-xs font-bold truncate">${item.name}</div>
-                                <div class="text-slate-400 text-[10px]">${item.class}</div>
+                                <div class="text-white text-[11px] font-bold truncate">${item.name}</div>
+                                <div class="text-slate-400 text-[9px]">${item.type}</div>
                             </div>
                         </div>
-                        <div class="mt-2 pt-2 border-t border-slate-700/50 flex justify-between items-center">
-                            <span class="text-blue-400 text-[10px] font-bold">📅 ${item.date}</span>
-                            <span class="bg-blue-900/40 text-blue-300 px-2 py-0.5 rounded text-[9px]">${item.type}</span>
+                        <div class="mt-1 pt-1 border-t border-slate-700/50 flex justify-between items-center text-[10px]">
+                            <span class="text-blue-400 font-mono">🗓 ${item.date}</span>
+                            <span class="text-slate-500 italic">Appr: ${item.approvedBy || '-'}</span>
                         </div>
-                        <div class="text-[9px] text-slate-500 mt-1 italic text-right">Appr: ${item.approvedBy || '-'}</div>
-                    </div>
-                `;
+                    </div>`;
             });
-            
-            // ตรวจสอบข้อมูลเพื่อทำ Auto-scroll (Clone ข้อมูลถ้ามีมากกว่า 5 รายการ)
+
+            listEl.innerHTML = html;
+
+            // ทำ Auto-scroll (ถ้ามีข้อมูลเยอะ)
             if (result.data.length > 5) {
-                listEl.innerHTML += listEl.innerHTML; 
+                listEl.innerHTML += listEl.innerHTML; // Clone ข้อมูลเพื่อให้ Scroll ต่อเนื่อง
             }
         }
-    }).handleGetUpcomingLeaves(); // เรียกฟังก์ชันใน Code.gs
-}
-
-// เรียกใช้งานทุกครั้งที่เปิด Dashboard หรือเปลี่ยนวันที่
-// renderUpcomingLeaves();
-    // ฟังก์ชันสำหรับกรองข้อมูลการลาล่วงหน้ามาแสดง
-function updateUpcomingLeaveDashboard(allLeaves) {
-    const listContainer = document.getElementById('upcoming-leave-list');
-    const badgeCount = document.getElementById('count-upcoming');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // ตั้งค่าเป็นต้นวันเพื่อเปรียบเทียบเฉพาะวันที่
-
-    let html = '';
-    let count = 0;
-
-    // สมมติว่า allLeaves คือ Array ของข้อมูลที่ดึงมาจากชีต Leaves
-    allLeaves.forEach(item => {
-        const leaveDate = new Date(item.Date || item.date); // รองรับทั้งตัวพิมพ์เล็ก-ใหญ่
-        
-        // เงื่อนไข: เป็นวันที่ในอนาคต (เริ่มตั้งแต่พรุ่งนี้เป็นต้นไป)
-        if (leaveDate > today) {
-            count++;
-            // เลือกสีตามประเภทการลา หรือ สถานะ
-            const statusColor = item.Status === 'Approved' ? 'text-emerald-400' : 'text-amber-400';
-            
-            html += `
-                <div class="p-2 mb-2 bg-slate-700/40 rounded-xl border border-slate-600/50 hover:bg-slate-700/60 transition-all">
-                    <div class="flex justify-between items-center">
-                        <span class="text-white font-bold text-[11px]">${item.Name || item.name}</span>
-                        <span class="text-[9px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded uppercase font-bold">${item.Type || item.type}</span>
-                    </div>
-                    <div class="flex justify-between items-center mt-1">
-                        <span class="text-[10px] text-slate-400 font-mono">🗓 ${formatThaiDate(leaveDate)}</span>
-                        <span class="text-[9px] ${statusColor} italic font-bold">${item.Status || 'Pending'}</span>
-                    </div>
-                </div>`;
-        }
-    });
-
-    // อัปเดต UI
-    if (listContainer) {
-        listContainer.innerHTML = html || '<div class="text-slate-500 text-center text-[10px] mt-10">ไม่มีรายการลาล่วงหน้า</div>';
-    }
-    if (badgeCount) {
-        badgeCount.innerText = count;
-    }
-}
-
-// ฟังก์ชันเสริมสำหรับแปลงวันที่เป็นแบบไทยสั้นๆ
-function formatThaiDate(date) {
-    return date.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    }).handleGetUpcomingLeaves(); // ตรวจสอบว่าใน Code.gs ของคุณมีฟังก์ชันชื่อนี้
 }
 </script>
 </body>
