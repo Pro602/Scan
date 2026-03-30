@@ -1139,7 +1139,7 @@ function renderUpcomingLeaves(allLeaves, allStaff) {
     const filteredLeaves = allLeaves.filter(row => {
         const lDate = new Date(row.Date || row.date);
         lDate.setHours(0, 0, 0, 0);
-        return (row.Status === 'Approved' || row.status === 'Approved') && lDate >= today;
+        return (row.Status === 'Approved' || row.status === 'Approved') && lDate > today;
     });
 
     filteredLeaves.forEach(leave => {
@@ -1166,6 +1166,10 @@ function renderUpcomingLeaves(allLeaves, allStaff) {
                 </div>`;
         }
     });
+}
+    
+    // อัปเดตตัวเลขแจ้งเตือนจำนวนคนลา
+    statUpcoming.innerText = count;
 }
 // 1. แก้ไขรูปแบบการ์ดลาล่วงหน้า (ดึง Approved By และเปลี่ยนเป็น ค.ศ.)
 function renderLeaveCard(item) {
