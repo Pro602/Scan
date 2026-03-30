@@ -45,6 +45,23 @@
     /* ปรับหัวรายงานให้สวยงามตามแบบเดิม */
     .p-3.border-b.font-bold { border-bottom: 2px solid rgba(0,0,0,0.05) !important; padding: 12px 16px !important; font-size: 0.85rem !important; text-transform: uppercase; letter-spacing: 0.5px; }
     #stat-present, #stat-late, #stat-out, #stat-absent, #stat-upcoming { min-width: 35px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 8px !important; font-size: 1rem !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+
+    /* ตกแต่ง Card ในช่องลาล่วงหน้า */
+#upcoming-leave-list .bg-slate-800 {
+    transition: transform 0.2s;
+}
+#upcoming-leave-list .bg-slate-800:hover {
+    transform: scale(1.02);
+    border-color: #3b82f6;
+}
+
+/* บังคับชื่อพนักงานในทุกช่องไม่ให้ตกบรรทัด */
+.truncate-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+    
 </style>
 
 <nav class="shadow-lg sticky top-0 z-50 p-3">
@@ -1063,6 +1080,51 @@ function resetAndGoBack() {
     stopCamera('video'); // ปิดกล้อง
     if (window.detectorInterval) clearInterval(window.detectorInterval); // หยุดตัวตรวจจับหน้า
     switchTab('dashboard'); // กลับหน้าหลัก
+}
+    function renderUpcomingLeaves(allLeaves, allStaff) {
+    const upcomingContainer = document.getElementById('upcoming-leave-list');
+    const statUpcoming = document.getElementById('stat-upcoming');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    upcomingContainer.innerHTML = '';
+    let count = 0;
+
+    // กรองข้อมูล: อนุมัติแล้ว และ วันที่ลา > วันนี้
+    const filteredLeaves = allLeaves.filter(row => {
+        const leaveDate = new Date(row.Date);
+        return row.Status === 'Approved' && leaveDate > today;
+    });
+
+    filteredLeaves.forEach(leave => {
+        const staff = allStaff.find(s => s.StudentID === leave.StudentID);
+        if (staff) {
+            count++;
+            const leaveDateFormatted = new Date(leave.Date).toLocaleDateString('th-TH');
+            
+            const card = `
+                <div class="bg-slate-800 border border-slate-700 p-2 rounded-xl flex flex-col gap-1 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <img src="${staff.Image || 'https://via.placeholder.com/40'}" class="w-10 h-10 rounded-lg object-cover">
+                        <div class="overflow-hidden">
+                            <div class="text-[11px] font-bold text-blue-300 truncate">${staff.Name}</div>
+                            <div class="text-[9px] text-slate-400">${staff.Department}</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1 mt-1 pt-1 border-t border-slate-700">
+                        <div class="text-[9px] text-slate-400">📅 ${leaveDateFormatted}</div>
+                        <div class="text-[9px] font-bold text-emerald-400 text-right">${leave.Type}</div>
+                    </div>
+                    <div class="text-[8px] text-slate-500 italic mt-1 text-right">
+                        Approved by: ${leave.ApprovedBy || '-'}
+                    </div>
+                </div>
+            `;
+            upcomingContainer.innerHTML += card;
+        }
+    });
+
+    statUpcoming.innerText = count;
 }
 </script>
 </body>
