@@ -1164,21 +1164,21 @@ const upcoming = leaves.filter(row => {
 
 // 1. แก้ไขรูปแบบการ์ดลาล่วงหน้า (ดึง Approved By และเปลี่ยนเป็น ค.ศ.)
 function renderLeaveCard(item) {
-  // จัดการวันที่: แปลงเป็น ค.ศ. 
   const d = new Date(item.Date);
+  // บังคับรูปแบบวันที่เป็น ค.ศ. (DD/MM/YYYY)
   const formattedDate = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
 
   return `
-    <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-2 flex items-center gap-3 shadow-sm">
-      <img src="${getStaffPhoto(item.Name)}" class="w-10 h-10 rounded-full border-2 border-slate-600 object-cover shadow-md">
+    <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-2 flex items-center gap-3 mb-2">
+      <img src="${getStaffPhoto(item.Name)}" class="w-10 h-10 rounded-full border-2 border-slate-600 object-cover">
       <div class="flex-grow min-w-0">
-        <div class="text-[11px] font-bold text-slate-100 truncate">${item.Name}</div>
+        <div class="text-[12px] font-bold text-slate-100 truncate">${item.Name}</div>
         <div class="flex justify-between items-end mt-1">
           <div class="flex flex-col">
             <span class="text-[9px] text-amber-400 font-semibold">${item.Type}</span>
             <span class="text-[8px] text-slate-400">Approved By: ${item.ApprovedBy || '-'}</span>
           </div>
-          <span class="text-[9px] font-black text-slate-300">${formattedDate}</span>
+          <span class="text-[10px] font-black text-slate-300">${formattedDate}</span>
         </div>
       </div>
     </div>`;
@@ -1201,22 +1201,23 @@ function startAutoScroll() {
 
 // เรียกใช้หลังจากโหลดข้อมูลเสร็จ 2 วินาที
 setTimeout(startAutoScroll, 2000);
-    // 2. ปรับการกรองข้อมูลลา (ไม่เอาวันปัจจุบัน / เอาเฉพาะ Approved)
+// ปรับปรุงฟังก์ชันกรองข้อมูลลาล่วงหน้า
 function updateLeaveDisplay(allLeaves, selectedDate) {
   const container = document.getElementById('upcoming-leave-list');
   container.innerHTML = '';
-  
   const targetDate = new Date(selectedDate);
 
   const upcoming = allLeaves.filter(row => {
     const leaveDate = new Date(row.Date);
-    // เงื่อนไข: สถานะ Approved และ วันที่ต้องมากกว่า (หลัง) วันที่เลือก
-    return row.Status === 'Approved' && leaveDate > targetDate;
+    // เปลี่ยนจาก > เป็น >= เพื่อให้แสดงรายการของวันนี้ด้วย
+    // และต้องมีสถานะเป็น Approved เท่านั้น
+    return row.Status === 'Approved' && leaveDate >= targetDate;
   });
 
   document.getElementById('stat-upcoming').textContent = upcoming.length;
+  
   upcoming.forEach(item => {
-    container.innerHTML += renderLeaveCard(item);
+    container.innerHTML += renderLeaveCard(item); 
   });
 }
 </script>
