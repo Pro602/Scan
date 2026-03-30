@@ -138,44 +138,44 @@
 
 <div class="grid grid-cols-1 md:grid-cols-6 gap-3 p-2">
     
-    <div class="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden flex flex-col h-[650px]">
+    <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
         <div class="p-2 bg-emerald-500/10 text-emerald-400 font-bold text-[11px] flex justify-between border-b border-emerald-500/20">
-            <span>มาปกติ (IN)</span>
-            <span id="stat-present" class="bg-emerald-600 text-white px-2 py-0.5 rounded-lg text-[10px]">0</span>
+            <span class="tracking-wider">มาปกติ (IN)</span>
+            <span id="stat-present" class="bg-emerald-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
         </div>
-        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section" id="normal-list"></div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="normal-list"></div>
     </div>
 
-    <div class="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden flex flex-col h-[650px]">
+    <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
         <div class="p-2 bg-amber-500/10 text-amber-400 font-bold text-[11px] flex justify-between border-b border-amber-500/20">
-            <span>มาสาย (IN)</span>
-            <span id="stat-late" class="bg-amber-600 text-white px-2 py-0.5 rounded-lg text-[10px]">0</span>
+            <span class="tracking-wider">มาสาย (IN)</span>
+            <span id="stat-late" class="bg-amber-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
         </div>
-        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section" id="late-list-display"></div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="late-list-display"></div>
     </div>
 
-    <div class="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden flex flex-col h-[650px]">
+    <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
         <div class="p-2 bg-blue-500/10 text-blue-400 font-bold text-[11px] flex justify-between border-b border-blue-500/20">
-            <span>สแกนออก (OUT)</span>
-            <span id="stat-out" class="bg-blue-600 text-white px-2 py-0.5 rounded-lg text-[10px]">0</span>
+            <span class="tracking-wider">สแกนออก (OUT)</span>
+            <span id="stat-out" class="bg-blue-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
         </div>
-        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section" id="out-list"></div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="out-list"></div>
     </div>
 
-    <div class="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden flex flex-col h-[650px]">
+    <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
         <div class="p-2 bg-rose-500/10 text-rose-400 font-bold text-[11px] flex justify-between border-b border-rose-500/20">
-            <span>ยังไม่สแกน/ลา</span>
-            <span id="stat-absent" class="bg-rose-600 text-white px-2 py-0.5 rounded-lg text-[10px]">0</span>
+            <span class="tracking-wider">ยังไม่สแกน/ลา</span>
+            <span id="stat-absent" class="bg-rose-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
         </div>
-        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section" id="absent-list"></div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="absent-list"></div>
     </div>
 
-    <div class="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden flex flex-col h-[650px]">
+    <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
         <div class="p-2 bg-slate-800 text-indigo-400 font-bold text-[11px] flex justify-between border-b border-slate-700">
-            <span>ลาล่วงหน้า (LEAVE)</span>
-            <span id="stat-upcoming" class="bg-indigo-600 text-white px-2 py-0.5 rounded-lg text-[10px]">0</span>
+            <span class="tracking-wider">ลาล่วงหน้า (LEAVE)</span>
+            <span id="stat-upcoming" class="bg-indigo-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
         </div>
-        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section" id="upcoming-leave-list"></div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="upcoming-leave-list"></div>
     </div>
 
     <div class="bg-slate-800/40 rounded-2xl border border-slate-600 overflow-hidden flex flex-col h-[650px]">
@@ -1129,10 +1129,8 @@ function resetAndGoBack() {
 function renderUpcomingLeaves(allLeaves, allStaff) {
     const upcomingContainer = document.getElementById('upcoming-leave-list');
     const statUpcoming = document.getElementById('stat-upcoming');
-    
     if(!upcomingContainer || !statUpcoming) return;
 
-    // ดึงวันที่จากตัวเลือกปฏิทินในหน้าจอ (เช่น 30/03/2026)
     const dateInput = document.getElementById('dashboard-date').value;
     const today = new Date(dateInput);
     today.setHours(0, 0, 0, 0);
@@ -1140,49 +1138,38 @@ function renderUpcomingLeaves(allLeaves, allStaff) {
     upcomingContainer.innerHTML = '';
     let count = 0;
 
-    // กรองข้อมูล: สถานะ Approved และ วันที่ลา ต้องเท่ากับหรือมากกว่าวันที่เลือก (>=)
     const filteredLeaves = allLeaves.filter(row => {
         const lDate = new Date(row.Date || row.date);
         lDate.setHours(0, 0, 0, 0);
         const lStatus = (row.Status || row.status || "").toString().toLowerCase();
-        
-        // กรองเอาเฉพาะที่อนุมัติแล้ว และเป็นวันที่เลือกหรือวันถัดๆ ไป
-        return lStatus === 'approved' && lDate > today;
+        return lStatus === 'approved' && lDate >= today;
     });
 
     filteredLeaves.forEach(leave => {
-        // ค้นหาข้อมูลพนักงานเพื่อดึงรูปภาพ
         const s = allStaff.find(x => String(x.studentid) === String(leave.id || leave.StudentID));
-        
         if (s) {
             count++;
             const d = new Date(leave.Date || leave.date);
-            
-            // แสดงรูปแบบวันที่เป็น ค.ศ. ตามปฏิทิน (เช่น 30/3/2026)
             const dStr = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-            
-            // ดึงชื่อ Approved By จากคอลัมน์ G (ถ้าไม่มีให้แสดงเป็น -)
+            // ดึงชื่อ Approved By มาแสดงผล
             const approvedBy = leave.ApprovedBy || leave.approvedby || '-';
 
             upcomingContainer.innerHTML += `
-                <div class="flex items-center justify-between bg-slate-800/60 p-2 rounded-xl border border-slate-700/50 mb-2 shadow-sm">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <img src="${s.imagedatabase64 || 'https://via.placeholder.com/40'}" 
-                             class="w-10 h-10 rounded-full object-cover border-2 border-slate-600 shadow-md">
-                        <div class="overflow-hidden">
-                            <p class="font-bold text-slate-100 text-[12px] truncate">${s.name}</p>
-                            <p class="text-[9px] text-slate-400">Approved By: <span class="text-emerald-400">${approvedBy}</span></p>
+                <div class="flex items-center justify-between bg-slate-800/40 p-2 rounded-xl border border-white/5 mb-2 shadow-sm transition-all hover:bg-slate-700/50">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <img src="${s.imagedatabase64}" class="w-9 h-9 rounded-full object-cover border-2 border-indigo-500/30">
+                        <div class="overflow-hidden leading-tight">
+                            <p class="font-bold text-white text-[11px] truncate uppercase">${s.name}</p>
+                            <p class="text-[9px] text-slate-400 italic">Approved By: <span class="text-emerald-400 font-semibold">${approvedBy}</span></p>
                         </div>
                     </div>
-                    <div class="text-right min-w-[75px] ml-2">
-                        <p class="text-[9px] font-bold text-amber-400 uppercase">${leave.Type || leave.type}</p>
-                        <p class="text-[10px] font-black text-slate-300 tracking-tighter">${dStr}</p>
+                    <div class="text-right min-w-[65px] ml-1">
+                        <p class="text-[9px] font-bold text-amber-400 leading-none mb-1">${leave.Type || leave.type}</p>
+                        <p class="text-[10px] font-black text-white/90 tracking-tighter italic leading-none">${dStr}</p>
                     </div>
                 </div>`;
         }
     });
-
-    // อัปเดตตัวเลขแจ้งเตือนจำนวนคนลา
     statUpcoming.innerText = count;
 }
 // 1. แก้ไขรูปแบบการ์ดลาล่วงหน้า (ดึง Approved By และเปลี่ยนเป็น ค.ศ.)
@@ -1211,22 +1198,29 @@ function renderLeaveCard(item) {
 }
 
 // 3. ระบบเลื่อนอัตโนมัติ (ใส่ไว้ท้ายสุดของ Script)
-function startAutoScroll() {
-  const sections = document.querySelectorAll('.auto-scroll-section');
-  sections.forEach(section => {
-    setInterval(() => {
-      if (section.scrollHeight > section.clientHeight) {
-        section.scrollTop += 1;
-        if (section.scrollTop + section.clientHeight >= section.scrollHeight) {
-          section.scrollTop = 0;
-        }
-      }
-    }, 50);
-  });
+function startContinuousScroll() {
+    const scrollSections = document.querySelectorAll('.auto-scroll-section');
+    
+    scrollSections.forEach(section => {
+        // เคลียร์ Interval เดิมเพื่อป้องกันการซ้อนทับ
+        if(section.dataset.scrollInterval) clearInterval(section.dataset.scrollInterval);
+        
+        const interval = setInterval(() => {
+            // เลื่อนลงทีละ 1px
+            section.scrollTop += 1;
+            
+            // ถ้าเลื่อนจนสุด (เหลือระยะห่างไม่เกิน 1px จากขอบล่าง) ให้กลับไปเริ่มที่ 0 ทันที
+            if (section.scrollTop + section.clientHeight >= section.scrollHeight - 1) {
+                section.scrollTop = 0;
+            }
+        }, 40); // ความเร็ว 40ms (ปรับให้ช้าลงเพื่อความสมูท)
+        
+        section.dataset.scrollInterval = interval;
+    });
 }
 
-// เรียกใช้หลังจากโหลดข้อมูลเสร็จ 2 วินาที
-setTimeout(startAutoScroll, 2000);
+// เรียกใช้งานหลังจาก Render ข้อมูลเสร็จ 1 วินาที
+setTimeout(startContinuousScroll, 1000);
 // ปรับปรุงฟังก์ชันกรองข้อมูลลาล่วงหน้า
 function updateLeaveDisplay(allLeaves, selectedDate) {
   const container = document.getElementById('upcoming-leave-list');
