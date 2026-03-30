@@ -8,203 +8,296 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
-<style>
-    body { font-family: 'Kanit', sans-serif; background-color: #1a1c1e; color: #f8fafc; margin: 0; }
-    
-    /* --- Dashboard Layout Optimized for 1600px --- */
-    .dashboard-container {
-        display: flex;
-        gap: 10px;
-        width: 100%;
-        padding: 5px;
-        align-items: flex-start;
-        justify-content: space-between;
-    }
-
-    /* รายงานที่ 1-4: ปรับความกว้างให้รองรับชื่อบรรทัดเดียว */
-    .attendance-col {
-        flex: 1;
-        min-width: 200px; /* เพิ่มจาก 170px เพื่อให้ชื่อไม่ตกบรรทัด */
-        background-color: #ffffff;
-        border-radius: 15px;
-        border: 1px solid #e2e8f0;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    }
-
-    /* คอลัมน์ที่ 5 (ลาล่วงหน้า) และ 6 (รายชื่อพนักงาน) */
-    .upcoming-leave-col, .staff-list-col {
-        flex: 1.2;
-        min-width: 260px;
-        max-width: 300px;
-        background: linear-gradient(145deg, #1e293b, #0f172a) !important;
-        border-radius: 20px;
-        border: 1px solid rgba(255,255,255,0.1);
-        display: flex;
-        flex-direction: column;
-    }
-
-    /* จัดการชื่อพนักงานให้ยาวได้ในบรรทัดเดียว */
-    .staff-name-text {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 140px;
-    }
-
-    /* --- Auto Scroll System --- */
-    .list-window-scrollable {
-        height: 600px;
-        overflow: hidden;
-        position: relative;
-    }
-
-    .scroll-content-active {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        padding: 10px;
-        animation: smoothScrollEffect 40s linear infinite;
-    }
-
-    .scroll-content-active:hover { animation-play-state: paused; }
-
-    @keyframes smoothScrollEffect {
-        0% { transform: translateY(0); }
-        100% { transform: translateY(-50%); }
-    }
-
-    /* --- UI Decor --- */
-    .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; }
+    <style>
+    body { font-family: 'Kanit', sans-serif; background-color: #1a1c1e; color: #f8fafc; }
+    .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; overflow: hidden; border-radius: 0.75rem; }
+    .logo-fade { animation: fadeInLogo 1.2s ease forwards; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)); }
     .logo-spin { animation: spin360 8s linear infinite; transform-style: preserve-3d; }
+    @keyframes fadeInLogo { from { opacity: 0; transform: translateY(-10px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
     @keyframes spin360 { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
     
-    .tab-inactive { color: #94a3b8 !important; opacity: 0.6; }
-    .hidden { display: none !important; }
+    /* Animation สำหรับปุ่มอนุมัติ */
+    @keyframes pulse-orange {
+        0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); background-color: rgba(30, 41, 59, 1); }
+        50% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); background-color: rgba(245, 158, 11, 1); color: white; }
+        100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); background-color: rgba(30, 41, 59, 1); }
+    }
+    .btn-pending-pulse { animation: pulse-orange 2s infinite; border: 1px solid #f59e0b !important; }
+
+    /* --- ส่วนที่ปรับปรุงใหม่ --- */
+    
+    /* 1. คอนเทนเนอร์หลัก (ปิดการเลื่อนถาวรออก) */
+    .list-window { 
+        overflow: hidden; 
+        position: relative; 
+    }
+
+    /* 2. ตัวครอบรายการ (เตรียมพร้อมสำหรับการเลื่อน แต่ยังไม่เลื่อน) */
+    .scroll-container { 
+        display: flex; 
+        flex-direction: column; 
+    }
+
+    /* 3. Class พิเศษที่จะถูกใส่โดย JavaScript เมื่อข้อมูลล้น */
+    .auto-scroll-active { 
+        animation: scrollUp 20s linear infinite; 
+    }
+    
+    /* หยุดเลื่อนเมื่อเอาเมาส์ไปวาง */
+    .auto-scroll-active:hover { 
+        animation-play-state: paused; 
+    } 
+
+    @keyframes scrollUp { 
+        0% { transform: translateY(0); } 
+        100% { transform: translateY(-50%); } 
+    }
+    /* ------------------------ */
+
+    nav { background-color: #25282c !important; border-bottom: 1px solid #334155; }
+    .tab-inactive { color: #94a3b8 !important; }
+        /* คอนเทนเนอร์คุมความสูงที่มองเห็น */
+.list-window-staff {
+    height: 580px; /* ปรับให้พอดีกับหน้าจอ */
+    overflow: hidden;
+    position: relative;
+}
+
+/* ตัวคอนเทนเนอร์ที่จะวิ่ง */
+.scroll-content-staff {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: smoothScrollStaff 30s linear infinite; /* ปรับเลข 30s ให้ช้า/เร็วตามชอบ */
+}
+
+/* เมื่อเอาเมาส์วาง หรือกดค้าง ให้หยุดเลื่อน */
+.scroll-content-staff:hover {
+    animation-play-state: paused;
+}
+
+@keyframes smoothScrollStaff {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-50%); } /* วิ่งไปครึ่งหนึ่งของความยาวทั้งหมด */
+}
+        /* ขยายตัวเลขจำนวนพนักงานในแถบสีเข้ม */
+#total-staff-count {
+    font-size: 1.25rem !important; /* ปรับขนาดตามความเหมาะสม */
+    font-weight: 800;
+    color: #34d399; /* สีเขียวสว่าง */
+    letter-spacing: 0.05em;
+}
+        /* เพิ่มระยะห่างระหว่างคอลัมน์ใน Grid หลัก */
+.grid-cols-12 {
+    gap: 2rem !important; /* เพิ่มช่องว่างจากเดิม 1rem เป็น 2rem */
+}
+
+/* บีบคอลัมน์รายชื่อพนักงาน (ฝั่งขวาสุด) ให้แคบลง */
+.xl\:col-span-3 {
+    max-width: 320px; /* จำกัดความกว้างไม่ให้แผ่กว้างเกินไป */
+    margin-left: auto; /* ดันไปทางขวาเพื่อให้เกิดช่องว่างตรงกลาง */
+}
+
+/* ปรับแต่ง Scrollbar ของรายชื่อพนักงานให้ดูทันสมัย */
+#all-staff-scan-list-container::-webkit-scrollbar {
+    width: 6px;
+}
+#all-staff-scan-list-container::-webkit-scrollbar-thumb {
+    background-color: #475569;
+    border-radius: 10px;
+}
+        /* --- 1. ปรับแต่งชื่อรายงานให้เด่นและสวยงาม --- */
+.p-3.border-b.font-bold {
+    border-bottom: 2px solid rgba(0,0,0,0.05) !important;
+    padding: 12px 16px !important;
+    font-size: 0.85rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* เพิ่ม Effect ให้ตัวเลขบนหัวรายงาน */
+#stat-present, #stat-late, #stat-out, #stat-absent {
+    min-width: 35px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px !important;
+    font-size: 1rem !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* --- 2. ปรับระยะห่าง (Gap) ให้สมดุลทุกคอลัมน์ --- */
+.grid-cols-12 {
+    gap: 1rem !important; /* ปรับให้เท่ากันทุกช่องเพื่อความสมดุล */
+}
+
+/* บีบรายชื่อพนักงานให้แคบลงเพื่อให้ดูไม่แผ่กระจาย */
+.xl\:col-span-3 {
+    max-width: 330px !important; 
+    margin-left: auto;
+}
+
+/* --- 3. ปรับตัวเลขจำนวนพนักงาน (13 คน) ให้ชัดเจนมาก --- */
+#total-staff-count {
+    font-size: 1.5rem !important;
+    font-weight: 900 !important;
+    color: #34d399 !important; /* สีเขียวสว่าง */
+    text-shadow: 0 0 10px rgba(52, 211, 153, 0.3);
+    margin-right: 4px;
+}
+
+/* ปรับแต่งแถบ "รายชื่อพนักงาน" ให้ดูพรีเมียม */
+.bg-slate-800\/40 {
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    background: linear-gradient(145deg, #1e293b, #0f172a) !important;
+}
 </style>
+</head>
+<body>
 
-<nav class="shadow-lg sticky top-0 z-50 p-3 bg-[#25282c] border-b border-slate-700">
-    <div class="max-w-[1600px] mx-auto flex justify-between items-center">
-        <div class="flex items-center space-x-4">
-            <div class="logo-wrapper">
-                <img src="https://lh3.googleusercontent.com/d/1rlAx7j8TDQBCnqrBts_mzs75U1U1aYy3" class="logo-spin w-12 h-12 object-contain rounded-xl">
+    <nav class="shadow-lg sticky top-0 z-50 p-3">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-4">
+                <div class="logo-wrapper">
+                    <img src="https://lh3.googleusercontent.com/d/1rlAx7j8TDQBCnqrBts_mzs75U1U1aYy3" alt="Logo" class="logo-fade logo-spin w-14 h-14 object-contain rounded-xl">
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-blue-400 font-bold text-2xl tracking-tight">THAISIAM INKJET</span>
+                    <span class="text-slate-500 text-[10px] uppercase tracking-[0.2em] font-medium">Professional Attendance Recording Systems</span>
+                </div>
             </div>
-            <div class="flex flex-col">
-                <span class="text-blue-400 font-bold text-xl tracking-tight">THAISIAM INKJET</span>
-                <span class="text-slate-500 text-[9px] uppercase tracking-widest">Professional Attendance System</span>
+            <div class="flex bg-slate-800 p-1 rounded-2xl border border-slate-700 shadow-inner overflow-x-auto">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-md transition-all whitespace-nowrap">Dashboard</button>
+                <button onclick="switchTab('scan')" id="tab-scan" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">สแกนบันทึกเวลา</button>
+                <button onclick="switchTab('leave')" id="tab-leave" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">ลงชื่อการลา</button>
+                <button onclick="switchTab('approve')" id="tab-approve" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">จัดการการอนุมัติ</button>
+                <button onclick="switchTab('manage')" id="tab-manage" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">พนักงาน</button>
             </div>
         </div>
-        <div class="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
-            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-2 rounded-lg text-sm font-bold bg-blue-600 text-white shadow-md transition-all">Dashboard</button>
-            <button onclick="switchTab('scan')" id="tab-scan" class="px-4 py-2 rounded-lg text-sm font-medium tab-inactive">สแกนบันทึกเวลา</button>
-            <button onclick="switchTab('leave')" id="tab-leave" class="px-4 py-2 rounded-lg text-sm font-medium tab-inactive">ลงชื่อการลา</button>
-            <button onclick="switchTab('approve')" id="tab-approve" class="px-4 py-2 rounded-lg text-sm font-medium tab-inactive">จัดการการอนุมัติ</button>
-            <button onclick="switchTab('manage')" id="tab-manage" class="px-4 py-2 rounded-lg text-sm font-medium tab-inactive">พนักงาน</button>
+    </nav>
+
+    <main class="max-w-[1600px] mx-auto p-4 md:p-6">
+    <div id="content-dashboard" class="space-y-6">
+        <div class="flex flex-col border-b border-slate-700 pb-4 gap-1">
+            <div class="flex flex-wrap items-center gap-3">
+                <h2 class="text-lg font-bold text-slate-200 uppercase tracking-widest whitespace-nowrap">
+                    สรุปการเข้างานประจำวันที่
+                </h2>
+                <div class="flex items-center gap-2 bg-slate-800/50 p-1 px-3 rounded-xl border border-slate-600 shadow-sm">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">วันที่:</span>
+                    <input type="date" id="dashboard-date" onchange="renderDashboard()" 
+                           class="bg-transparent text-sm font-bold text-emerald-400 outline-none cursor-pointer [color-scheme:dark]">
+                </div>
+            </div>
+            <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Daily Attendance Overview</p>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4">
+            
+            <div class="col-span-12 xl:col-span-9 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
+                    <div class="p-3 bg-emerald-50 border-b font-bold text-emerald-700 text-xs flex justify-between items-center">
+                        <span>มาปกติ (IN)</span>
+                        <span id="stat-present" class="bg-emerald-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
+                    </div>
+                    <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
+                        <div id="normal-list" class="p-2 space-y-1"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
+                    <div class="p-3 bg-amber-50 border-b font-bold text-amber-700 text-xs flex justify-between items-center">
+                        <span>มาสาย (IN)</span>
+                        <span id="stat-late" class="bg-amber-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
+                    </div>
+                    <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
+                        <div id="late-list-display" class="p-2 space-y-1"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
+                    <div class="p-3 bg-blue-50 border-b font-bold text-blue-700 text-xs flex justify-between items-center">
+                        <span>สแกนออก (OUT)</span>
+                        <span id="stat-out" class="bg-blue-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
+                    </div>
+                    <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
+                        <div id="out-list" class="p-2 space-y-1"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
+                    <div class="p-3 bg-rose-50 border-b font-bold text-rose-700 text-xs flex justify-between items-center">
+                        <span>ยังไม่สแกน/แจ้งลา</span>
+                        <span id="stat-absent" class="bg-rose-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
+                    </div>
+                    <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
+                        <div id="absent-list" class="p-2 space-y-1"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-12 xl:col-span-3 bg-slate-800/40 rounded-[2.5rem] p-4 border border-slate-600 shadow-2xl flex flex-col h-[650px]">
+                <div class="flex justify-between items-center mb-4 px-2">
+                    <h3 class="text-sm font-black text-emerald-400 flex items-center gap-2 uppercase">
+                        <i data-lucide="users" class="w-4 h-4"></i> รายชื่อพนักงาน
+                    </h3>
+                    <span id="total-staff-count" class="bg-slate-700 text-slate-300 text-[10px] px-2 py-1 rounded-full font-bold">0 คน</span>
+                </div>
+                <div id="all-staff-scan-list" class="flex-grow overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                    </div>
+            </div>
         </div>
     </div>
-</nav>
 
-<main class="max-w-[1600px] mx-auto p-4">
-    <div id="content-dashboard" class="space-y-4">
-        <div class="flex flex-col border-b border-slate-700 pb-2">
-            <div class="flex items-center gap-3">
-                <h2 class="text-lg font-bold text-slate-200 uppercase tracking-widest">สรุปการเข้างานประจำวันที่</h2>
-                <div class="flex items-center gap-2 bg-slate-800/50 p-1 px-3 rounded-lg border border-slate-600">
-                    <input type="date" id="dashboard-date" onchange="renderDashboard()" class="bg-transparent text-sm font-bold text-emerald-400 outline-none [color-scheme:dark]">
-                </div>
-            </div>
-            <p class="text-[10px] text-slate-500 uppercase">Daily Attendance Overview</p>
-        </div>
-
-        <div class="dashboard-container">
-            <div class="attendance-col h-[650px]">
-                <div class="p-3 bg-emerald-50 border-b font-bold text-emerald-700 text-xs flex justify-between items-center">
-                    <span>มาปกติ (IN)</span>
-                    <span id="stat-present" class="bg-emerald-600 text-white px-2 py-0.5 rounded-md">0</span>
-                </div>
-                <div class="list-window flex-grow bg-slate-50 overflow-y-auto p-2 space-y-1" id="normal-list"></div>
-            </div>
-
-            <div class="attendance-col h-[650px]">
-                <div class="p-3 bg-amber-50 border-b font-bold text-amber-700 text-xs flex justify-between items-center">
-                    <span>มาสาย (IN)</span>
-                    <span id="stat-late" class="bg-amber-600 text-white px-2 py-0.5 rounded-md">0</span>
-                </div>
-                <div class="list-window flex-grow bg-slate-50 overflow-y-auto p-2 space-y-1" id="late-list-display"></div>
-            </div>
-
-            <div class="attendance-col h-[650px]">
-                <div class="p-3 bg-blue-50 border-b font-bold text-blue-700 text-xs flex justify-between items-center">
-                    <span>สแกนออก (OUT)</span>
-                    <span id="stat-out" class="bg-blue-600 text-white px-2 py-0.5 rounded-md">0</span>
-                </div>
-                <div class="list-window flex-grow bg-slate-50 overflow-y-auto p-2 space-y-1" id="out-list"></div>
-            </div>
-
-            <div class="attendance-col h-[650px]">
-                <div class="p-3 bg-rose-50 border-b font-bold text-rose-700 text-xs flex justify-between items-center">
-                    <span>ยังไม่สแกน/แจ้งลา</span>
-                    <span id="stat-absent" class="bg-rose-600 text-white px-2 py-0.5 rounded-md">0</span>
-                </div>
-                <div class="list-window flex-grow bg-slate-50 overflow-y-auto p-2 space-y-1" id="absent-list"></div>
-            </div>
-
-            <div class="upcoming-leave-col h-[650px]">
-                <div class="p-4 border-b border-slate-700 flex justify-between items-center">
-                    <h3 class="text-white font-bold text-[11px] uppercase tracking-wider">ลาล่วงหน้า</h3>
-                    <span id="count-upcoming" class="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">0</span>
-                </div>
-                <div class="list-window-scrollable flex-grow">
-                    <div id="upcoming-leave-list" class="scroll-content-active"></div>
-                </div>
-            </div>
-
-            <div class="staff-list-col h-[650px] p-4">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xs font-black text-emerald-400 uppercase">รายชื่อพนักงาน</h3>
-                    <span id="total-staff-count" class="text-emerald-400 text-lg font-bold">0 คน</span>
-                </div>
-                <div class="list-window-scrollable flex-grow">
-                    <div id="all-staff-scan-list" class="scroll-content-active"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="content-scan" class="hidden">
-        <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200">
+<div id="content-scan" class="hidden">
+        <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200 text-slate-800">
+            
             <div class="mb-4">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">📍 เลือกสถานที่ปฏิบัติงาน</label>
-                <select id="location-select" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold outline-none"></select>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">📍 เลือกสถานที่ปฏิบัติงาน</label>
+                <select id="location-select" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold outline-none ring-blue-500 focus:ring-2 transition-all">
+                </select>
             </div>
+
             <div class="relative aspect-video bg-slate-900 rounded-2xl overflow-hidden mb-4 border-4 border-slate-50 shadow-inner">
                 <video id="video" class="w-full h-full object-cover" autoplay muted playsinline></video>
                 <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
+                
                 <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div class="w-44 h-56 border-2 border-dashed border-emerald-400 rounded-[3.5rem] opacity-60 shadow-[0_0_0_999px_rgba(0,0,0,0.5)]"></div>
+                    <div class="absolute top-1/4 text-emerald-400 text-[10px] font-bold uppercase tracking-widest bg-slate-900/80 px-2 py-1 rounded">วางใบหน้าในกรอบ</div>
                 </div>
             </div>
+
             <div class="flex items-center space-x-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <img id="res-img" class="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-sm hidden">
-                <div id="res-img-placeholder" class="w-16 h-16 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400"><i data-lucide="user"></i></div>
-                <div>
-                    <h3 id="res-name" class="text-lg font-bold italic text-slate-800">พร้อมสแกน...</h3>
-                    <p id="res-id" class="text-blue-500 text-xs font-mono">STANDING BY</p>
+                <div id="res-img-placeholder" class="w-16 h-16 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400">
+                    <i data-lucide="user"></i>
+                </div>
+                <div class="overflow-hidden">
+                    <h3 id="res-name" class="text-lg font-bold italic text-slate-800 truncate leading-tight">พร้อมสแกน...</h3>
+                    <p id="res-id" class="text-blue-500 text-xs font-mono tracking-wider">STANDING BY</p>
                 </div>
             </div>
-            <div id="wrong-face-actions" class="hidden my-4">
-                <button onclick="resetAndGoBack()" class="w-full bg-rose-50 text-rose-600 py-3 rounded-xl font-bold text-sm border border-rose-200">ไม่ใช่ฉัน.. กลับไปเลือกชื่อใหม่</button>
+
+            <div id="wrong-face-actions" class="hidden my-4 text-center animate-bounce">
+                <button onclick="resetAndGoBack()" class="w-full bg-rose-50 text-rose-600 py-3 rounded-xl font-bold text-sm border border-rose-200 shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="x-circle" class="w-4 h-4"></i>
+                    ไม่ใช่ฉัน.. กลับไปเลือกชื่อใหม่
+                </button>
             </div>
             <div class="grid grid-cols-2 gap-3 mt-4">
-                <button id="btn-in" onclick="finishAttendance('IN')" class="bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg">บันทึกเข้างาน (IN)</button>
-                <button id="btn-out" onclick="finishAttendance('OUT')" class="bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg">บันทึกออกงาน (OUT)</button>
+                <button id="btn-in" onclick="finishAttendance('IN')" class="bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all hover:bg-emerald-700">บันทึกเข้างาน (IN)</button>
+                <button id="btn-out" onclick="finishAttendance('OUT')" class="bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all hover:bg-blue-700">บันทึกออกงาน (OUT)</button>
             </div>
         </div>
     </div>
 
     <div id="content-approve" class="hidden space-y-4">
+        <div class="text-center pb-2">
+            <h3 class="text-xl font-bold italic text-slate-200">Pending Approvals</h3>
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest">รายการรออนุมัติการลา</p>
+        </div>
         <div id="pending-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
     </div>
 
@@ -223,12 +316,12 @@
 
     <div id="content-manage" class="hidden space-y-4">
         <div class="flex justify-between items-center text-slate-200">
-            <h2 class="text-xl font-bold uppercase">Employee List</h2>
-            <button onclick="openAddModal()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold">+ เพิ่มพนักงาน</button>
+            <h2 class="text-xl font-bold uppercase tracking-tighter">Employee List</h2>
+            <button onclick="openAddModal()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-md">+ เพิ่มพนักงาน</button>
         </div>
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <table class="w-full text-left text-sm text-slate-800">
-                <thead class="bg-slate-50 font-bold text-slate-400">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-800 min-w-[600px]">
+                <thead class="bg-slate-50 text-slate-400 font-bold">
                     <tr><th class="p-4">รูป</th><th class="p-4">รหัส</th><th class="p-4">ชื่อ</th><th class="p-4">แผนก</th><th class="p-4 text-center">จัดการ</th></tr>
                 </thead>
                 <tbody id="student-table-body" class="divide-y divide-slate-100"></tbody>
@@ -507,30 +600,29 @@ async function approveAction(id, date) {
 
     // --- ส่วน Logic พื้นฐาน (คงเดิม) ---
 function switchTab(tab) {
-    // 1 & 2. เช็คเงื่อนไข Scan และ Login (คงเดิม)
+    // 1. ตรวจสอบ: ถ้าจะสแกนแต่ยังไม่ได้เลือกชื่อพนักงาน
     if (tab === 'scan' && !window.targetStaff) {
         alert("⚠️ กรุณากดเลือกรายชื่อพนักงานที่ 'รายชื่อพนักงาน' ก่อนเข้าหน้าสแกนค่ะ");
+        const dashContent = document.getElementById('content-dashboard');
+        if (dashContent && dashContent.classList.contains('hidden')) {
+            switchTab('dashboard'); 
+        }
         return; 
     }
+
+    // 2. ตรวจสอบการ Login สำหรับหน้าจัดการ
     if ((tab === 'approve' || tab === 'manage') && !isLoggedIn) { 
         pendingAction = tab; 
         document.getElementById('login-modal').classList.remove('hidden'); 
         return; 
     }
 
-    // --- 3. แก้ไขจุดสลับหน้าจอ (แก้ปัญหาหน้าหาย) ---
-    // สั่งซ่อนทุก div ที่เป็นลูกโดยตรงของ main
-    document.querySelectorAll('main > div').forEach(div => {
-        div.classList.add('hidden');
-    });
-
-    // แสดงหน้าที่เลือก (โดยใช้ ID content-...)
+    // 3. สลับการแสดงผลหน้าเนื้อหา (Hidden/Show)
+    document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
     const targetContent = document.getElementById(`content-${tab}`);
-    if (targetContent) {
-        targetContent.classList.remove('hidden');
-    }
+    if (targetContent) targetContent.classList.remove('hidden');
 
-    // 4. ปรับสีปุ่มเมนูให้ Active (คงเดิม)
+    // 4. ปรับสีปุ่มเมนูให้ Active
     document.querySelectorAll('nav button').forEach(btn => {
         btn.classList.remove('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
         btn.classList.add('tab-inactive');
@@ -541,10 +633,18 @@ function switchTab(tab) {
         activeTab.classList.remove('tab-inactive');
     }
 
-    // 5. จัดการระบบกล้อง (คงเดิม)
+    // 5. จัดการระบบกล้องและ "ล็อกปุ่มบันทึก" ทันทีที่เข้าหน้าสแกน
     if (tab === 'scan') { 
+        // --- ส่วนที่เพิ่มเข้าไปใหม่ ---
         document.getElementById('btn-in').disabled = true;
         document.getElementById('btn-out').disabled = true;
+        document.getElementById('btn-in').style.opacity = "0.5";
+        document.getElementById('btn-out').style.opacity = "0.5";
+        
+        const wrongAction = document.getElementById('wrong-face-actions');
+        if(wrongAction) wrongAction.classList.add('hidden');
+        // ------------------------
+
         startCamera('video'); 
         setTimeout(startDetector, 1000); 
     } else {
@@ -552,11 +652,6 @@ function switchTab(tab) {
         if(window.detectorInterval) clearInterval(window.detectorInterval);
     }
 
-    // โหลดข้อมูลใหม่เมื่อกลับมาหน้า Dashboard
-    if (tab === 'dashboard') {
-        renderDashboard();       // ฟังก์ชันเดิมของคุณ
-        renderUpcomingLeaves();  // ฟังก์ชันใหม่ที่เพิ่มมา
-    }
     if (tab === 'approve') renderApprovalList();
 }
 
@@ -1087,52 +1182,6 @@ function resetAndGoBack() {
     stopCamera('video'); // ปิดกล้อง
     if (window.detectorInterval) clearInterval(window.detectorInterval); // หยุดตัวตรวจจับหน้า
     switchTab('dashboard'); // กลับหน้าหลัก
-}
-
-    // ฟังก์ชันสำหรับแสดงผลรายงานที่ 5
-// ฟังก์ชันสำหรับดึงข้อมูลและแสดงผลลาล่วงหน้า
-function renderUpcomingLeaves() {
-    const listEl = document.getElementById('upcoming-leave-list');
-    const badge = document.getElementById('count-upcoming');
-    
-    if (!listEl) return;
-
-    // เรียกฟังก์ชันจาก Code.gs
-    google.script.run.withSuccessHandler(function(result) {
-        if (result.success && result.data) {
-            badge.innerText = result.data.length;
-            
-            if (result.data.length === 0) {
-                listEl.innerHTML = '<div class="text-slate-500 text-center py-10 text-[10px]">ไม่มีข้อมูลการลาล่วงหน้า</div>';
-                return;
-            }
-
-            let html = '';
-            result.data.forEach(item => {
-                html += `
-                    <div class="leave-card bg-slate-800/60 p-2 rounded-xl border border-slate-700 shadow-sm mb-2">
-                        <div class="flex items-center gap-2">
-                            <img src="${item.image || 'https://via.placeholder.com/40'}" class="w-8 h-8 rounded-full object-cover border border-slate-600">
-                            <div class="overflow-hidden">
-                                <div class="text-white text-[11px] font-bold truncate">${item.name}</div>
-                                <div class="text-slate-400 text-[9px]">${item.type}</div>
-                            </div>
-                        </div>
-                        <div class="mt-1 pt-1 border-t border-slate-700/50 flex justify-between items-center text-[10px]">
-                            <span class="text-blue-400 font-mono">🗓 ${item.date}</span>
-                            <span class="text-slate-500 italic">Appr: ${item.approvedBy || '-'}</span>
-                        </div>
-                    </div>`;
-            });
-
-            listEl.innerHTML = html;
-
-            // ทำ Auto-scroll (ถ้ามีข้อมูลเยอะ)
-            if (result.data.length > 5) {
-                listEl.innerHTML += listEl.innerHTML; // Clone ข้อมูลเพื่อให้ Scroll ต่อเนื่อง
-            }
-        }
-    }).handleGetUpcomingLeaves(); // ตรวจสอบว่าใน Code.gs ของคุณมีฟังก์ชันชื่อนี้
 }
 </script>
 </body>
