@@ -1130,12 +1130,15 @@ function renderUpcomingLeaves(leaves, selectedDate) {
   const container = document.getElementById('upcoming-leave-list');
   container.innerHTML = '';
   
-  // กรอง: 1. ต้อง Approved 2. ต้องเป็นวันที่มากกว่าวันที่เลือก (ไม่เอาวันนี้)
-  const upcoming = leaves.filter(row => {
-    const leaveDate = new Date(row.Date);
-    const targetDate = new Date(selectedDate);
-    return row.Status === 'Approved' && leaveDate > targetDate;
-  });
+// ปรับส่วนการกรองในฟังก์ชัน renderUpcomingLeaves
+const upcoming = leaves.filter(row => {
+  const leaveDate = new Date(row.Date);
+  const targetDate = new Date(selectedDate);
+  
+  // แก้ไข: ให้แสดงเฉพาะวันที่ "มากกว่า" วันที่เลือก (ล่วงหน้าจริงๆ)
+  // และรองรับกรณีที่ Approved By อาจจะยังไม่มีค่า (ใช้ '-' แทน)
+  return (row.Status === 'Approved') && leaveDate > targetDate;
+});
 
   document.getElementById('stat-upcoming').textContent = upcoming.length;
 
@@ -1159,22 +1162,32 @@ function renderUpcomingLeaves(leaves, selectedDate) {
   });
 }
 
-// ระบบ Auto-Scroll (เพิ่มฟังก์ชันนี้เข้าไปในสคริปต์ของคุณ)
 function initAutoScroll() {
   const sections = document.querySelectorAll('.auto-scroll-section');
   sections.forEach(section => {
-    let scrollSpeed = 0.5;
+    let scrollSpeed = 0.5; // ความเร็วในการเลื่อน
     function scroll() {
       if (section.scrollHeight > section.clientHeight) {
         section.scrollTop += scrollSpeed;
+        // เมื่อเลื่อนถึงล่างสุด
         if (section.scrollTop + section.clientHeight >= section.scrollHeight - 1) {
-          setTimeout(() => { section.scrollTop = 0; }, 2000); // หยุดพักเมื่อถึงล่างสุด 2 วิ
+          // หยุดรอ 2 วินาทีให้คนอ่านก่อน แล้วค่อยกลับไปเริ่มใหม่
+          clearInterval(scrollInterval);
+          setTimeout(() => {
+            section.scrollTop = 0;
+            startInterval();
+          }, 2000);
         }
       }
     }
-    setInterval(scroll, 50);
+    let scrollInterval;
+    const startInterval = () => { scrollInterval = setInterval(scroll, 50); };
+    startInterval();
   });
 }
+
+// เรียกใช้งานหลังจาก Render ข้อมูลเสร็จ
+setTimeout(initAutoScroll, 2000);
 </script>
 </body>
 </html>
