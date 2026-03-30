@@ -878,10 +878,23 @@ function getDistance(lat1, lon1, lat2, lon2) {
         document.getElementById('leave-date').value = new Date().toISOString().split('T')[0];
     }
 
-    function renderStudentTable() {
-        document.getElementById('student-table-body').innerHTML = students.map(s => `<tr><td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td><td class="p-4 font-mono text-xs">${s.studentid}</td><td class="p-4 font-bold text-slate-700">${s.name}</td><td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td><td class="p-4 text-center"><button onclick="deleteStudent(${s.rowIndex})" class="text-rose-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td></tr>`).join('');
-        lucide.createIcons();
-    }
+function renderStudentTable() {
+    document.getElementById('student-table-body').innerHTML = students.map(s => `
+        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+            <td class="p-4">
+                <img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border shadow-sm">
+            </td>
+            <td class="p-4 font-mono text-xs text-slate-500">${s.studentid}</td>
+            <td class="p-4 font-bold text-slate-700">${s.name}</td>
+            <td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td>
+            <td class="p-4 text-center">
+                <button onclick="confirmDeleteStudent(${s.rowindex || s.rowIndex}, '${s.name}')" class="text-rose-500 hover:scale-110 transition-transform">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                </button>
+            </td>
+        </tr>`).join('');
+    lucide.createIcons();
+}
 
     // --- วางตัวแปรไว้ด้านบนสุดของกลุ่มฟังก์ชัน ---
     let croppedImg = null; 
@@ -1272,6 +1285,29 @@ function updateLeaveDisplay(allLeaves, selectedDate) {
   upcoming.forEach(item => {
     container.innerHTML += renderLeaveCard(item);
   });
+}
+    function confirmDeleteStudent(rowIndex, name) {
+    if (confirm(`⚠️ คุณแน่ใจใช่ไหมที่จะลบรายชื่อ: "${name}" ?\nการลบนี้จะไม่สามารถย้อนกลับได้`)) {
+        // ส่งคำสั่งไปที่ doPost ใน Code.gs
+        fetch(scriptUrl, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'deleteStudent',
+                data: { rowIndex: rowIndex }
+            })
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                alert('✅ ลบข้อมูลพนักงานเรียบร้อยแล้ว');
+                // เรียกฟังก์ชันโหลดข้อมูลใหม่เพื่ออัปเดตหน้าจอ
+                initData(); 
+            } else {
+                alert('❌ เกิดข้อผิดพลาด: ' + (res.error || 'ลบไม่ได้'));
+            }
+        })
+        .catch(err => alert('❌ Error: ' + err));
+    }
 }
 </script>
 </body>
