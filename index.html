@@ -136,46 +136,47 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-6 gap-3">
-            <div class="bg-slate-900/50 rounded-2xl shadow-xl border border-slate-700 overflow-hidden flex flex-col h-[600px]">
-                <div class="p-2 bg-emerald-500/10 border-b border-emerald-500/20 font-bold text-emerald-400 text-[11px] flex justify-between items-center">
-                    <span>มาปกติ (IN)</span>
-                    <span id="stat-present" class="bg-emerald-600 text-white px-2 py-0.5 rounded-lg font-black text-[10px]">0</span>
-                </div>
-                <div class="flex-grow overflow-y-auto p-2 space-y-2 custom-scrollbar auto-scroll-section" id="normal-list"></div>
-            </div>
+<div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+    <div class="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden flex flex-col h-[600px]">
+        <div class="p-2 bg-emerald-500/10 text-emerald-400 font-bold text-[11px] flex justify-between border-b border-emerald-500/20">
+            <span>มาปกติ (IN)</span>
+            <span id="stat-present" class="bg-emerald-600 text-white px-2 py-0.5 rounded-lg text-[10px]">0</span>
+        </div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section" id="normal-list"></div>
+    </div>
 
-            <div class="bg-slate-900/50 rounded-2xl shadow-xl border border-slate-700 overflow-hidden flex flex-col h-[600px]">
-                <div class="p-2 bg-amber-500/10 border-b border-amber-500/20 font-bold text-amber-400 text-[11px] flex justify-between items-center">
-                    <span>มาสาย (IN)</span>
-                    <span id="stat-late" class="bg-amber-600 text-white px-2 py-0.5 rounded-lg font-black text-[10px]">0</span>
-                </div>
-                <div class="flex-grow overflow-y-auto p-2 space-y-2 custom-scrollbar auto-scroll-section" id="late-list-display"></div>
-            </div>
+    <div class="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden flex flex-col h-[600px]">
+        <div class="p-2 bg-amber-500/10 text-amber-400 font-bold text-[11px] flex justify-between border-b border-amber-500/20">
+            <span>มาสาย (IN)</span>
+            <span id="stat-late" class="bg-amber-600 text-white px-2 py-0.5 rounded-lg text-[10px]">0</span>
+        </div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section" id="late-list-display"></div>
+    </div>
 
-            <div class="bg-slate-900/50 rounded-2xl shadow-xl border border-slate-700 overflow-hidden flex flex-col h-[600px]">
-                <div class="p-2 bg-blue-500/10 border-b border-blue-500/20 font-bold text-blue-400 text-[11px] flex justify-between items-center">
-                    <span>สแกนออก (OUT)</span>
-                    <span id="stat-out" class="bg-blue-600 text-white px-2 py-0.5 rounded-lg font-black text-[10px]">0</span>
-                </div>
-                <div class="flex-grow overflow-y-auto p-2 space-y-2 custom-scrollbar auto-scroll-section" id="out-list"></div>
-            </div>
+    <div class="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden flex flex-col h-[600px]">
+        <div class="p-2 bg-blue-500/10 text-blue-400 font-bold text-[11px] flex justify-between border-b border-blue-500/20">
+            <span>สแกนออก (OUT)</span>
+            <span id="stat-out" class="bg-blue-600 text-white px-2 py-0.5 rounded-lg text-[10px]">0</span>
+        </div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section" id="out-list"></div>
+    </div>
 
-            <div class="bg-slate-900/50 rounded-2xl shadow-xl border border-slate-700 overflow-hidden flex flex-col h-[600px]">
-                <div class="p-2 bg-rose-500/10 border-b border-rose-500/20 font-bold text-rose-400 text-[11px] flex justify-between items-center">
-                    <span>ยังไม่สแกน/ลา</span>
-                    <span id="stat-absent" class="bg-rose-600 text-white px-2 py-0.5 rounded-lg font-black text-[10px]">0</span>
-                </div>
-                <div class="flex-grow overflow-y-auto p-2 space-y-2 custom-scrollbar auto-scroll-section" id="absent-list"></div>
-            </div>
+    <div class="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden flex flex-col h-[600px]">
+        <div class="p-2 bg-rose-500/10 text-rose-400 font-bold text-[11px] flex justify-between border-b border-rose-500/20">
+            <span>ยังไม่สแกน/ลา</span>
+            <span id="stat-absent" class="bg-rose-600 text-white px-2 py-0.5 rounded-lg text-[10px]">0</span>
+        </div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section" id="absent-list"></div>
+    </div>
 
-            <div class="bg-slate-900 rounded-2xl shadow-xl border border-slate-700 overflow-hidden flex flex-col h-[600px]">
-                <div class="p-2 bg-slate-800 border-b border-slate-700 font-bold text-indigo-400 text-[11px] flex justify-between items-center">
-                    <span>ลาล่วงหน้า (LEAVE)</span>
-                    <span id="stat-upcoming" class="bg-indigo-600 text-white px-2 py-0.5 rounded-lg font-black text-[10px]">0</span>
-                </div>
-                <div class="flex-grow overflow-y-auto p-2 space-y-2 custom-scrollbar auto-scroll-section" id="upcoming-leave-list"></div>
-            </div>
+    <div class="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden flex flex-col h-[600px]">
+        <div class="p-2 bg-slate-800 text-indigo-400 font-bold text-[11px] flex justify-between border-b border-slate-700">
+            <span>ลาล่วงหน้า (LEAVE)</span>
+            <span id="stat-upcoming" class="bg-indigo-600 text-white px-2 py-0.5 rounded-lg text-[10px]">0</span>
+        </div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section" id="upcoming-leave-list"></div>
+    </div>
+</div>
 
             <div class="bg-slate-800/40 rounded-[2rem] p-3 border border-slate-600 shadow-2xl flex flex-col h-[600px]">
                 <div class="flex justify-between items-center mb-3 px-1">
@@ -1162,32 +1163,43 @@ const upcoming = leaves.filter(row => {
   });
 }
 
+// 1. ฟังก์ชันสร้างการ์ดคนลา (รูปวงกลม + ค.ศ. + Approved By)
+function renderLeaveCard(data) {
+  const d = new Date(data.Date);
+  const formattedDate = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`; // จัดรูปแบบ ค.ศ.
+
+  return `
+    <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-2 flex items-center gap-3 shadow-sm">
+      <img src="${getStaffPhoto(data.Name)}" class="w-10 h-10 rounded-full border-2 border-slate-600 object-cover shadow-md">
+      <div class="flex-grow min-w-0">
+        <div class="text-[12px] font-bold text-slate-100 truncate">${data.Name}</div>
+        <div class="flex justify-between items-end mt-1">
+          <div class="flex flex-col">
+            <span class="text-[9px] text-amber-400 font-semibold">${data.Type}</span>
+            <span class="text-[8px] text-slate-400">Approved By: ${data.ApprovedBy || '-'}</span>
+          </div>
+          <span class="text-[10px] font-black text-slate-300">${formattedDate}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+// 2. ฟังก์ชันสั่งให้เลื่อนอัตโนมัติ (Auto-Scroll)
 function initAutoScroll() {
   const sections = document.querySelectorAll('.auto-scroll-section');
   sections.forEach(section => {
-    let scrollSpeed = 0.5; // ความเร็วในการเลื่อน
+    let scrollSpeed = 0.5;
     function scroll() {
       if (section.scrollHeight > section.clientHeight) {
         section.scrollTop += scrollSpeed;
-        // เมื่อเลื่อนถึงล่างสุด
         if (section.scrollTop + section.clientHeight >= section.scrollHeight - 1) {
-          // หยุดรอ 2 วินาทีให้คนอ่านก่อน แล้วค่อยกลับไปเริ่มใหม่
-          clearInterval(scrollInterval);
-          setTimeout(() => {
-            section.scrollTop = 0;
-            startInterval();
-          }, 2000);
+          setTimeout(() => { section.scrollTop = 0; }, 2000); // ถึงล่างสุดหยุด 2 วิ แล้วไปเริ่มใหม่
         }
       }
     }
-    let scrollInterval;
-    const startInterval = () => { scrollInterval = setInterval(scroll, 50); };
-    startInterval();
+    setInterval(scroll, 50);
   });
 }
-
-// เรียกใช้งานหลังจาก Render ข้อมูลเสร็จ
-setTimeout(initAutoScroll, 2000);
 </script>
 </body>
 </html>
