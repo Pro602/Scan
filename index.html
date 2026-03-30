@@ -161,71 +161,71 @@
             <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Daily Attendance Overview</p>
         </div>
 
-<div class="dashboard-container">
-            
-            <div class="attendance-col h-[650px] flex flex-col overflow-hidden shadow-xl border border-slate-200 bg-white">
-                <div class="p-3 bg-emerald-50 border-b font-bold text-emerald-700 text-xs flex justify-between items-center">
-                    <span>มาปกติ (IN)</span>
-                    <span id="stat-present" class="bg-emerald-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
-                </div>
-                <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
-                    <div id="normal-list" class="p-2 space-y-1"></div>
-                </div>
+<div id="content-dashboard">
+    <div class="dashboard-container">
+        <div class="attendance-col h-[650px] flex flex-col overflow-hidden shadow-xl border border-slate-200 bg-white">
+            <div class="p-3 bg-emerald-50 border-b font-bold text-emerald-700 text-xs flex justify-between items-center">
+                <span>มาปกติ (IN)</span>
+                <span id="stat-present" class="bg-emerald-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
             </div>
+            <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
+                <div id="normal-list" class="p-2 space-y-1"></div>
+            </div>
+        </div>
 
-            <div class="attendance-col h-[650px] flex flex-col overflow-hidden shadow-xl border border-slate-200 bg-white">
-                <div class="p-3 bg-amber-50 border-b font-bold text-amber-700 text-xs flex justify-between items-center">
-                    <span>มาสาย (IN)</span>
-                    <span id="stat-late" class="bg-amber-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
-                </div>
-                <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
-                    <div id="late-list-display" class="p-2 space-y-1"></div>
-                </div>
+        <div class="attendance-col h-[650px] flex flex-col overflow-hidden shadow-xl border border-slate-200 bg-white">
+            <div class="p-3 bg-amber-50 border-b font-bold text-amber-700 text-xs flex justify-between items-center">
+                <span>มาสาย (IN)</span>
+                <span id="stat-late" class="bg-amber-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
             </div>
+            <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
+                <div id="late-list-display" class="p-2 space-y-1"></div>
+            </div>
+        </div>
 
-            <div class="attendance-col h-[650px] flex flex-col overflow-hidden shadow-xl border border-slate-200 bg-white">
-                <div class="p-3 bg-blue-50 border-b font-bold text-blue-700 text-xs flex justify-between items-center">
-                    <span>สแกนออก (OUT)</span>
-                    <span id="stat-out" class="bg-blue-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
-                </div>
-                <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
-                    <div id="out-list" class="p-2 space-y-1"></div>
-                </div>
+        <div class="attendance-col h-[650px] flex flex-col overflow-hidden shadow-xl border border-slate-200 bg-white">
+            <div class="p-3 bg-blue-50 border-b font-bold text-blue-700 text-xs flex justify-between items-center">
+                <span>สแกนออก (OUT)</span>
+                <span id="stat-out" class="bg-blue-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
             </div>
+            <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
+                <div id="out-list" class="p-2 space-y-1"></div>
+            </div>
+        </div>
 
-            <div class="attendance-col h-[650px] flex flex-col overflow-hidden shadow-xl border border-slate-200 bg-white">
-                <div class="p-3 bg-rose-50 border-b font-bold text-rose-700 text-xs flex justify-between items-center">
-                    <span>ยังไม่สแกน/แจ้งลา</span>
-                    <span id="stat-absent" class="bg-rose-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
-                </div>
-                <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
-                    <div id="absent-list" class="p-2 space-y-1"></div>
-                </div>
+        <div class="attendance-col h-[650px] flex flex-col overflow-hidden shadow-xl border border-slate-200 bg-white">
+            <div class="p-3 bg-rose-50 border-b font-bold text-rose-700 text-xs flex justify-between items-center">
+                <span>ยังไม่สแกน/แจ้งลา</span>
+                <span id="stat-absent" class="bg-rose-600 text-white px-2.5 py-0.5 rounded-lg text-sm font-black shadow-sm">0</span>
             </div>
+            <div class="list-window flex-grow bg-slate-50 overflow-y-auto">
+                <div id="absent-list" class="p-2 space-y-1"></div>
+            </div>
+        </div>
 
-            <div class="upcoming-leave-col h-[650px] flex flex-col shadow-2xl">
-                <div class="p-3 border-b border-slate-700 flex justify-between items-center">
-                    <h3 class="text-white font-bold text-[11px] uppercase tracking-wider"><i class="fas fa-calendar-alt mr-2 text-blue-400"></i>ลาล่วงหน้า</h3>
-                    <span id="count-upcoming" class="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">0</span>
-                </div>
-                <div class="list-window-scrollable flex-grow">
-                    <div id="upcoming-leave-list" class="scroll-content-active">
-                        </div>
-                </div>
+        <div class="upcoming-leave-col h-[650px] flex flex-col shadow-2xl">
+            <div class="p-3 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="text-white font-bold text-[11px] uppercase tracking-wider"><i class="fas fa-calendar-alt mr-2 text-blue-400"></i>ลาล่วงหน้า</h3>
+                <span id="count-upcoming" class="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">0</span>
             </div>
+            <div class="list-window-scrollable flex-grow">
+                <div id="upcoming-leave-list" class="scroll-content-active"></div>
+            </div>
+        </div>
 
-            <div class="staff-list-col h-[650px] flex flex-col shadow-2xl p-4">
-                <div class="flex justify-between items-center mb-4 px-2">
-                    <h3 class="text-xs font-black text-emerald-400 flex items-center gap-2 uppercase">
-                        <i data-lucide="users" class="w-4 h-4"></i> รายชื่อพนักงาน
-                    </h3>
-                    <span id="total-staff-count" class="bg-slate-700 text-emerald-400 text-[10px] px-2 py-1 rounded-full font-bold">0 คน</span>
-                </div>
-                <div class="list-window-scrollable flex-grow">
-                    <div id="all-staff-scan-list" class="scroll-content-active">
-                        </div>
-                </div>
+        <div class="staff-list-col h-[650px] flex flex-col shadow-2xl p-4">
+            <div class="flex justify-between items-center mb-4 px-2">
+                <h3 class="text-xs font-black text-emerald-400 flex items-center gap-2 uppercase">
+                    <i data-lucide="users" class="w-4 h-4"></i> รายชื่อพนักงาน
+                </h3>
+                <span id="total-staff-count" class="bg-slate-700 text-emerald-400 text-[10px] px-2 py-1 rounded-full font-bold">0 คน</span>
             </div>
+            <div class="list-window-scrollable flex-grow">
+                <div id="all-staff-scan-list" class="scroll-content-active"></div>
+            </div>
+        </div>
+    </div> 
+</div>
 
 <div id="content-scan" class="hidden">
         <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200 text-slate-800">
