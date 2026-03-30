@@ -1165,14 +1165,16 @@ const upcoming = leaves.filter(row => {
 // 1. แก้ไขรูปแบบการ์ดลาล่วงหน้า (ดึง Approved By และเปลี่ยนเป็น ค.ศ.)
 function renderLeaveCard(item) {
   const d = new Date(item.Date);
-  // บังคับรูปแบบวันที่เป็น ค.ศ. (DD/MM/YYYY)
+  // บังคับรูปแบบวันที่เป็น ค.ศ. (วัน/เดือน/ปี)
   const formattedDate = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
 
   return `
-    <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-2 flex items-center gap-3 mb-2">
-      <img src="${getStaffPhoto(item.Name)}" class="w-10 h-10 rounded-full border-2 border-slate-600 object-cover">
+    <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-2 flex items-center gap-3 mb-2 shadow-sm">
+      <img src="${getStaffPhoto(item.Name)}" class="w-10 h-10 rounded-full border-2 border-slate-600 object-cover shadow-md">
+      
       <div class="flex-grow min-w-0">
         <div class="text-[12px] font-bold text-slate-100 truncate">${item.Name}</div>
+        
         <div class="flex justify-between items-end mt-1">
           <div class="flex flex-col">
             <span class="text-[9px] text-amber-400 font-semibold">${item.Type}</span>
@@ -1181,7 +1183,8 @@ function renderLeaveCard(item) {
           <span class="text-[10px] font-black text-slate-300">${formattedDate}</span>
         </div>
       </div>
-    </div>`;
+    </div>
+  `;
 }
 
 // 3. ระบบเลื่อนอัตโนมัติ (ใส่ไว้ท้ายสุดของ Script)
@@ -1204,20 +1207,26 @@ setTimeout(startAutoScroll, 2000);
 // ปรับปรุงฟังก์ชันกรองข้อมูลลาล่วงหน้า
 function updateLeaveDisplay(allLeaves, selectedDate) {
   const container = document.getElementById('upcoming-leave-list');
+  if (!container) return;
+  
   container.innerHTML = '';
   const targetDate = new Date(selectedDate);
+  targetDate.setHours(0, 0, 0, 0); // ตั้งค่าเวลาเป็นศูนย์เพื่อการเปรียบเทียบที่แม่นยำ
 
+  // กรองข้อมูล: ต้องเป็น Approved และวันที่ต้องเท่ากับหรือมากกว่าวันที่เลือก
   const upcoming = allLeaves.filter(row => {
     const leaveDate = new Date(row.Date);
-    // เปลี่ยนจาก > เป็น >= เพื่อให้แสดงรายการของวันนี้ด้วย
-    // และต้องมีสถานะเป็น Approved เท่านั้น
+    leaveDate.setHours(0, 0, 0, 0);
     return row.Status === 'Approved' && leaveDate >= targetDate;
   });
 
-  document.getElementById('stat-upcoming').textContent = upcoming.length;
-  
+  // อัปเดตตัวเลขจำนวนคนลา
+  const statElement = document.getElementById('stat-upcoming');
+  if (statElement) statElement.textContent = upcoming.length;
+
+  // นำข้อมูลไปแสดงผลด้วยรูปแบบการ์ดที่สวยงาม
   upcoming.forEach(item => {
-    container.innerHTML += renderLeaveCard(item); 
+    container.innerHTML += renderLeaveCard(item);
   });
 }
 </script>
