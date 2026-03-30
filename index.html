@@ -490,6 +490,7 @@ function renderDashboard() {
         setTimeout(() => { lucide.createIcons(); }, 150);
     }
 }
+    
     // --- ส่วนงานจัดการการอนุมัติ ---
     function renderApprovalList() {
         const container = document.getElementById('pending-list');
@@ -1127,16 +1128,16 @@ function resetAndGoBack() {
 // ฟังก์ชันสำหรับ Render รายการลาล่วงหน้า
 function renderUpcomingLeaves(allLeaves, allStaff) {
     const upcomingContainer = document.getElementById('upcoming-leave-list');
-    if(!upcomingContainer) return;
+    const statUpcoming = document.getElementById('stat-upcoming');
+    if(!upcomingContainer || !statUpcoming) return;
 
-    // ดึงวันที่จากปฏิทินในหน้าจอ
     const dateInput = document.getElementById('dashboard-date').value;
     const today = new Date(dateInput);
     today.setHours(0, 0, 0, 0);
 
     upcomingContainer.innerHTML = '';
-    
-    // กรองข้อมูลเฉพาะที่ Approved และเป็นวันที่เลือกหรือวันถัดไป
+    let count = 0;
+
     const filteredLeaves = allLeaves.filter(row => {
         const lDate = new Date(row.Date || row.date);
         lDate.setHours(0, 0, 0, 0);
@@ -1147,14 +1148,14 @@ function renderUpcomingLeaves(allLeaves, allStaff) {
     filteredLeaves.forEach(leave => {
         const s = allStaff.find(x => String(x.studentid) === String(leave.id || leave.StudentID));
         if (s) {
+            count++;
             const d = new Date(leave.Date || leave.date);
             const dStr = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-            
-            // ดึงชื่อ Approved By จากข้อมูลใน Sheet (คอลัมน์ G)
+            // ดึงชื่อ Approved By มาแสดงผล
             const approvedBy = leave.ApprovedBy || leave.approvedby || '-';
 
             upcomingContainer.innerHTML += `
-                <div class="flex items-center justify-between bg-slate-800/40 p-2 rounded-xl border border-white/5 mb-2 shadow-sm">
+                <div class="flex items-center justify-between bg-slate-800/40 p-2 rounded-xl border border-white/5 mb-2 shadow-sm transition-all hover:bg-slate-700/50">
                     <div class="flex items-center gap-3 min-w-0 flex-1">
                         <img src="${s.imagedatabase64}" class="w-9 h-9 rounded-full object-cover border-2 border-indigo-500/30">
                         <div class="overflow-hidden leading-tight">
@@ -1162,14 +1163,13 @@ function renderUpcomingLeaves(allLeaves, allStaff) {
                             <p class="text-[9px] text-slate-400 italic">Approved By: <span class="text-emerald-400 font-semibold">${approvedBy}</span></p>
                         </div>
                     </div>
-                    <div class="text-right min-w-[70px] ml-1">
-                        <p class="text-[9px] font-bold text-amber-400 leading-none mb-1 uppercase">${leave.Type || leave.type}</p>
+                    <div class="text-right min-w-[65px] ml-1">
+                        <p class="text-[9px] font-bold text-amber-400 leading-none mb-1">${leave.Type || leave.type}</p>
                         <p class="text-[10px] font-black text-white/90 tracking-tighter italic leading-none">${dStr}</p>
                     </div>
                 </div>`;
         }
     });
-}
     statUpcoming.innerText = count;
 }
 // 1. แก้ไขรูปแบบการ์ดลาล่วงหน้า (ดึง Approved By และเปลี่ยนเป็น ค.ศ.)
