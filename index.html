@@ -1147,7 +1147,7 @@ function renderUpcomingLeaves(allLeaves, allStaff) {
         const lStatus = (row.Status || row.status || "").toString().toLowerCase();
         
         // กรองเอาเฉพาะที่อนุมัติแล้ว และเป็นวันที่เลือกหรือวันถัดๆ ไป
-        return lStatus === 'approved' && lDate >= today;
+        return lStatus === 'approved' && lDate > today;
     });
 
     filteredLeaves.forEach(leave => {
