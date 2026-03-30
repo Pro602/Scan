@@ -326,6 +326,9 @@ async function loadAllData() {
     if (typeof renderStudentTable === 'function') renderStudentTable();
     
     renderDashboard();
+    // --- วางบรรทัดนี้ลงไปครับ ---
+    renderUpcomingLeaves(leaves, students); 
+    // -------------------------
     renderAllStaffForScan(); // บรรทัดนี้จะทำงานได้แล้ว
 }
 
@@ -449,6 +452,9 @@ function renderDashboard() {
     document.getElementById('stat-late').innerText = counts.late;
     document.getElementById('stat-out').innerText = counts.out;
     document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedInIds.size);
+    // --- วางบรรทัดนี้ลงไปครับ ---
+    renderUpcomingLeaves(leaves, students); 
+    // -------------------------
 
     if (typeof lucide !== 'undefined') {
         setTimeout(() => { lucide.createIcons(); }, 150);
@@ -475,24 +481,31 @@ function renderDashboard() {
 
 // วางทับของเดิมที่เป็นชื่อนี้ได้เลย
 async function approveAction(id, date) {
-    const approver = currentUserName || "Admin";
-    if(!confirm(`ยืนยันการอนุมัติโดยคุณ ${approver}?`)) return;
+    // ใช้ currentUserName ที่ได้จากการ Login (เช่น Weera, Jang)
+    const approver = (typeof currentUserName !== 'undefined' && currentUserName) ? currentUserName : "Admin";
+    
+    if(!confirm(`ยืนยันการอนุมัติรายการนี้ โดยคุณ ${approver}?`)) return;
 
     const res = await apiCall({ 
         action: 'approveLeave', 
         data: { 
             id: id, 
             date: date, 
-            approvedBy: approver // ส่งค่าชื่อไปที่ Google Sheets
+            approvedBy: approver 
         } 
     });
 
     if(res.success) { 
-        alert("อนุมัติสำเร็จ"); 
+        alert("✅ อนุมัติสำเร็จ"); 
+        // สำคัญ: โหลดข้อมูลใหม่จาก Sheets และวาดหน้าจอทั้งหมดใหม่ทันที
         await loadAllData(); 
         renderApprovalList(); 
+        // สั่งให้รายงานลาล่วงหน้าอัปเดตตัวเลขและรายชื่อใหม่ด้วย
+        if (typeof renderUpcomingLeaves === 'function') {
+            renderUpcomingLeaves(leaves, students);
+        }
     } else {
-        alert("ล้มเหลว");
+        alert("❌ อนุมัติล้มเหลว: " + (res.message || "ติดต่อแอดมิน"));
     }
 }
 
@@ -1081,49 +1094,48 @@ function resetAndGoBack() {
     if (window.detectorInterval) clearInterval(window.detectorInterval); // หยุดตัวตรวจจับหน้า
     switchTab('dashboard'); // กลับหน้าหลัก
 }
-    function renderUpcomingLeaves(allLeaves, allStaff) {
+
+function renderUpcomingLeaves(allLeaves, allStaff) {
     const upcomingContainer = document.getElementById('upcoming-leave-list');
     const statUpcoming = document.getElementById('stat-upcoming');
-    const today = new Date();
+    if(!upcomingContainer || !statUpcoming) return;
+
+    const dateInput = document.getElementById('dashboard-date').value;
+    const today = new Date(dateInput);
     today.setHours(0, 0, 0, 0);
 
     upcomingContainer.innerHTML = '';
     let count = 0;
 
-    // กรองข้อมูล: อนุมัติแล้ว และ วันที่ลา > วันนี้
+    // กรอง: สถานะคือ Approved และ วันลา > วันที่เลือกในหน้า Dashboard
     const filteredLeaves = allLeaves.filter(row => {
-        const leaveDate = new Date(row.Date);
-        return row.Status === 'Approved' && leaveDate > today;
+        const lDate = new Date(row.Date || row.date); // รองรับทั้ง D ตัวใหญ่และเล็ก
+        const lStatus = (row.Status || row.status || "").toString().toLowerCase();
+        return lStatus === 'approved' && lDate > today;
     });
 
     filteredLeaves.forEach(leave => {
-        const staff = allStaff.find(s => s.StudentID === leave.StudentID);
-        if (staff) {
+        // ค้นหาพนักงาน (ใช้ studentid ตัวเล็กตามที่ปรากฏใน Script หลัก)
+        const s = allStaff.find(x => String(x.studentid) === String(leave.id || leave.StudentID));
+        if (s) {
             count++;
-            const leaveDateFormatted = new Date(leave.Date).toLocaleDateString('th-TH');
-            
-            const card = `
-                <div class="bg-slate-800 border border-slate-700 p-2 rounded-xl flex flex-col gap-1 shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <img src="${staff.Image || 'https://via.placeholder.com/40'}" class="w-10 h-10 rounded-lg object-cover">
-                        <div class="overflow-hidden">
-                            <div class="text-[11px] font-bold text-blue-300 truncate">${staff.Name}</div>
-                            <div class="text-[9px] text-slate-400">${staff.Department}</div>
+            const dStr = new Date(leave.Date || leave.date).toLocaleDateString('th-TH');
+            upcomingContainer.innerHTML += `
+                <div class="flex items-center justify-between bg-white p-1 px-2 rounded-xl border border-slate-200 shadow-sm mb-0.5">
+                    <div class="flex items-center gap-2">
+                        <img src="${s.imagedatabase64}" class="w-8 h-8 rounded-lg object-cover border">
+                        <div>
+                            <p class="font-bold text-slate-700 text-[10px] leading-tight">${s.name}</p>
+                            <p class="text-[8px] text-slate-500 italic">${leave.ApprovedBy || leave.approvedby || '-'}</p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-1 mt-1 pt-1 border-t border-slate-700">
-                        <div class="text-[9px] text-slate-400">📅 ${leaveDateFormatted}</div>
-                        <div class="text-[9px] font-bold text-emerald-400 text-right">${leave.Type}</div>
+                    <div class="text-right">
+                        <p class="text-[9px] font-bold text-emerald-600">${leave.Type || leave.type}</p>
+                        <p class="text-[8px] text-slate-400 font-mono">${dStr}</p>
                     </div>
-                    <div class="text-[8px] text-slate-500 italic mt-1 text-right">
-                        Approved by: ${leave.ApprovedBy || '-'}
-                    </div>
-                </div>
-            `;
-            upcomingContainer.innerHTML += card;
+                </div>`;
         }
     });
-
     statUpcoming.innerText = count;
 }
 </script>
