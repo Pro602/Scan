@@ -1126,42 +1126,65 @@ function resetAndGoBack() {
 }
 
 // ฟังก์ชันสำหรับ Render รายการลาล่วงหน้า
-function renderUpcomingLeaves(leaves, selectedDate) {
-  const container = document.getElementById('upcoming-leave-list');
-  container.innerHTML = '';
-  
-// ปรับส่วนการกรองในฟังก์ชัน renderUpcomingLeaves
-const upcoming = leaves.filter(row => {
-  const leaveDate = new Date(row.Date);
-  const targetDate = new Date(selectedDate);
-  
-  // แก้ไข: ให้แสดงเฉพาะวันที่ "มากกว่า" วันที่เลือก (ล่วงหน้าจริงๆ)
-  // และรองรับกรณีที่ Approved By อาจจะยังไม่มีค่า (ใช้ '-' แทน)
-  return (row.Status === 'Approved') && leaveDate > targetDate;
-});
-
-  document.getElementById('stat-upcoming').textContent = upcoming.length;
-
-  upcoming.forEach(row => {
-    // จัดรูปแบบวันที่เป็น ค.ศ. ตามที่คุณต้องการ
-    const d = new Date(row.Date);
-    const dateStr = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+function renderUpcomingLeaves(allLeaves, allStaff) {
+    const upcomingContainer = document.getElementById('upcoming-leave-list');
+    const statUpcoming = document.getElementById('stat-upcoming');
     
-    container.innerHTML += `
-      <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-2 flex items-center gap-3">
-        <img src="${getStaffPhoto(row.Name)}" class="w-8 h-8 rounded-full border-2 border-indigo-500/30 object-cover">
-        <div class="flex-grow min-w-0">
-          <div class="text-[11px] font-bold text-slate-200 truncate">${row.Name}</div>
-          <div class="flex justify-between items-center mt-0.5">
-            <span class="text-[9px] text-indigo-400 font-medium">${row.Type} | ${dateStr}</span>
-            <span class="text-[8px] text-slate-500 bg-slate-700/50 px-1 rounded">By: ${row.ApprovedBy || '-'}</span>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-}
+    if(!upcomingContainer || !statUpcoming) return;
 
+    // ดึงวันที่จากตัวเลือกปฏิทินในหน้าจอ (เช่น 30/03/2026)
+    const dateInput = document.getElementById('dashboard-date').value;
+    const today = new Date(dateInput);
+    today.setHours(0, 0, 0, 0);
+
+    upcomingContainer.innerHTML = '';
+    let count = 0;
+
+    // กรองข้อมูล: สถานะ Approved และ วันที่ลา ต้องเท่ากับหรือมากกว่าวันที่เลือก (>=)
+    const filteredLeaves = allLeaves.filter(row => {
+        const lDate = new Date(row.Date || row.date);
+        lDate.setHours(0, 0, 0, 0);
+        const lStatus = (row.Status || row.status || "").toString().toLowerCase();
+        
+        // กรองเอาเฉพาะที่อนุมัติแล้ว และเป็นวันที่เลือกหรือวันถัดๆ ไป
+        return lStatus === 'approved' && lDate >= today;
+    });
+
+    filteredLeaves.forEach(leave => {
+        // ค้นหาข้อมูลพนักงานเพื่อดึงรูปภาพ
+        const s = allStaff.find(x => String(x.studentid) === String(leave.id || leave.StudentID));
+        
+        if (s) {
+            count++;
+            const d = new Date(leave.Date || leave.date);
+            
+            // แสดงรูปแบบวันที่เป็น ค.ศ. ตามปฏิทิน (เช่น 30/3/2026)
+            const dStr = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+            
+            // ดึงชื่อ Approved By จากคอลัมน์ G (ถ้าไม่มีให้แสดงเป็น -)
+            const approvedBy = leave.ApprovedBy || leave.approvedby || '-';
+
+            upcomingContainer.innerHTML += `
+                <div class="flex items-center justify-between bg-slate-800/60 p-2 rounded-xl border border-slate-700/50 mb-2 shadow-sm">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <img src="${s.imagedatabase64 || 'https://via.placeholder.com/40'}" 
+                             class="w-10 h-10 rounded-full object-cover border-2 border-slate-600 shadow-md">
+                        <div class="overflow-hidden">
+                            <p class="font-bold text-slate-100 text-[12px] truncate">${s.name}</p>
+                            <p class="text-[9px] text-slate-400">Approved By: <span class="text-emerald-400">${approvedBy}</span></p>
+                        </div>
+                    </div>
+                    <div class="text-right min-w-[75px] ml-2">
+                        <p class="text-[9px] font-bold text-amber-400 uppercase">${leave.Type || leave.type}</p>
+                        <p class="text-[10px] font-black text-slate-300 tracking-tighter">${dStr}</p>
+                    </div>
+                </div>`;
+        }
+    });
+
+    // อัปเดตตัวเลขแจ้งเตือนจำนวนคนลา
+    statUpcoming.innerText = count;
+}
 // 1. แก้ไขรูปแบบการ์ดลาล่วงหน้า (ดึง Approved By และเปลี่ยนเป็น ค.ศ.)
 function renderLeaveCard(item) {
   const d = new Date(item.Date);
