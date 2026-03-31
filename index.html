@@ -887,7 +887,6 @@ function renderStudentTable() {
             <td class="p-4 font-bold text-slate-700">${s.name}</td>
             <td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td>
             <td class="p-4 text-center">
-                /* ใช้ i + 2 แทนการเรียก rowIndex เพราะชัวร์กว่า (i เริ่มที่ 0 + หัวตาราง 1 แถว + แถวถัดไป = 2) */
                 <button onclick="deleteStudent(${i + 2}, \`${s.name}\`)" class="text-rose-500">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
