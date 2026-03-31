@@ -813,17 +813,31 @@ async function finishAttendance(type) {
             }
         }
 
-        const now = new Date();
+ const now = new Date();
         const timestamp = now.toISOString().slice(0, 10) + " " + now.toTimeString().split(' ')[0];
         
         let statusText = "";
         if (type === 'IN') {
-            const isLate = (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30));
-            statusText = isLate ? 'สาย' : 'มาปกติ';
+            // คำนวณเวลาเป็นนาทีเพื่อให้เช็คง่ายขึ้น
+            const currentMinutes = (now.getHours() * 60) + now.getMinutes();
+            
+            // เงื่อนไข 1: ช่วงเช้า ไม่เกิน 08:30 (8*60 + 30 = 510 นาที)
+            const isMorningNormal = currentMinutes <= 510;
+            
+            // เงื่อนไข 2: ช่วงบ่าย 12:00 - 13:00 (720 - 780 นาที)
+            const isAfternoonNormal = currentMinutes >= 900 && currentMinutes <= 960;
+
+            // ถ้าอยู่ในช่วงใดช่วงหนึ่งให้ถือว่า "ปกติ" นอกนั้นคือ "สาย"
+            if (isMorningNormal || isAfternoonNormal) {
+                statusText = 'ปกติ';
+            } else {
+                statusText = 'สาย';
+            }
         } else {
             statusText = 'ออกงาน';
         }
 
+        // ส่วนการเรียก apiCall และ alert ด้านล่างใช้ของเดิมได้เลยครับ
         const res = await apiCall({
             action: 'recordAttendanceUpdate', 
             data: [{
@@ -833,13 +847,14 @@ async function finishAttendance(type) {
                 timestamp: timestamp, 
                 location: `${currentLat},${currentLng}`,
                 location_name: selectedLocName, 
-                status: statusText,
+                status: statusText, // ส่งค่าที่คำนวณใหม่ไป
                 type: type
             }]
         });
 
         if (res.success) {
             if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
+            // หน้าจอจะแสดง statusText ตามที่เราคำนวณใหม่ (ปกติ/สาย)
             alert(`✅ บันทึก ${type} สำเร็จ!\nพนักงาน: ${displayName}\nสถานะ: ${statusText}`);
             location.reload();
         } else {
