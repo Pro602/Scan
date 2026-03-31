@@ -879,7 +879,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
     }
 
     function renderStudentTable() {
-        document.getElementById('student-table-body').innerHTML = students.map(s => `<tr><td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td><td class="p-4 font-mono text-xs">${s.studentid}</td><td class="p-4 font-bold text-slate-700">${s.name}</td><td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td><td class="p-4 text-center"><button onclick="deleteStudent(${s.rowIndex || s.rowindex}, \`${s.name}\`)" class="text-rose-500">
+        document.getElementById('student-table-body').innerHTML = students.map(s => `<tr><td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td><td class="p-4 font-mono text-xs">${s.studentid}</td><td class="p-4 font-bold text-slate-700">${s.name}</td><td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td><td class="p-4 text-center"><button onclick="deleteStudent(${s.rowIndex || s.rowindex}, \`${s.name}\`)" class="text-rose-500 hover:scale-110 transition-transform">
     <i data-lucide="trash-2" class="w-4 h-4"></i>
 </button></td></tr>`).join('');
         lucide.createIcons();
@@ -1277,21 +1277,21 @@ function updateLeaveDisplay(allLeaves, selectedDate) {
 }
 
 async function deleteStudent(index, name) {
-    // ตรวจสอบก่อนว่า index มีค่าไหม
-    if (!index) {
-        alert("❌ ไม่พบลำดับแถวของพนักงานรายนี้ กรุณารีเฟรชหน้าเว็บแล้วลองใหม่");
+    // 1. ตรวจสอบค่า Index (ดักทั้ง undefined แบบตัวแปร และแบบ String)
+    if (!index || index === "undefined" || isNaN(index)) {
+        alert("❌ ไม่พบลำดับแถวพนักงาน\nวิธีแก้: ให้รีเฟรชหน้าเว็บ (F5) 1 ครั้ง แล้วลองกดลบใหม่ครับ");
         return;
     }
 
-    if (!confirm(`⚠️ ยืนยันการลบรายชื่อ: ${name} ?`)) return;
+    if (!confirm(`⚠️ ยืนยันการลบรายชื่อพนักงาน: ${name} ?`)) return;
 
     try {
-        // ใช้ scriptURL (L ตัวใหญ่ตามตัวแปรหลักของคุณ)
+        // 2. ส่งคำสั่ง (ใช้ scriptURL ตัว L ใหญ่ตามไฟล์ของคุณ)
         const response = await fetch(scriptURL, { 
             method: 'POST',
             body: JSON.stringify({
                 action: 'deleteStudent',
-                data: { rowIndex: index } // ส่งค่า index ไปในชื่อ rowIndex
+                data: { rowIndex: index } 
             })
         });
 
@@ -1299,15 +1299,19 @@ async function deleteStudent(index, name) {
         
         if (res.success) {
             alert('✅ ลบข้อมูลพนักงานเรียบร้อยแล้ว');
-            // เรียกฟังก์ชันโหลดข้อมูลใหม่ (อ้างอิงจากไฟล์ Master Index ของคุณคือ initData)
-            if (typeof initData === "function") initData();
+            
+            // 3. เรียกฟังก์ชันโหลดข้อมูลที่มีอยู่ในไฟล์ Index ของคุณจริง
+            if (typeof handleGetStudents === "function") {
+                handleGetStudents(); 
+            } else {
+                location.reload(); // กรณีหาฟังก์ชันไม่เจอจริงๆ ให้รีโหลดหน้าจอ
+            }
         } else {
-            // ถ้าหลังบ้านตอบว่า Row not found จะมาตกที่นี่
             alert('❌ ลบไม่สำเร็จ: ' + res.error);
         }
     } catch (error) {
         console.error("Error:", error);
-        alert("❌ เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+        alert("❌ เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์\n(ตรวจสอบว่าคุณได้ Deploy เว็บเป็นเวอร์ชันใหม่หรือยัง)");
     }
 }
 </script>
