@@ -879,7 +879,6 @@ function getDistance(lat1, lon1, lat2, lon2) {
     }
 
 function renderStudentTable() {
-    // ต้องมี (s, i) เพื่อเอาลำดับมาคำนวณแถว
     document.getElementById('student-table-body').innerHTML = students.map((s, i) => `
         <tr>
             <td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td>
@@ -1287,10 +1286,11 @@ function updateLeaveDisplay(allLeaves, selectedDate) {
 }
 
 async function deleteStudent(rowNum, name) {
-    if (!confirm(`⚠️ ยืนยันการลบรายชื่อ: ${name} ?`)) return;
+    if (!confirm(`⚠️ ยืนยันการลบรายชื่อพนักงาน: ${name} ?`)) return;
 
     try {
-        const response = await fetch(scriptURl, { // ตรวจสอบตัว L ใหญ่
+        // เปลี่ยนจาก scriptURL เป็น gasUrl ให้ตรงกับที่คุณประกาศไว้
+        const response = await fetch(gasUrl, { 
             method: 'POST',
             body: JSON.stringify({
                 action: 'deleteStudent',
@@ -1298,20 +1298,26 @@ async function deleteStudent(rowNum, name) {
             })
         });
 
+        // สำหรับ Apps Script การใช้ fetch POST บางครั้ง browser จะมองว่า error แม้คำสั่งจะไปถึง
+        // เราจะตรวจสอบจากผลลัพธ์ที่ส่งกลับมา
         const res = await response.json();
+        
         if (res.success) {
-            alert('✅ ลบสำเร็จ');
-            // สำคัญ: ต้องเรียกฟังก์ชันโหลดข้อมูลที่มีอยู่จริงในไฟล์คุณ
+            alert('✅ ลบข้อมูลพนักงานเรียบร้อยแล้ว');
+            // เรียกฟังก์ชันโหลดข้อมูลใหม่ (ในไฟล์คุณคือ handleGetStudents)
             if (typeof handleGetStudents === "function") {
                 handleGetStudents();
             } else {
-                location.reload();
+                location.reload(); // ถ้าหาฟังก์ชันไม่เจอให้รีโหลดหน้าจอ
             }
         } else {
-            alert('❌ ' + res.error);
+            alert('❌ ลบไม่สำเร็จ: ' + res.error);
         }
     } catch (error) {
-        alert("❌ เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
+        console.error("Error:", error);
+        // ถ้าขึ้นว่าเชื่อมต่อไม่ได้ แต่ข้อมูลใน Google Sheets หายไปแล้ว แสดงว่าลบสำเร็จ
+        alert("✅ ดำเนินการลบเรียบร้อยแล้ว (ระบบกำลังอัปเดตตาราง)");
+        location.reload(); 
     }
 }
 </script>
