@@ -879,7 +879,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
     }
 
 function renderStudentTable() {
-    // เพิ่ม (s, i) เข้าไปใน map เพื่อเอาลำดับ i มาคำนวณเลขแถว
+    // ต้องมี (s, i) เพื่อเอาลำดับมาคำนวณแถว
     document.getElementById('student-table-body').innerHTML = students.map((s, i) => `
         <tr>
             <td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td>
@@ -887,6 +887,7 @@ function renderStudentTable() {
             <td class="p-4 font-bold text-slate-700">${s.name}</td>
             <td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td>
             <td class="p-4 text-center">
+                /* ส่ง i + 2 เสมอ (i=0 คือแถวที่ 2 ใน Sheets) */
                 <button onclick="deleteStudent(${i + 2}, \`${s.name}\`)" class="text-rose-500">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
@@ -1287,31 +1288,31 @@ function updateLeaveDisplay(allLeaves, selectedDate) {
 }
 
 async function deleteStudent(rowNum, name) {
-    if (!confirm(`⚠️ ยืนยันการลบรายชื่อพนักงาน: ${name} ?`)) return;
+    if (!confirm(`⚠️ ยืนยันการลบรายชื่อ: ${name} ?`)) return;
 
     try {
-        const response = await fetch(scriptURL, { // ตรวจสอบว่าใช้ scriptURL (L ใหญ่)
+        const response = await fetch(scriptURL, { // ตรวจสอบตัว L ใหญ่
             method: 'POST',
             body: JSON.stringify({
                 action: 'deleteStudent',
-                data: { rowIndex: rowNum } // ส่งค่า rowNum ที่เราคำนวณ i+2 มาให้
+                data: { rowIndex: rowNum } 
             })
         });
 
         const res = await response.json();
         if (res.success) {
-            alert('✅ ลบข้อมูลเรียบร้อยแล้ว');
-            // เรียกฟังก์ชันโหลดข้อมูลที่มีในไฟล์ของคุณจริง
+            alert('✅ ลบสำเร็จ');
+            // สำคัญ: ต้องเรียกฟังก์ชันโหลดข้อมูลที่มีอยู่จริงในไฟล์คุณ
             if (typeof handleGetStudents === "function") {
                 handleGetStudents();
             } else {
                 location.reload();
             }
         } else {
-            alert('❌ ลบไม่สำเร็จ: ' + res.error);
+            alert('❌ ' + res.error);
         }
     } catch (error) {
-        alert("❌ เกิดข้อผิดพลาดในการเชื่อมต่อ");
+        alert("❌ เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
     }
 }
 </script>
