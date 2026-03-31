@@ -879,7 +879,9 @@ function getDistance(lat1, lon1, lat2, lon2) {
     }
 
     function renderStudentTable() {
-        document.getElementById('student-table-body').innerHTML = students.map(s => `<tr><td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td><td class="p-4 font-mono text-xs">${s.studentid}</td><td class="p-4 font-bold text-slate-700">${s.name}</td><td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td><td class="p-4 text-center"><button onclick="deleteStudent(${s.rowIndex})" class="text-rose-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td></tr>`).join('');
+        document.getElementById('student-table-body').innerHTML = students.map(s => `<tr><td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td><td class="p-4 font-mono text-xs">${s.studentid}</td><td class="p-4 font-bold text-slate-700">${s.name}</td><td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td><td class="p-4 text-center"><button onclick="deleteStudent(${s.rowIndex || s.rowindex}, '${s.name}')" class="text-rose-500">
+    <i data-lucide="trash-2" class="w-4 h-4"></i>
+</button></td></tr>`).join('');
         lucide.createIcons();
     }
 
@@ -1274,33 +1276,38 @@ function updateLeaveDisplay(allLeaves, selectedDate) {
   });
 }
 
-async function deleteStudent(rowIndex) {
-    if (!confirm("⚠️ คุณแน่ใจว่าต้องการลบรายชื่อพนักงานนี้ใช่หรือไม่?")) return;
+async function deleteStudent(index, name) {
+    // ตรวจสอบก่อนว่า index มีค่าไหม
+    if (!index) {
+        alert("❌ ไม่พบลำดับแถวของพนักงานรายนี้ กรุณารีเฟรชหน้าเว็บแล้วลองใหม่");
+        return;
+    }
+
+    if (!confirm(`⚠️ ยืนยันการลบรายชื่อ: ${name} ?`)) return;
 
     try {
-        // ตรวจสอบว่าใช้ scriptURL (L ตัวใหญ่) ตามที่ประกาศไว้ด้านบนสุดของไฟล์ Index
+        // ใช้ scriptURL (L ตัวใหญ่ตามตัวแปรหลักของคุณ)
         const response = await fetch(scriptURL, { 
             method: 'POST',
             body: JSON.stringify({
                 action: 'deleteStudent',
-                data: { rowIndex: rowIndex }
+                data: { rowIndex: index } // ส่งค่า index ไปในชื่อ rowIndex
             })
         });
 
-        // เนื่องจาก Apps Script POST อาจจะ Return Response ยากในบาง Browser
-        // เราจะถือว่าส่งคำสั่งสำเร็จและทำการรีเฟรชข้อมูล
-        alert("✅ ดำเนินการลบข้อมูลเรียบร้อยแล้ว");
+        const res = await response.json();
         
-        // เรียกฟังก์ชันโหลดข้อมูลใหม่ (เลือกใช้อย่างใดอย่างหนึ่งตามที่มีในไฟล์คุณ)
-        if (typeof initData === "function") {
-            initData(); 
+        if (res.success) {
+            alert('✅ ลบข้อมูลพนักงานเรียบร้อยแล้ว');
+            // เรียกฟังก์ชันโหลดข้อมูลใหม่ (อ้างอิงจากไฟล์ Master Index ของคุณคือ initData)
+            if (typeof initData === "function") initData();
         } else {
-            location.reload(); 
+            // ถ้าหลังบ้านตอบว่า Row not found จะมาตกที่นี่
+            alert('❌ ลบไม่สำเร็จ: ' + res.error);
         }
-
     } catch (error) {
         console.error("Error:", error);
-        alert("❌ เกิดข้อผิดพลาดในการเชื่อมต่อ");
+        alert("❌ เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
     }
 }
 </script>
