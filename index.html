@@ -825,7 +825,7 @@ async function finishAttendance(type) {
             const isMorningNormal = currentMinutes <= 510;
             
             // เงื่อนไข 2: ช่วงบ่าย 12:00 - 13:00 (720 - 780 นาที)
-            const isAfternoonNormal = currentMinutes >= 900 && currentMinutes <= 960;
+            const isAfternoonNormal = currentMinutes >= 720 && currentMinutes <= 780;
 
             // ถ้าอยู่ในช่วงใดช่วงหนึ่งให้ถือว่า "ปกติ" นอกนั้นคือ "สาย"
             if (isMorningNormal || isAfternoonNormal) {
