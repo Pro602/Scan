@@ -878,12 +878,23 @@ function getDistance(lat1, lon1, lat2, lon2) {
         document.getElementById('leave-date').value = new Date().toISOString().split('T')[0];
     }
 
-    function renderStudentTable() {
-        document.getElementById('student-table-body').innerHTML = students.map(s => `<tr><td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td><td class="p-4 font-mono text-xs">${s.studentid}</td><td class="p-4 font-bold text-slate-700">${s.name}</td><td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td><td class="p-4 text-center"><button onclick="deleteStudent(${s.rowindex || s.rowIndex}, \`${s.name}\`)" class="text-rose-500">
-    <i data-lucide="trash-2" class="w-4 h-4"></i>
-</button></td></tr>`).join('');
-        lucide.createIcons();
-    }
+function renderStudentTable() {
+    // เพิ่ม (s, i) เข้าไปใน map เพื่อเอาลำดับ i มาคำนวณเลขแถว
+    document.getElementById('student-table-body').innerHTML = students.map((s, i) => `
+        <tr>
+            <td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td>
+            <td class="p-4 font-mono text-xs">${s.studentid}</td>
+            <td class="p-4 font-bold text-slate-700">${s.name}</td>
+            <td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td>
+            <td class="p-4 text-center">
+                /* ใช้ i + 2 แทนการเรียก rowIndex เพราะชัวร์กว่า (i เริ่มที่ 0 + หัวตาราง 1 แถว + แถวถัดไป = 2) */
+                <button onclick="deleteStudent(${i + 2}, \`${s.name}\`)" class="text-rose-500">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </td>
+        </tr>`).join('');
+    lucide.createIcons();
+}
 
     // --- วางตัวแปรไว้ด้านบนสุดของกลุ่มฟังก์ชัน ---
     let croppedImg = null; 
@@ -1276,45 +1287,32 @@ function updateLeaveDisplay(allLeaves, selectedDate) {
   });
 }
 
-async function deleteStudent(index, name) {
-    // 1. ดักค่าที่ส่งมา
-    console.log("Deleting Row Index:", index); // ดูค่าใน Console (F12)
-    
-    if (!index || index === "undefined" || isNaN(index)) {
-        alert("❌ ระบบหาลำดับแถวไม่เจอ (ค่าที่ได้รับ: " + index + ")\nวิธีแก้: กด Ctrl + F5 เพื่อรีเฟรชหน้าเว็บแบบล้างแคช แล้วลองใหม่ครับ");
-        return;
-    }
-
+async function deleteStudent(rowNum, name) {
     if (!confirm(`⚠️ ยืนยันการลบรายชื่อพนักงาน: ${name} ?`)) return;
 
     try {
-        const response = await fetch(scriptURL, { 
+        const response = await fetch(scriptURL, { // ตรวจสอบว่าใช้ scriptURL (L ใหญ่)
             method: 'POST',
             body: JSON.stringify({
                 action: 'deleteStudent',
-                data: { rowIndex: index } 
+                data: { rowIndex: rowNum } // ส่งค่า rowNum ที่เราคำนวณ i+2 มาให้
             })
         });
 
         const res = await response.json();
-        
         if (res.success) {
-            alert('✅ ลบข้อมูลพนักงานเรียบร้อยแล้ว');
-            
-            // 2. เรียกฟังก์ชันดึงข้อมูลใหม่ (ในไฟล์คุณใช้ handleGetStudents หรือ initData)
+            alert('✅ ลบข้อมูลเรียบร้อยแล้ว');
+            // เรียกฟังก์ชันโหลดข้อมูลที่มีในไฟล์ของคุณจริง
             if (typeof handleGetStudents === "function") {
-                handleGetStudents(); 
-            } else if (typeof initData === "function") {
-                initData();
+                handleGetStudents();
             } else {
-                location.reload(); 
+                location.reload();
             }
         } else {
             alert('❌ ลบไม่สำเร็จ: ' + res.error);
         }
     } catch (error) {
-        console.error("Error:", error);
-        alert("❌ เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+        alert("❌ เกิดข้อผิดพลาดในการเชื่อมต่อ");
     }
 }
 </script>
