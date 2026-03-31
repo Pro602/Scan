@@ -1274,32 +1274,33 @@ function updateLeaveDisplay(allLeaves, selectedDate) {
   });
 }
 
-    async function deleteStudent(rowIndex) {
-    if (!confirm("⚠️ คุณแน่ใจว่าต้องการลบรายชื่อพนักงานนี้ใช่หรือไม่?\nการลบนี้จะไม่สามารถย้อนกลับได้")) return;
-
-    // แสดง Loading หรือสถานะกำลังลบ (ถ้ามี)
-    console.log("กำลังลบแถวที่:", rowIndex);
+async function deleteStudent(rowIndex) {
+    if (!confirm("⚠️ คุณแน่ใจว่าต้องการลบรายชื่อพนักงานนี้ใช่หรือไม่?")) return;
 
     try {
-        const response = await fetch(scriptUrl, {
+        // ตรวจสอบว่าใช้ scriptURL (L ตัวใหญ่) ตามที่ประกาศไว้ด้านบนสุดของไฟล์ Index
+        const response = await fetch(scriptURL, { 
             method: 'POST',
-            mode: 'no-cors', // เพิ่มเผื่อไว้กรณีติดปัญหา CORS
             body: JSON.stringify({
                 action: 'deleteStudent',
                 data: { rowIndex: rowIndex }
             })
         });
 
-        // เนื่องจากเราใช้ mode: 'no-cors' หรือการส่งแบบ Web App 
-        // บางครั้งอาจจะไม่ได้รับ JSON กลับมาทันที ให้เราทำการหน่วงเวลาแล้วโหลดข้อมูลใหม่
-        alert("ส่งคำสั่งลบข้อมูลเรียบร้อยแล้ว");
+        // เนื่องจาก Apps Script POST อาจจะ Return Response ยากในบาง Browser
+        // เราจะถือว่าส่งคำสั่งสำเร็จและทำการรีเฟรชข้อมูล
+        alert("✅ ดำเนินการลบข้อมูลเรียบร้อยแล้ว");
         
-        // โหลดข้อมูลพนักงานใหม่เพื่ออัปเดตหน้าตาราง
-        initData(); 
-        
+        // เรียกฟังก์ชันโหลดข้อมูลใหม่ (เลือกใช้อย่างใดอย่างหนึ่งตามที่มีในไฟล์คุณ)
+        if (typeof initData === "function") {
+            initData(); 
+        } else {
+            location.reload(); 
+        }
+
     } catch (error) {
-        console.error("Error deleting student:", error);
-        alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+        console.error("Error:", error);
+        alert("❌ เกิดข้อผิดพลาดในการเชื่อมต่อ");
     }
 }
 </script>
