@@ -328,39 +328,43 @@ const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilw
     let pendingAction = null;    
     let pendingDeleteIndex = null;
     
-   function loginSupervisor() {
-    const userVal = document.getElementById('username-input').value;
-    const passVal = document.getElementById('password-input').value;
+// --- วางทับ loginSupervisor อันเดิมได้เลยครับ ---
+    function loginSupervisor() {
+        const userVal = document.getElementById('username-input').value;
+        const passVal = document.getElementById('password-input').value;
 
-    if (!userVal || !passVal) {
-        alert("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
-        return;
-    }
+        if (!userVal || !passVal) {
+            alert("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
+            return;
+        }
 
-    // เรียกฟังก์ชันใน Code.gs
-    google.script.run
-        .withSuccessHandler(function(res) {
-            if (res.success) {
-                currentUser = res.user; // เก็บชื่อและสิทธิ์ไว้ในตัวแปร
-                alert(`✅ ยินดีต้อนรับคุณ ${currentUser.name}`);
-                
-                // ปิดหน้าต่าง Modal
-                document.getElementById('login-modal').classList.add('hidden');
-                
-                // ถ้ามีการกดเมนูค้างไว้ ให้เปิดเมนูนั้นทันที
-                if (pendingAction) {
-                    openAdminMenu(pendingAction);
-                    pendingAction = null;
+        // แสดงข้อความใน Console เพื่อเช็คว่าปุ่มทำงานไหม
+        console.log("กำลังส่งข้อมูลไปที่ Server...");
+
+        // เรียกฟังก์ชันใน Code.gs (วิธีนี้เสถียรที่สุด)
+        google.script.run
+            .withSuccessHandler(function(res) {
+                if (res.success) {
+                    currentUser = res.user; // เก็บค่า {name, role, menuAccess}
+                    alert(`✅ ยินดีต้อนรับคุณ ${currentUser.name}`);
+                    
+                    // ปิดหน้าต่าง Modal
+                    document.getElementById('login-modal').classList.add('hidden');
+                    
+                    // ถ้าก่อนหน้านี้กดเมนูไหนค้างไว้ ให้เปิดเมนูนั้นทันที
+                    if (pendingAction) {
+                        openAdminMenu(pendingAction);
+                        pendingAction = null;
+                    }
+                } else {
+                    alert("❌ " + res.message);
                 }
-            } else {
-                alert("❌ " + res.message);
-            }
-        })
-        .withFailureHandler(function(err) {
-            alert("❌ ระบบขัดข้อง: " + err);
-        })
-        .loginSupervisorDirect({ username: userVal, password: passVal });
-}
+            })
+            .withFailureHandler(function(err) {
+                alert("❌ ระบบขัดข้อง: " + err);
+            })
+            .loginSupervisorDirect({ username: userVal, password: passVal });
+    }
 
     window.onload = async () => {
         lucide.createIcons();
@@ -408,17 +412,17 @@ function openAdminMenu(menuType) {
         return;
     }
 
-    // เช็คสิทธิ์ที่ดึงมาจากชีท
+    // แยกสิทธิ์จาก MenuAccess ในชีท
     const accessList = currentUser.menuAccess ? currentUser.menuAccess.split(',').map(s => s.trim()) : [];
     
     if (accessList.includes(menuType)) {
         if (menuType === 'Employee') {
-            switchTab('manage'); // เปิดหน้าพนักงาน
+            switchTab('manage'); // เปิดหน้าพนักงาน (id: tab-manage)
         } else if (menuType === 'Approval') {
-            switchTab('approve'); // เปิดหน้าอนุมัติ
+            switchTab('approve'); // เปิดหน้าจัดการการลา (id: tab-approve)
         }
     } else {
-        alert(`⚠️ ขออภัยคุณ ${currentUser.name} ไม่มีสิทธิ์เข้าถึงเมนูนี้`);
+        alert(`⚠️ ขออภัยคุณ ${currentUser.name}\nคุณไม่มีสิทธิ์เข้าถึงเมนูนี้`);
     }
 }
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
