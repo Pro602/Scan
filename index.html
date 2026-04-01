@@ -402,28 +402,44 @@ function openAdminMenu(menuType) {
         }, 30000);
     };
 
-
-
 async function loadAllData() {
     const [sRes, aRes, lRes, vRes] = await Promise.all([
-        apiCall({action:'getStudents'}), apiCall({action:'getAttendance'}), 
-        apiCall({action:'getLocations'}), apiCall({action:'getLeaves'})
+        apiCall({action:'getStudents'}), 
+        apiCall({action:'getAttendance'}), 
+        apiCall({action:'getLocations'}), 
+        apiCall({action:'getLeaves'})
     ]);
-    if(sRes.success) { students = sRes.data; renderLeaveDropdown(); }
+
+    if(sRes.success) { 
+        students = sRes.data; 
+        // แก้ไข: เช็คก่อนเรียกใช้เพื่อไม่ให้ตัวแดงขึ้น
+        if (typeof renderLeaveDropdown === 'function') renderLeaveDropdown(); 
+    }
+    
     if(aRes.success) attendance = aRes.data;
-    if(lRes.success) { locationList = lRes.data; renderLocationDropdown(); }
+    
+    if(lRes.success) { 
+        locationList = lRes.data; 
+        // แก้ไข: เช็คก่อนเรียกใช้
+        if (typeof renderLocationDropdown === 'function') renderLocationDropdown(); 
+    }
+    
     if(vRes.success) leaves = vRes.data;
 
-    // ตรวจสอบว่ามีฟังก์ชันนี้ก่อนเรียกใช้ เพื่อป้องกัน Error (รูปที่ 2)
+    // ตรวจสอบฟังก์ชันแสดงผลพนักงาน
     if (typeof renderStudentTable === 'function') renderStudentTable();
     
-    renderDashboard();
-    // --- วางบรรทัดนี้ลงไปครับ ---
-    renderUpcomingLeaves(leaves, students); 
-    // -------------------------
-    renderAllStaffForScan(); // บรรทัดนี้จะทำงานได้แล้ว
+    // ตรวจสอบฟังก์ชัน Dashboard
+    if (typeof renderDashboard === 'function') renderDashboard();
+    
+    // ตรวจสอบฟังก์ชันรายการลาล่วงหน้า
+    if (typeof renderUpcomingLeaves === 'function') {
+        renderUpcomingLeaves(leaves, students);
+    }
+    
+    // ตรวจสอบฟังก์ชันสแกนหน้า
+    if (typeof renderAllStaffForScan === 'function') renderAllStaffForScan();
 }
-// --- เพิ่มฟังก์ชันนี้เข้าไปใหม่ในส่วน <script> ของ Index ---
 
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
 function renderDashboard() {
