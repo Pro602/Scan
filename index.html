@@ -257,15 +257,19 @@
         </div>
     </div>
 </main>
-    <div id="login-modal" class="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center hidden backdrop-blur-md">
-        <div class="bg-white p-8 rounded-[2rem] max-w-xs w-full shadow-2xl space-y-4 text-slate-800">
-            <h3 class="text-lg font-bold text-center">ยืนยันสิทธิ์เข้าถึง</h3>
-            <input type="text" id="login-user" placeholder="Username" class="w-full border p-3 rounded-xl outline-none text-sm">
-            <input type="password" id="login-pass" placeholder="Password" class="w-full border p-3 rounded-xl outline-none text-sm">
-            <button onclick="checkLogin()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Login</button>
-            <button onclick="closeLoginModal()" class="w-full text-slate-400 text-xs text-center">ยกเลิก</button>
-        </div>
+<div id="login-modal" class="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center hidden backdrop-blur-md">
+    <div class="bg-white p-8 rounded-[2rem] max-w-xs w-full shadow-2xl space-y-4 text-slate-800">
+        <h3 class="text-lg font-bold text-center">ยืนยันสิทธิ์เข้าถึง</h3>
+        
+        <input type="text" id="username-input" placeholder="Username" class="w-full border p-3 rounded-xl outline-none text-sm">
+        
+        <input type="password" id="password-input" placeholder="Password" class="w-full border p-3 rounded-xl outline-none text-sm">
+        
+        <button onclick="loginSupervisor()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Login</button>
+        
+        <button onclick="document.getElementById('login-modal').classList.add('hidden')" class="w-full text-slate-400 text-xs text-center">ยกเลิก</button>
     </div>
+</div>
 
    <div id="student-modal" class="fixed inset-0 bg-black/80 hidden z-[100] flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl">
@@ -1378,20 +1382,23 @@ async function loginSupervisor() {
         const res = await response.json();
 
         if (res.success) {
-            currentUser = res.user; 
-            alert(`สวัสดีคุณ ${currentUser.name} (สิทธิ์: ${currentUser.role})`);
+            currentUser = res.user; // เก็บ {name, role, menuAccess}
+            alert(`✅ ยินดีต้อนรับคุณ ${currentUser.name}`);
+            
+            // ปิดหน้าต่าง Login
             document.getElementById('login-modal').classList.add('hidden');
             
-            // เมื่อ Login สำเร็จ ให้เปิดหน้าที่ตั้งใจจะเข้า
+            // เช็คว่าก่อนหน้านี้กดเมนูไหนค้างไว้ ให้เปิดเมนูนั้นทันที
             if (pendingAction) {
                 openAdminMenu(pendingAction);
                 pendingAction = null;
             }
         } else {
-            alert("❌ " + res.message);
+            alert("❌ เข้าสู่ระบบไม่สำเร็จ: " + res.message);
         }
     } catch (error) {
-        alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+        console.error("Login Error:", error);
+        alert("❌ เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบการ Deploy");
     }
 }
 </script>
