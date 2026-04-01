@@ -318,11 +318,11 @@
     <audio id="snd-ok" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
 <script>
-    const gasUrl = "https://script.google.com/macros/s/AKfycby9t947sFIvKCyxoLrFjLu0nNSGo95rdgFLarIfIVanE7kCKEDfglqgikUZCeFC_JAj/exec";
+const gasUrl = "https://script.google.com/macros/s/AKfycby9t947sFIvKCyxoLrFjLu0nNSGo95rdgFLarIfIVanE7kCKEDfglqgikUZCeFC_JAj/exec";
     let students = [], attendance = [], locationList = [], leaves = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
-    let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
-    let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
-    const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
+    let currentUser = null;      
+    let pendingAction = null;    
+    let pendingDeleteIndex = null;
 
     window.onload = async () => {
         lucide.createIcons();
@@ -361,7 +361,29 @@ async function loadAllData() {
     // -------------------------
     renderAllStaffForScan(); // บรรทัดนี้จะทำงานได้แล้ว
 }
+// --- เพิ่มฟังก์ชันนี้เข้าไปใหม่ในส่วน <script> ของ Index ---
+    
+function openAdminMenu(menuType) {
+    // 1. ตรวจสอบว่า Login หรือยัง?
+    if (!currentUser) {
+        pendingAction = menuType; 
+        document.getElementById('login-modal').classList.remove('hidden'); 
+        return;
+    }
 
+    // 2. ถ้า Login แล้ว ตรวจสอบสิทธิ์จาก MenuAccess
+    const accessList = currentUser.menuAccess ? currentUser.menuAccess.split(',').map(s => s.trim()) : [];
+    
+    if (accessList.includes(menuType)) {
+        if (menuType === 'Employee') {
+            showSection('student-list-section'); 
+        } else if (menuType === 'Approval') {
+            showSection('leave-report-section'); 
+        }
+    } else {
+        alert(`⚠️ ขออภัยคุณ ${currentUser.name}\nคุณไม่มีสิทธิ์เข้าถึงเมนูนี้`);
+    }
+}
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
 function renderDashboard() {
     const dateInput = document.getElementById('dashboard-date').value;
@@ -1333,6 +1355,45 @@ async function deleteStudent(rowNum, name) {
         // ถ้าขึ้นว่าเชื่อมต่อไม่ได้ แต่ข้อมูลใน Google Sheets หายไปแล้ว แสดงว่าลบสำเร็จ
         alert("✅ ดำเนินการลบเรียบร้อยแล้ว (ระบบกำลังอัปเดตตาราง)");
         location.reload(); 
+    }
+}
+    async function loginSupervisor() {
+    const userVal = document.getElementById('username-input').value;
+    const passVal = document.getElementById('password-input').value;
+
+    if (!userVal || !passVal) {
+        alert("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
+        return;
+    }
+
+    try {
+        const response = await fetch(gasUrl, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'loginSupervisor',
+                data: { username: userVal, password: passVal }
+            })
+        });
+
+        const res = await response.json();
+
+        if (res.success) {
+            currentUser = res.user; // เก็บ {name, role, menuAccess}
+            alert(`สวัสดีคุณ ${currentUser.name} (สิทธิ์: ${currentUser.role})`);
+            
+            document.getElementById('login-modal').classList.add('hidden');
+            
+            // ถ้ามีการกดเข้าเมนูค้างไว้ก่อน Login ให้เปิดหน้านั้นทันที
+            if (pendingAction) {
+                openAdminMenu(pendingAction);
+                pendingAction = null;
+            }
+        } else {
+            alert("❌ เข้าสู่ระบบไม่สำเร็จ: " + res.message);
+        }
+    } catch (error) {
+        console.error("Login Error:", error);
+        alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
     }
 }
 </script>
