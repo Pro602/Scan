@@ -327,8 +327,9 @@ const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilw
     let currentUser = null;      
     let pendingAction = null;    
     let pendingDeleteIndex = null;
-    
-// --- วางทับ loginSupervisor อันเดิมได้เลยครับ ---
+
+
+    // --- 2. ฟังก์ชัน Login (ก๊อปปี้ไปวางใหม่ให้จบปีกกาปิด) ---
     function loginSupervisor() {
         const userVal = document.getElementById('username-input').value;
         const passVal = document.getElementById('password-input').value;
@@ -338,20 +339,17 @@ const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilw
             return;
         }
 
-        // แสดงข้อความใน Console เพื่อเช็คว่าปุ่มทำงานไหม
-        console.log("กำลังส่งข้อมูลไปที่ Server...");
-
-        // เรียกฟังก์ชันใน Code.gs (วิธีนี้เสถียรที่สุด)
+        // เรียกใช้ฟังก์ชันใน Code.gs ผ่าน google.script.run (เสถียรที่สุด)
         google.script.run
             .withSuccessHandler(function(res) {
                 if (res.success) {
-                    currentUser = res.user; // เก็บค่า {name, role, menuAccess}
-                    alert(`✅ ยินดีต้อนรับคุณ ${currentUser.name}`);
+                    currentUser = res.user;
+                    alert("✅ ยินดีต้อนรับคุณ " + currentUser.name);
                     
-                    // ปิดหน้าต่าง Modal
+                    // ปิด Modal Login
                     document.getElementById('login-modal').classList.add('hidden');
                     
-                    // ถ้าก่อนหน้านี้กดเมนูไหนค้างไว้ ให้เปิดเมนูนั้นทันที
+                    // ถ้ามีการกดเมนูค้างไว้ ให้เปิดหน้านั้นทันที
                     if (pendingAction) {
                         openAdminMenu(pendingAction);
                         pendingAction = null;
@@ -364,6 +362,27 @@ const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilw
                 alert("❌ ระบบขัดข้อง: " + err);
             })
             .loginSupervisorDirect({ username: userVal, password: passVal });
+    }
+
+    // --- 3. ฟังก์ชันเช็คสิทธิ์ (ต้องมีเพื่อให้เปลี่ยนหน้าได้) ---
+    function openAdminMenu(menuType) {
+        if (!currentUser) {
+            pendingAction = menuType;
+            document.getElementById('login-modal').classList.remove('hidden');
+            return;
+        }
+
+        const accessList = currentUser.menuAccess ? currentUser.menuAccess.split(',').map(s => s.trim()) : [];
+        
+        if (accessList.includes(menuType)) {
+            if (menuType === 'Employee') {
+                switchTab('manage'); 
+            } else if (menuType === 'Approval') {
+                switchTab('approve');
+            }
+        } else {
+            alert("⚠️ ขออภัยคุณ " + currentUser.name + "\nคุณไม่มีสิทธิ์เข้าถึงเมนูนี้");
+        }
     }
 
     window.onload = async () => {
@@ -404,27 +423,7 @@ async function loadAllData() {
     renderAllStaffForScan(); // บรรทัดนี้จะทำงานได้แล้ว
 }
 // --- เพิ่มฟังก์ชันนี้เข้าไปใหม่ในส่วน <script> ของ Index ---
-    
-function openAdminMenu(menuType) {
-    if (!currentUser) {
-        pendingAction = menuType; 
-        document.getElementById('login-modal').classList.remove('hidden');
-        return;
-    }
 
-    // แยกสิทธิ์จาก MenuAccess ในชีท
-    const accessList = currentUser.menuAccess ? currentUser.menuAccess.split(',').map(s => s.trim()) : [];
-    
-    if (accessList.includes(menuType)) {
-        if (menuType === 'Employee') {
-            switchTab('manage'); // เปิดหน้าพนักงาน (id: tab-manage)
-        } else if (menuType === 'Approval') {
-            switchTab('approve'); // เปิดหน้าจัดการการลา (id: tab-approve)
-        }
-    } else {
-        alert(`⚠️ ขออภัยคุณ ${currentUser.name}\nคุณไม่มีสิทธิ์เข้าถึงเมนูนี้`);
-    }
-}
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
 function renderDashboard() {
     const dateInput = document.getElementById('dashboard-date').value;
