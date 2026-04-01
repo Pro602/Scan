@@ -327,6 +327,38 @@ const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilw
     let currentUser = null;      
     let pendingAction = null;    
     let pendingDeleteIndex = null;
+    
+    function loginSupervisor() {
+    const userVal = document.getElementById('username-input').value;
+    const passVal = document.getElementById('password-input').value;
+
+    if (!userVal || !passVal) {
+        alert("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
+        return;
+    }
+
+    // เรียกไปที่ Code.gs โดยตรง
+    google.script.run
+        .withSuccessHandler(function(res) {
+            if (res.success) {
+                currentUser = res.user;
+                alert(`✅ ยินดีต้อนรับคุณ ${currentUser.name}`);
+                document.getElementById('login-modal').classList.add('hidden');
+                
+                // ถ้ากดเมนูค้างไว้ ให้เปิดหน้านั้นทันที
+                if (pendingAction) {
+                    openAdminMenu(pendingAction);
+                    pendingAction = null;
+                }
+            } else {
+                alert("❌ " + res.message);
+            }
+        })
+        .withFailureHandler(function(err) {
+            alert("❌ ระบบขัดข้อง: " + err);
+        })
+        .loginSupervisorDirect({ username: userVal, password: passVal });
+}
 
     window.onload = async () => {
         lucide.createIcons();
@@ -1362,37 +1394,6 @@ async function deleteStudent(rowNum, name) {
     }
 }
 
-function loginSupervisor() {
-    const userVal = document.getElementById('username-input').value;
-    const passVal = document.getElementById('password-input').value;
-
-    if (!userVal || !passVal) {
-        alert("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
-        return;
-    }
-
-    // ใช้การเรียกฟังก์ชันตรงๆ ไปยัง Google Apps Script
-    google.script.run
-        .withSuccessHandler(function(res) {
-            if (res.success) {
-                currentUser = res.user;
-                alert(`✅ ยินดีต้อนรับคุณ ${currentUser.name}`);
-                document.getElementById('login-modal').classList.add('hidden');
-                
-                // เปิดหน้าที่กดค้างไว้
-                if (pendingAction) {
-                    openAdminMenu(pendingAction);
-                    pendingAction = null;
-                }
-            } else {
-                alert("❌ " + res.message);
-            }
-        })
-        .withFailureHandler(function(err) {
-            alert("❌ ระบบขัดข้อง: " + err);
-        })
-        .loginSupervisorDirect({ username: userVal, password: passVal });
-}
 </script>
 </body>
 </html>
