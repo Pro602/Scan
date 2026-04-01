@@ -335,6 +335,8 @@ const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilw
 
 // 2. ฟังก์ชัน Login ที่สมบูรณ์ (วางทับอันเดิม)
 function loginSupervisor() {
+    console.log("--- เริ่มกดปุ่ม Login แล้ว ---"); // <--- เพิ่มบรรทัดนี้
+    alert("ปุ่มทำงานแล้ว!"); // <--- เพิ่มบรรทัดนี้เพื่อเช็ค
     const userVal = document.getElementById('username-input').value;
     const passVal = document.getElementById('password-input').value;
 
