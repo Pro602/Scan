@@ -410,37 +410,36 @@ async function loadAllData() {
         apiCall({action:'getLeaves'})
     ]);
 
+    // แก้ไขจุดที่ 1: เช็คก่อนเรียกใช้ (บรรทัดที่ทำให้ตัวแดงขึ้น)
     if(sRes.success) { 
         students = sRes.data; 
-        // แก้ไข: เช็คก่อนเรียกใช้เพื่อไม่ให้ตัวแดงขึ้น
-        if (typeof renderLeaveDropdown === 'function') renderLeaveDropdown(); 
+        if (typeof renderLeaveDropdown === 'function') {
+            renderLeaveDropdown(); 
+        }
     }
     
     if(aRes.success) attendance = aRes.data;
     
+    // แก้ไขจุดที่ 2: เช็คก่อนเรียกใช้
     if(lRes.success) { 
         locationList = lRes.data; 
-        // แก้ไข: เช็คก่อนเรียกใช้
-        if (typeof renderLocationDropdown === 'function') renderLocationDropdown(); 
+        if (typeof renderLocationDropdown === 'function') {
+            renderLocationDropdown(); 
+        }
     }
     
     if(vRes.success) leaves = vRes.data;
 
-    // ตรวจสอบฟังก์ชันแสดงผลพนักงาน
+    // แก้ไขจุดที่ 3: เช็คก่อนเรียกใช้ทุกตัวที่เหลือ
     if (typeof renderStudentTable === 'function') renderStudentTable();
-    
-    // ตรวจสอบฟังก์ชัน Dashboard
     if (typeof renderDashboard === 'function') renderDashboard();
     
-    // ตรวจสอบฟังก์ชันรายการลาล่วงหน้า
     if (typeof renderUpcomingLeaves === 'function') {
         renderUpcomingLeaves(leaves, students);
     }
     
-    // ตรวจสอบฟังก์ชันสแกนหน้า
     if (typeof renderAllStaffForScan === 'function') renderAllStaffForScan();
 }
-
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
 function renderDashboard() {
     const dateInput = document.getElementById('dashboard-date').value;
