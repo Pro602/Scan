@@ -1361,7 +1361,8 @@ async function deleteStudent(rowNum, name) {
         location.reload(); 
     }
 }
-async function loginSupervisor() {
+
+    async function loginSupervisor() {
     const userVal = document.getElementById('username-input').value;
     const passVal = document.getElementById('password-input').value;
 
@@ -1371,24 +1372,17 @@ async function loginSupervisor() {
     }
 
     try {
-        const response = await fetch(gasUrl, {
-            method: 'POST',
-            body: JSON.stringify({
-                action: 'loginSupervisor',
-                data: { username: userVal, password: passVal }
-            })
+        // ใช้ apiCall แทน fetch ตรงๆ เพื่อลดปัญหาการเชื่อมต่อ
+        const res = await apiCall({
+            action: 'loginSupervisor',
+            data: { username: userVal, password: passVal }
         });
 
-        const res = await response.json();
-
         if (res.success) {
-            currentUser = res.user; // เก็บ {name, role, menuAccess}
+            currentUser = res.user; 
             alert(`✅ ยินดีต้อนรับคุณ ${currentUser.name}`);
-            
-            // ปิดหน้าต่าง Login
             document.getElementById('login-modal').classList.add('hidden');
             
-            // เช็คว่าก่อนหน้านี้กดเมนูไหนค้างไว้ ให้เปิดเมนูนั้นทันที
             if (pendingAction) {
                 openAdminMenu(pendingAction);
                 pendingAction = null;
@@ -1398,7 +1392,7 @@ async function loginSupervisor() {
         }
     } catch (error) {
         console.error("Login Error:", error);
-        alert("❌ เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบการ Deploy");
+        alert("❌ ไม่สามารถติดต่อ Server ได้\nตรวจสอบว่าคุณได้กด 'Deploy New Version' ใน Apps Script หรือยัง?");
     }
 }
 </script>
