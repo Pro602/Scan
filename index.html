@@ -328,7 +328,7 @@ const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilw
     let pendingAction = null;    
     let pendingDeleteIndex = null;
     
-    function loginSupervisor() {
+   function loginSupervisor() {
     const userVal = document.getElementById('username-input').value;
     const passVal = document.getElementById('password-input').value;
 
@@ -337,15 +337,17 @@ const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilw
         return;
     }
 
-    // เรียกไปที่ Code.gs โดยตรง
+    // เรียกฟังก์ชันใน Code.gs
     google.script.run
         .withSuccessHandler(function(res) {
             if (res.success) {
-                currentUser = res.user;
+                currentUser = res.user; // เก็บชื่อและสิทธิ์ไว้ในตัวแปร
                 alert(`✅ ยินดีต้อนรับคุณ ${currentUser.name}`);
+                
+                // ปิดหน้าต่าง Modal
                 document.getElementById('login-modal').classList.add('hidden');
                 
-                // ถ้ากดเมนูค้างไว้ ให้เปิดหน้านั้นทันที
+                // ถ้ามีการกดเมนูค้างไว้ ให้เปิดเมนูนั้นทันที
                 if (pendingAction) {
                     openAdminMenu(pendingAction);
                     pendingAction = null;
@@ -400,24 +402,23 @@ async function loadAllData() {
 // --- เพิ่มฟังก์ชันนี้เข้าไปใหม่ในส่วน <script> ของ Index ---
     
 function openAdminMenu(menuType) {
-    // 1. ถ้ายังไม่ Login ให้เปิดหน้าต่าง Login
     if (!currentUser) {
         pendingAction = menuType; 
         document.getElementById('login-modal').classList.remove('hidden');
         return;
     }
 
-    // 2. ตรวจสอบสิทธิ์จากค่า menuAccess ใน Sheets (เช่น "Approval,Employee")
+    // เช็คสิทธิ์ที่ดึงมาจากชีท
     const accessList = currentUser.menuAccess ? currentUser.menuAccess.split(',').map(s => s.trim()) : [];
     
     if (accessList.includes(menuType)) {
         if (menuType === 'Employee') {
-            switchTab('manage'); // เรียกใช้ฟังก์ชันเดิมของคุณเพื่อเปิดหน้าพนักงาน
+            switchTab('manage'); // เปิดหน้าพนักงาน
         } else if (menuType === 'Approval') {
-            switchTab('approve'); // เรียกใช้ฟังก์ชันเดิมของคุณเพื่อเปิดหน้าจัดการการลา
+            switchTab('approve'); // เปิดหน้าอนุมัติ
         }
     } else {
-        alert(`⚠️ ขออภัยคุณ ${currentUser.name}\nคุณไม่มีสิทธิ์เข้าถึงเมนูนี้`);
+        alert(`⚠️ ขออภัยคุณ ${currentUser.name} ไม่มีสิทธิ์เข้าถึงเมนูนี้`);
     }
 }
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
