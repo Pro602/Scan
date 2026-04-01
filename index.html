@@ -118,8 +118,8 @@
             <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-md transition-all whitespace-nowrap">Dashboard</button>
             <button onclick="switchTab('scan')" id="tab-scan" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">สแกนบันทึกเวลา</button>
             <button onclick="switchTab('leave')" id="tab-leave" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">ลงชื่อการลา</button>
-<button onclick="openAdminMenu('Approval')" id="tab-approve" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">จัดการการอนุมัติ</button>
-<button onclick="openAdminMenu('Employee')" id="tab-manage" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">พนักงาน</button>
+            <button onclick="switchTab('approve')" id="tab-approve" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">จัดการการอนุมัติ</button>
+            <button onclick="switchTab('manage')" id="tab-manage" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">พนักงาน</button>
         </div>
     </div>
 </nav>
@@ -257,19 +257,15 @@
         </div>
     </div>
 </main>
-<div id="login-modal" class="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center hidden backdrop-blur-md">
-    <div class="bg-white p-8 rounded-[2rem] max-w-xs w-full shadow-2xl space-y-4 text-slate-800">
-        <h3 class="text-lg font-bold text-center">ยืนยันสิทธิ์เข้าถึง</h3>
-        
-        <input type="text" id="username-input" placeholder="Username" class="w-full border p-3 rounded-xl outline-none text-sm">
-        
-        <input type="password" id="password-input" placeholder="Password" class="w-full border p-3 rounded-xl outline-none text-sm">
-        
-        <button onclick="loginSupervisor()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Login</button>
-        
-        <button onclick="document.getElementById('login-modal').classList.add('hidden')" class="w-full text-slate-400 text-xs text-center">ยกเลิก</button>
+    <div id="login-modal" class="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center hidden backdrop-blur-md">
+        <div class="bg-white p-8 rounded-[2rem] max-w-xs w-full shadow-2xl space-y-4 text-slate-800">
+            <h3 class="text-lg font-bold text-center">ยืนยันสิทธิ์เข้าถึง</h3>
+            <input type="text" id="login-user" placeholder="Username" class="w-full border p-3 rounded-xl outline-none text-sm">
+            <input type="password" id="login-pass" placeholder="Password" class="w-full border p-3 rounded-xl outline-none text-sm">
+            <button onclick="checkLogin()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Login</button>
+            <button onclick="closeLoginModal()" class="w-full text-slate-400 text-xs text-center">ยกเลิก</button>
+        </div>
     </div>
-</div>
 
    <div id="student-modal" class="fixed inset-0 bg-black/80 hidden z-[100] flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl">
@@ -322,86 +318,12 @@
     <audio id="snd-ok" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
 <script>
-const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilwEKbHz5ACSUWP-LxeU8Rwk2pBDtGrBTp-sVRXJBvwA/exec";
+    const gasUrl = "https://script.google.com/macros/s/AKfycby9t947sFIvKCyxoLrFjLu0nNSGo95rdgFLarIfIVanE7kCKEDfglqgikUZCeFC_JAj/exec";
     let students = [], attendance = [], locationList = [], leaves = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
-    let currentUser = null;      
-    let pendingAction = null;    
-    let pendingDeleteIndex = null;
-    
-    async function apiCall(p) {
-        try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
-        catch(e) { return {success:false}; }
-    }
+    let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
+    let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
+    const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
 
-// 2. ฟังก์ชัน Login ที่สมบูรณ์ (วางทับอันเดิม)
-// --- ตรวจสอบส่วนนี้ในไฟล์ Index ---
-function loginSupervisor() {
-    alert("1. ฟังก์ชันเริ่มทำงานแล้ว"); // ถ้า Alert นี้ไม่ขึ้น แสดงว่าชื่อฟังก์ชันใน HTML กับ Script ไม่ตรงกัน
-
-    try {
-        const uInput = document.getElementById('username-input');
-        const pInput = document.getElementById('password-input');
-
-        if (!uInput || !pInput) {
-            alert("2. หา ID ใน HTML ไม่เจอ (username-input หรือ password-input)");
-            return;
-        }
-
-        const userVal = uInput.value.trim();
-        const passVal = pInput.value.trim();
-
-        if (!userVal || !passVal) {
-            alert("3. กรุณากรอกข้อมูลให้ครบ");
-            return;
-        }
-
-        alert("4. กำลังส่งข้อมูลไปที่ Code.gs...");
-
-        google.script.run
-            .withSuccessHandler(function(res) {
-                alert("5. Server ตอบกลับมาแล้ว: " + JSON.stringify(res));
-                if (res.success) {
-                    currentUser = res.user;
-                    alert("✅ ยินดีต้อนรับคุณ " + currentUser.name);
-                    document.getElementById('login-modal').classList.add('hidden');
-                    if (pendingAction) {
-                        openAdminMenu(pendingAction);
-                        pendingAction = null;
-                    }
-                } else {
-                    alert("❌ " + res.message);
-                }
-            })
-            .withFailureHandler(function(err) {
-                alert("❌ ระบบขัดข้อง (ฝั่ง Server): " + err);
-            })
-            .loginSupervisorDirect({ username: userVal, password: passVal });
-
-    } catch (error) {
-        alert("❌ เกิด Error ใน JavaScript: " + error.message);
-    }
-}
-// 3. เพิ่มฟังก์ชันเช็คสิทธิ์เมนู (ต้องมีเพื่อให้เปลี่ยนหน้าได้)
-function openAdminMenu(menuType) {
-    if (!currentUser) {
-        pendingAction = menuType;
-        document.getElementById('login-modal').classList.remove('hidden');
-        return;
-    }
-
-    // แยกสิทธิ์จากคอลัมน์ MenuAccess ใน Sheets
-    const accessList = currentUser.menuAccess ? currentUser.menuAccess.split(',').map(s => s.trim()) : [];
-    
-    if (accessList.includes(menuType)) {
-        if (menuType === 'Employee') {
-            switchTab('manage'); // ไปที่หน้าพนักงาน
-        } else if (menuType === 'Approval') {
-            switchTab('approve'); // ไปที่หน้าจัดการการอนุมัติ
-        }
-    } else {
-        alert("⚠️ ขออภัยคุณ " + currentUser.name + "\nคุณไม่มีสิทธิ์เข้าถึงเมนูนี้");
-    }
-}
     window.onload = async () => {
         lucide.createIcons();
         document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
@@ -415,44 +337,31 @@ function openAdminMenu(menuType) {
         }, 30000);
     };
 
+    async function apiCall(p) {
+        try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
+        catch(e) { return {success:false}; }
+    }
+
 async function loadAllData() {
     const [sRes, aRes, lRes, vRes] = await Promise.all([
-        apiCall({action:'getStudents'}), 
-        apiCall({action:'getAttendance'}), 
-        apiCall({action:'getLocations'}), 
-        apiCall({action:'getLeaves'})
+        apiCall({action:'getStudents'}), apiCall({action:'getAttendance'}), 
+        apiCall({action:'getLocations'}), apiCall({action:'getLeaves'})
     ]);
-
-    // แก้ไขจุดที่ 1: เช็คก่อนเรียกใช้ (บรรทัดที่ทำให้ตัวแดงขึ้น)
-    if(sRes.success) { 
-        students = sRes.data; 
-        if (typeof renderLeaveDropdown === 'function') {
-            renderLeaveDropdown(); 
-        }
-    }
-    
+    if(sRes.success) { students = sRes.data; renderLeaveDropdown(); }
     if(aRes.success) attendance = aRes.data;
-    
-    // แก้ไขจุดที่ 2: เช็คก่อนเรียกใช้
-    if(lRes.success) { 
-        locationList = lRes.data; 
-        if (typeof renderLocationDropdown === 'function') {
-            renderLocationDropdown(); 
-        }
-    }
-    
+    if(lRes.success) { locationList = lRes.data; renderLocationDropdown(); }
     if(vRes.success) leaves = vRes.data;
 
-    // แก้ไขจุดที่ 3: เช็คก่อนเรียกใช้ทุกตัวที่เหลือ
+    // ตรวจสอบว่ามีฟังก์ชันนี้ก่อนเรียกใช้ เพื่อป้องกัน Error (รูปที่ 2)
     if (typeof renderStudentTable === 'function') renderStudentTable();
-    if (typeof renderDashboard === 'function') renderDashboard();
     
-    if (typeof renderUpcomingLeaves === 'function') {
-        renderUpcomingLeaves(leaves, students);
-    }
-    
-    if (typeof renderAllStaffForScan === 'function') renderAllStaffForScan();
+    renderDashboard();
+    // --- วางบรรทัดนี้ลงไปครับ ---
+    renderUpcomingLeaves(leaves, students); 
+    // -------------------------
+    renderAllStaffForScan(); // บรรทัดนี้จะทำงานได้แล้ว
 }
+
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
 function renderDashboard() {
     const dateInput = document.getElementById('dashboard-date').value;
@@ -1426,7 +1335,6 @@ async function deleteStudent(rowNum, name) {
         location.reload(); 
     }
 }
-
 </script>
 </body>
 </html>
