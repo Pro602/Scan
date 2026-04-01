@@ -327,7 +327,11 @@ const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilw
     let currentUser = null;      
     let pendingAction = null;    
     let pendingDeleteIndex = null;
-
+    
+    async function apiCall(p) {
+        try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
+        catch(e) { return {success:false}; }
+    }
 
 // 2. ฟังก์ชัน Login ที่สมบูรณ์ (วางทับอันเดิม)
 function loginSupervisor() {
@@ -396,10 +400,7 @@ function openAdminMenu(menuType) {
         }, 30000);
     };
 
-    async function apiCall(p) {
-        try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
-        catch(e) { return {success:false}; }
-    }
+
 
 async function loadAllData() {
     const [sRes, aRes, lRes, vRes] = await Promise.all([
