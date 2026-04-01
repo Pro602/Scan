@@ -330,39 +330,35 @@ const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilw
 
 
     // --- 2. ฟังก์ชัน Login (ก๊อปปี้ไปวางใหม่ให้จบปีกกาปิด) ---
-    function loginSupervisor() {
-        const userVal = document.getElementById('username-input').value;
-        const passVal = document.getElementById('password-input').value;
+function loginSupervisor() {
+  const userVal = document.getElementById('username-input').value;
+  const passVal = document.getElementById('password-input').value;
 
-        if (!userVal || !passVal) {
-            alert("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
-            return;
+  if (!userVal || !passVal) {
+    alert("กรุณากรอกข้อมูลให้ครบ");
+    return;
+  }
+
+  // ต้องสะกดชื่อฟังก์ชันให้ตรงกับใน Code.gs (ตัวเล็กตัวใหญ่สำคัญมาก)
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.success) {
+        currentUser = res.user;
+        alert("สวัสดีคุณ " + currentUser.name);
+        document.getElementById('login-modal').classList.add('hidden');
+        if (pendingAction) {
+          openAdminMenu(pendingAction);
+          pendingAction = null;
         }
-
-        // เรียกใช้ฟังก์ชันใน Code.gs ผ่าน google.script.run (เสถียรที่สุด)
-        google.script.run
-            .withSuccessHandler(function(res) {
-                if (res.success) {
-                    currentUser = res.user;
-                    alert("✅ ยินดีต้อนรับคุณ " + currentUser.name);
-                    
-                    // ปิด Modal Login
-                    document.getElementById('login-modal').classList.add('hidden');
-                    
-                    // ถ้ามีการกดเมนูค้างไว้ ให้เปิดหน้านั้นทันที
-                    if (pendingAction) {
-                        openAdminMenu(pendingAction);
-                        pendingAction = null;
-                    }
-                } else {
-                    alert("❌ " + res.message);
-                }
-            })
-            .withFailureHandler(function(err) {
-                alert("❌ ระบบขัดข้อง: " + err);
-            })
-            .loginSupervisorDirect({ username: userVal, password: passVal });
-    }
+      } else {
+        alert(res.message);
+      }
+    })
+    .withFailureHandler(function(err) {
+      alert("เกิดข้อผิดพลาด: " + err);
+    })
+    .loginSupervisorDirect({ username: userVal, password: passVal }); // <--- จุดนี้ต้องตรงกัน
+}
 
     // --- 3. ฟังก์ชันเช็คสิทธิ์ (ต้องมีเพื่อให้เปลี่ยนหน้าได้) ---
     function openAdminMenu(menuType) {
