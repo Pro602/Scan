@@ -334,9 +334,11 @@ const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilw
     }
 
 // 2. ฟังก์ชัน Login ที่สมบูรณ์ (วางทับอันเดิม)
+// --- ตรวจสอบส่วนนี้ในไฟล์ Index ---
 function loginSupervisor() {
-    console.log("--- เริ่มกดปุ่ม Login แล้ว ---"); // <--- เพิ่มบรรทัดนี้
-    alert("ปุ่มทำงานแล้ว!"); // <--- เพิ่มบรรทัดนี้เพื่อเช็ค
+    // 1. ลองเพิ่มบรรทัดนี้เพื่อทดสอบว่าปุ่มเชื่อมกับฟังก์ชันหรือยัง
+    console.log("ปุ่ม Login ถูกกดแล้ว!"); 
+    
     const userVal = document.getElementById('username-input').value;
     const passVal = document.getElementById('password-input').value;
 
@@ -345,15 +347,15 @@ function loginSupervisor() {
         return;
     }
 
-    // เรียกไปที่ Code.gs ผ่าน google.script.run
+    // 2. เรียกไปที่ Code.gs
     google.script.run
         .withSuccessHandler(function(res) {
+            console.log("Server ตอบกลับมาว่า:", res); // ดูผลลัพธ์ใน Console
             if (res.success) {
                 currentUser = res.user;
                 alert("✅ ยินดีต้อนรับคุณ " + currentUser.name);
                 document.getElementById('login-modal').classList.add('hidden');
                 
-                // ถ้ามีการกดเมนูค้างไว้ ให้เปิดหน้านั้นทันที
                 if (pendingAction) {
                     openAdminMenu(pendingAction);
                     pendingAction = null;
@@ -363,6 +365,7 @@ function loginSupervisor() {
             }
         })
         .withFailureHandler(function(err) {
+            console.error("ระบบขัดข้อง:", err);
             alert("❌ ระบบขัดข้อง: " + err);
         })
         .loginSupervisorDirect({ username: userVal, password: passVal });
