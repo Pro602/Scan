@@ -118,8 +118,9 @@
             <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-md transition-all whitespace-nowrap">Dashboard</button>
             <button onclick="switchTab('scan')" id="tab-scan" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">สแกนบันทึกเวลา</button>
             <button onclick="switchTab('leave')" id="tab-leave" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">ลงชื่อการลา</button>
-            <button onclick="switchTab('approve')" id="tab-approve" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">จัดการการอนุมัติ</button>
-            <button onclick="switchTab('manage')" id="tab-manage" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">พนักงาน</button>
+<button onclick="checkAccess('approve')" id="tab-approve" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">จัดการการอนุมัติ</button>
+
+<button onclick="checkAccess('manage')" id="tab-manage" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">พนักงาน</button>
         </div>
     </div>
 </nav>
@@ -322,6 +323,7 @@
     let students = [], attendance = [], locationList = [], leaves = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
     let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
     let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
+    let currentUserRole = null; // เก็บสิทธิ์: 'admin', 'hr', 'supervisor'
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
 
     window.onload = async () => {
@@ -623,6 +625,43 @@ function switchTab(tab) {
     if (tab === 'approve') renderApprovalList();
 }
 
+    function checkAccess(menuType) {
+    // 1. ถ้ายังไม่ได้ Login ให้ถามหา User/Pass ก่อน
+    if (!currentUserRole) {
+        const userVal = prompt("Username (ชื่อผู้ใช้):");
+        const passVal = prompt("Password (รหัสผ่าน):");
+
+        if (userVal === 'admin' && passVal === '1234') {
+            currentUserRole = 'admin';
+        } else if (userVal === 'hr' && passVal === 'hr123') {
+            currentUserRole = 'hr';
+        } else if (userVal === 'boss' && passVal === 'boss123') {
+            currentUserRole = 'supervisor';
+        } else {
+            alert("❌ ข้อมูลไม่ถูกต้อง");
+            return;
+        }
+        alert("✅ เข้าสู่ระบบในฐานะ: " + currentUserRole);
+    }
+
+    // 2. เช็คสิทธิ์ตามเมนูที่กด
+    if (menuType === 'manage') {
+        // ให้เฉพาะ admin และ hr เข้าได้
+        if (currentUserRole === 'admin' || currentUserRole === 'hr') {
+            switchTab('manage');
+        } else {
+            alert("⚠️ สิทธิ์ของคุณไม่สามารถจัดการพนักงานได้");
+        }
+    } 
+    else if (menuType === 'approve') {
+        // ให้เฉพาะ admin และ boss (supervisor) เข้าได้
+        if (currentUserRole === 'admin' || currentUserRole === 'supervisor') {
+            switchTab('approve');
+        } else {
+            alert("⚠️ สิทธิ์ของคุณไม่สามารถอนุมัติการลาได้");
+        }
+    }
+}
     async function saveLeave() {
         const id = document.getElementById('leave-student-select').value;
         const student = students.find(x => String(x.studentid) === String(id));
