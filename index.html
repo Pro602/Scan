@@ -336,39 +336,50 @@ const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilw
 // 2. ฟังก์ชัน Login ที่สมบูรณ์ (วางทับอันเดิม)
 // --- ตรวจสอบส่วนนี้ในไฟล์ Index ---
 function loginSupervisor() {
-    // 1. ลองเพิ่มบรรทัดนี้เพื่อทดสอบว่าปุ่มเชื่อมกับฟังก์ชันหรือยัง
-    console.log("ปุ่ม Login ถูกกดแล้ว!"); 
-    
-    const userVal = document.getElementById('username-input').value;
-    const passVal = document.getElementById('password-input').value;
+    alert("1. ฟังก์ชันเริ่มทำงานแล้ว"); // ถ้า Alert นี้ไม่ขึ้น แสดงว่าชื่อฟังก์ชันใน HTML กับ Script ไม่ตรงกัน
 
-    if (!userVal || !passVal) {
-        alert("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
-        return;
-    }
+    try {
+        const uInput = document.getElementById('username-input');
+        const pInput = document.getElementById('password-input');
 
-    // 2. เรียกไปที่ Code.gs
-    google.script.run
-        .withSuccessHandler(function(res) {
-            console.log("Server ตอบกลับมาว่า:", res); // ดูผลลัพธ์ใน Console
-            if (res.success) {
-                currentUser = res.user;
-                alert("✅ ยินดีต้อนรับคุณ " + currentUser.name);
-                document.getElementById('login-modal').classList.add('hidden');
-                
-                if (pendingAction) {
-                    openAdminMenu(pendingAction);
-                    pendingAction = null;
+        if (!uInput || !pInput) {
+            alert("2. หา ID ใน HTML ไม่เจอ (username-input หรือ password-input)");
+            return;
+        }
+
+        const userVal = uInput.value.trim();
+        const passVal = pInput.value.trim();
+
+        if (!userVal || !passVal) {
+            alert("3. กรุณากรอกข้อมูลให้ครบ");
+            return;
+        }
+
+        alert("4. กำลังส่งข้อมูลไปที่ Code.gs...");
+
+        google.script.run
+            .withSuccessHandler(function(res) {
+                alert("5. Server ตอบกลับมาแล้ว: " + JSON.stringify(res));
+                if (res.success) {
+                    currentUser = res.user;
+                    alert("✅ ยินดีต้อนรับคุณ " + currentUser.name);
+                    document.getElementById('login-modal').classList.add('hidden');
+                    if (pendingAction) {
+                        openAdminMenu(pendingAction);
+                        pendingAction = null;
+                    }
+                } else {
+                    alert("❌ " + res.message);
                 }
-            } else {
-                alert("❌ " + res.message);
-            }
-        })
-        .withFailureHandler(function(err) {
-            console.error("ระบบขัดข้อง:", err);
-            alert("❌ ระบบขัดข้อง: " + err);
-        })
-        .loginSupervisorDirect({ username: userVal, password: passVal });
+            })
+            .withFailureHandler(function(err) {
+                alert("❌ ระบบขัดข้อง (ฝั่ง Server): " + err);
+            })
+            .loginSupervisorDirect({ username: userVal, password: passVal });
+
+    } catch (error) {
+        alert("❌ เกิด Error ใน JavaScript: " + error.message);
+    }
 }
 
 // 3. เพิ่มฟังก์ชันเช็คสิทธิ์เมนู (ต้องมีเพื่อให้เปลี่ยนหน้าได้)
