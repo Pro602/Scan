@@ -322,7 +322,7 @@
     <audio id="snd-ok" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
 <script>
-const gasUrl = "https://script.google.com/macros/s/AKfycby9t947sFIvKCyxoLrFjLu0nNSGo95rdgFLarIfIVanE7kCKEDfglqgikUZCeFC_JAj/exec";
+const gasUrl = "https://script.google.com/macros/s/AKfycbzI8nBa3n3qSSbqYWji0oilwEKbHz5ACSUWP-LxeU8Rwk2pBDtGrBTp-sVRXJBvwA/exec";
     let students = [], attendance = [], locationList = [], leaves = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
     let currentUser = null;      
     let pendingAction = null;    
@@ -1362,7 +1362,7 @@ async function deleteStudent(rowNum, name) {
     }
 }
 
-async function loginSupervisor() {
+function loginSupervisor() {
     const userVal = document.getElementById('username-input').value;
     const passVal = document.getElementById('password-input').value;
 
@@ -1371,35 +1371,27 @@ async function loginSupervisor() {
         return;
     }
 
-    try {
-        // ใช้ fetch มาตรฐานแทน apiCall เพื่อป้องกัน Error: apiCall is not defined
-        const response = await fetch(gasUrl, {
-            method: 'POST',
-            body: JSON.stringify({
-                action: 'loginSupervisor',
-                data: { username: userVal, password: passVal }
-            })
-        });
-
-        const res = await response.json();
-
-        if (res.success) {
-            currentUser = res.user; 
-            alert(`✅ ยินดีต้อนรับคุณ ${currentUser.name}`);
-            
-            document.getElementById('login-modal').classList.add('hidden');
-            
-            if (pendingAction) {
-                openAdminMenu(pendingAction);
-                pendingAction = null;
+    // ใช้การเรียกฟังก์ชันตรงๆ ไปยัง Google Apps Script
+    google.script.run
+        .withSuccessHandler(function(res) {
+            if (res.success) {
+                currentUser = res.user;
+                alert(`✅ ยินดีต้อนรับคุณ ${currentUser.name}`);
+                document.getElementById('login-modal').classList.add('hidden');
+                
+                // เปิดหน้าที่กดค้างไว้
+                if (pendingAction) {
+                    openAdminMenu(pendingAction);
+                    pendingAction = null;
+                }
+            } else {
+                alert("❌ " + res.message);
             }
-        } else {
-            alert("❌ เข้าสู่ระบบไม่สำเร็จ: " + res.message);
-        }
-    } catch (error) {
-        console.error("Login Error:", error);
-        alert("❌ ไม่สามารถเชื่อมต่อกับ Google Sheets ได้\n\nวิธีแก้:\n1. ตรวจสอบว่าอินเทอร์เน็ตปกติไหม\n2. ตรวจสอบว่าใน Apps Script ได้กด 'Deploy New Version' หรือยัง?");
-    }
+        })
+        .withFailureHandler(function(err) {
+            alert("❌ ระบบขัดข้อง: " + err);
+        })
+        .loginSupervisorDirect({ username: userVal, password: passVal });
 }
 </script>
 </body>
