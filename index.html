@@ -367,9 +367,15 @@ async function loadAllData() {
         apiCall({action:'getSupervisors'})
     ]);
     
-    if(sRes.success) { 
+if(sRes.success) { 
         students = sRes.data; 
-        renderLeaveDropdown(); // อัปเดตรายชื่อในหน้าลงชื่อลา
+        renderStudentTable(); // <--- เพิ่มเพื่อให้แสดงรายชื่อพนักงาน
+        renderLeaveDropdown(); 
+    }
+
+    if(lRes.success) {
+        locationList = lRes.data;
+        renderLocationDropdown(); // <--- เพิ่มบรรทัดนี้เพื่อให้สถานที่แสดงผลใน Dropdown
     }
     if(aRes.success) attendance = aRes.data;
     if(lRes.success) locationList = lRes.data;
@@ -955,36 +961,28 @@ function renderStudentTable() {
     const tbody = document.getElementById('student-table-body');
     if (!tbody) return;
 
-    // ใช้การ Map ข้อมูล และจัดลำดับ TD ใหม่ให้ตรงหัวข้อ
-    tbody.innerHTML = students.map((s, i) => {
-        const rowIndex = i + 2; // อ้างอิงแถวตามชุด Code เดิมของคุณ
-        const sID = s.studentid || s.id || "-";
-        const sName = s.name || "-";
-        const sClass = s.class || "-";
-        const sImg = s.imagedatabase64 || "";
-
-        return `
+    tbody.innerHTML = students.map((s, i) => `
         <tr class="border-b border-slate-700 hover:bg-slate-800/50 transition-colors">
-            <td class="p-4 text-center text-xs font-mono text-slate-400">${sID}</td>
-            
             <td class="p-4">
-                <div class="flex items-center gap-3">
-                    <img src="${sImg}" class="w-10 h-10 rounded-full object-cover border border-slate-600 shadow-sm" onerror="this.src='https://via.placeholder.com/40'">
-                    <span class="font-medium text-sm text-slate-200">${sName}</span>
-                </div>
+                <img src="${s.imagedatabase64}" 
+                     class="w-10 h-10 rounded-full object-cover border border-slate-600 shadow-sm" 
+                     onerror="this.src='https://via.placeholder.com/40'">
             </td>
-            
-            <td class="p-4 text-sm text-slate-300 text-center">${sClass}</td>
-            
+
+            <td class="p-4 font-mono text-xs text-slate-400">${s.studentid || '-'}</td>
+
+            <td class="p-4 font-bold text-slate-200 text-sm">${s.name || '-'}</td>
+
+            <td class="p-4 text-xs text-blue-400 font-bold">${s.class || '-'}</td>
+
             <td class="p-4 text-center">
-                <button onclick="deleteStudent(${rowIndex}, \`${sName}\`)" class="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors">
+                <button onclick="deleteStudent(${i + 2}, \`${s.name}\`)" class="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </td>
-        </tr>`;
-    }).join('');
+        </tr>`).join('');
 
-    // อัปเดตไอคอนถังขยะให้แสดงผล
+    // อัปเดตไอคอน Lucide
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
