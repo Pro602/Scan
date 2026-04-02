@@ -958,25 +958,26 @@ function renderStudentTable() {
     tbody.innerHTML = '';
     
     students.forEach((s) => {
-        // ตรวจสอบว่ามีข้อมูลจริงไหม ถ้าไม่มีให้ข้ามหรือใส่ '-'
-        const studentId = s.studentid || s.id || '-';
-        const studentName = s.name || '-';
-        const studentClass = s.class || '-';
-        const studentImg = s.imagedatabase64 || '';
+        // ดึงค่าให้ตรงตามหัวตารางใน Sheets (StudentID, Name, Class, ImageDataBase64)
+        const sID = s.studentid || s.id || "-";
+        const sName = s.name || "-";
+        const sClass = s.class || "-";
+        const sImg = s.imagedatabase64 || "";
+        const rIndex = s.rowIndex; // เลขแถวจาก Google Sheets
 
         const tr = document.createElement('tr');
         tr.className = "border-b border-slate-700 hover:bg-slate-800/50 transition-colors";
         tr.innerHTML = `
-            <td class="p-4 text-center text-xs font-mono text-slate-400">${studentId}</td>
+            <td class="p-4 text-center text-xs font-mono text-slate-400">${sID}</td>
             <td class="p-4">
                 <div class="flex items-center gap-3">
-                    <img src="${studentImg}" class="w-10 h-10 rounded-full object-cover border border-slate-600 shadow-sm" onerror="this.src='https://via.placeholder.com/40'">
-                    <span class="font-medium text-sm text-slate-200">${studentName}</span>
+                    <img src="${sImg}" class="w-10 h-10 rounded-full object-cover border border-slate-600 shadow-sm" onerror="this.src='https://via.placeholder.com/40'">
+                    <span class="font-medium text-sm text-slate-200">${sName}</span>
                 </div>
             </td>
-            <td class="p-4 text-sm text-slate-300 text-center">${studentClass}</td>
+            <td class="p-4 text-sm text-slate-300 text-center">${sClass}</td>
             <td class="p-4 text-center">
-                <button onclick="confirmDeleteStudent('${s.rowIndex}')" class="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors">
+                <button onclick="deleteStudent('${rIndex}', '${sName}')" class="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </td>
@@ -986,7 +987,6 @@ function renderStudentTable() {
     
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
-
     // --- วางตัวแปรไว้ด้านบนสุดของกลุ่มฟังก์ชัน ---
     let croppedImg = null; 
 
