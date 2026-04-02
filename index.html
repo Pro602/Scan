@@ -561,24 +561,20 @@ async function approveAction(id, date) {
 
     // --- ส่วน Logic พื้นฐาน (คงเดิม) ---
 function switchTab(tab) {
-    // 1. ตรวจสอบ: ถ้าจะสแกนแต่ยังไม่ได้เลือกชื่อพนักงาน
+    // 1. ตรวจสอบการสแกน (คงเดิมไว้)
     if (tab === 'scan' && !window.targetStaff) {
         alert("⚠️ กรุณากดเลือกรายชื่อพนักงานที่ 'รายชื่อพนักงาน' ก่อนเข้าหน้าสแกนค่ะ");
-        const dashContent = document.getElementById('content-dashboard');
-        if (dashContent && dashContent.classList.contains('hidden')) {
-            switchTab('dashboard'); 
-        }
         return; 
     }
 
-    // 2. ตรวจสอบการ Login สำหรับหน้าจัดการ
-    if ((tab === 'approve' || tab === 'manage') && !isLoggedIn) { 
-        pendingAction = tab; 
-        document.getElementById('login-modal').classList.remove('hidden'); 
-        return; 
+    // ❌ 2. ลบส่วนนี้ออก หรือเปลี่ยน isLoggedIn เป็น true ❌
+    // เดิม: if ((tab === 'approve' || tab === 'manage') && !isLoggedIn) { ... }
+    // ให้เปลี่ยนเป็นแบบนี้ครับ เพื่อให้ข้ามการเช็คตัวแปรเก่าไปเลย
+    if ((tab === 'approve' || tab === 'manage')) {
+        // ปล่อยว่างไว้ หรือลบทิ้ง เพราะเราใช้ checkAccess() คุมไว้แล้วที่ปุ่ม
     }
 
-    // 3. สลับการแสดงผลหน้าเนื้อหา (Hidden/Show)
+    // 3. สลับการแสดงผล (คงเดิมไว้)
     document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
     const targetContent = document.getElementById(`content-${tab}`);
     if (targetContent) targetContent.classList.remove('hidden');
@@ -1403,7 +1399,6 @@ async function deleteStudent(rowNum, name) {
             
             <button onclick="processAuth()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all">ยืนยัน</button>
             <button onclick="document.getElementById('auth-modal').classList.add('hidden')" class="w-full text-slate-400 text-xs text-center">ยกเลิก</button>
-            <button onclick="processAuth()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all">ยืนยัน</button>
         </div>
     </div>
 
