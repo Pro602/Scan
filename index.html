@@ -321,20 +321,31 @@
 // แก้ไข window.onload เพื่อแยกโหลด Face API ออกไปข้างหลัง
 window.onload = async () => {
     lucide.createIcons();
-    document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('dashboard-date');
+    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
 
-    // โหลดข้อมูล Dashboard ก่อน (อันนี้เร็ว)
+    // --- STEP 1: โหลดข้อมูลจาก Sheets มาแสดงผลก่อน (รวดเร็ว) ---
     await loadAllData(); 
     
-    // ค่อยๆ โหลด Face API ตามมาเบื้องหลัง (ไม่ขวางการแสดงผล Dashboard)
+    // --- STEP 2: สั่งวาดตารางพนักงานทันทีหลังจากได้ข้อมูล ---
+    if (typeof renderStudentTable === 'function') {
+        renderStudentTable();
+    }
+
+    // --- STEP 3: ค่อยๆ โหลด AI Face API ไว้เบื้องหลัง (ไม่ขวางการแสดงผล) ---
     console.log("Loading Face API in background...");
     initFaceAPI().then(() => {
         console.log("Face API Ready!");
-        renderAllStaffForScan();
+        // ถ้าหน้าสแกนต้องการข้อมูลค่อยสั่ง Render เพิ่มตรงนี้
+        if (typeof renderAllStaffForScan === 'function') renderAllStaffForScan();
     });
 
+    // อัปเดตข้อมูลทุก 30 วินาที
     setInterval(async () => {
-        const [aRes, vRes] = await Promise.all([apiCall({action:'getAttendance'}), apiCall({action:'getLeaves'})]);
+        const [aRes, vRes] = await Promise.all([
+            apiCall({action:'getAttendance'}), 
+            apiCall({action:'getLeaves'})
+        ]);
         if(aRes.success) attendance = aRes.data;
         if(vRes.success) leaves = vRes.data;
         renderDashboard();
@@ -347,24 +358,27 @@ window.onload = async () => {
 
 // ปรับปรุง loadAllData ให้ดึงข้อมูล Supervisor มาด้วย
 async function loadAllData() {
+    // เพิ่มการเรียก getSupervisors เพื่อดึงสิทธิ์จากชีทใหม่
     const [sRes, aRes, lRes, vRes, supRes] = await Promise.all([
         apiCall({action:'getStudents'}), 
         apiCall({action:'getAttendance'}), 
         apiCall({action:'getLocations'}), 
         apiCall({action:'getLeaves'}),
-        apiCall({action:'getSupervisors'}) // ดึงข้อมูลสิทธิ์จากชีท
+        apiCall({action:'getSupervisors'})
     ]);
     
-    if(sRes.success) { students = sRes.data; renderLeaveDropdown(); }
+    if(sRes.success) { 
+        students = sRes.data; 
+        renderLeaveDropdown(); // อัปเดตรายชื่อในหน้าลงชื่อลา
+    }
     if(aRes.success) attendance = aRes.data;
     if(lRes.success) locationList = lRes.data;
     if(vRes.success) leaves = vRes.data;
-    if(supRes && supRes.success) supervisors = supRes.data; // เก็บรายชื่อผู้มีสิทธิ์
+    if(supRes && supRes.success) supervisors = supRes.data; // เก็บรายชื่อผู้มีสิทธิ์จากชีท
 
     renderDashboard();
     renderUpcomingLeaves(leaves, students); 
 }
-
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
 function renderDashboard() {
     const dateInput = document.getElementById('dashboard-date').value;
@@ -938,19 +952,37 @@ function getDistance(lat1, lon1, lat2, lon2) {
     }
 
 function renderStudentTable() {
-    document.getElementById('student-table-body').innerHTML = students.map((s, i) => `
-        <tr>
-            <td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td>
-            <td class="p-4 font-mono text-xs">${s.studentid}</td>
-            <td class="p-4 font-bold text-slate-700">${s.name}</td>
-            <td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td>
+    const tbody = document.getElementById('student-table-body');
+    if (!tbody) {
+        console.error("หา id 'student-table-body' ไม่เจอ");
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    // นำรายชื่อจากตัวแปร students มาสร้างแถวในตาราง
+    students.forEach((s) => {
+        const tr = document.createElement('tr');
+        tr.className = "border-b border-slate-700 hover:bg-slate-800/50 transition-colors";
+        tr.innerHTML = `
+            <td class="p-4 text-center text-xs font-mono text-slate-400">${s.studentid}</td>
+            <td class="p-4">
+                <div class="flex items-center gap-3">
+                    <img src="${s.imagedatabase64 || ''}" class="w-10 h-10 rounded-full object-cover border border-slate-600 shadow-sm" onerror="this.src='https://via.placeholder.com/40'">
+                    <span class="font-medium text-sm text-slate-200">${s.name}</span>
+                </div>
+            </td>
+            <td class="p-4 text-sm text-slate-300 text-center">${s.class || '-'}</td>
             <td class="p-4 text-center">
-                <button onclick="deleteStudent(${i + 2}, \`${s.name}\`)" class="text-rose-500">
+                <button onclick="confirmDeleteStudent('${s.rowIndex}')" class="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </td>
-        </tr>`).join('');
-    lucide.createIcons();
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    // สั่งให้ไอคอน Lucide ทำงาน
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
     // --- วางตัวแปรไว้ด้านบนสุดของกลุ่มฟังก์ชัน ---
