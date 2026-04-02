@@ -309,50 +309,60 @@
     <audio id="snd-ok" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
 <script>
-    const gasUrl = "https://script.google.com/macros/s/AKfycbwdjYT7b7zEpJL0nr3d-t0YmMFoAycli7ru7UYxnP18qJzvMkr4xEYjCHhf3ucWxiAw/exec";
+    const gasUrl = "https://script.google.com/macros/s/AKfycbxOxCWV-QvzIMqjQLbN9sMDaWQjEpikN8ExqMKNN3er77o3OTJm3tdDKmvseQA1Rrk3/exec";
     let students = [], attendance = [], locationList = [], leaves = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
     let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
     let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
     let currentUserRole = null; // เก็บสิทธิ์: 'admin', 'hr', 'supervisor'
     let targetMenu = null; // เก็บไว้ว่าเขากำลังจะเข้าเมนูไหน
+    let supervisors = [];
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
 
-    window.onload = async () => {
-        lucide.createIcons();
-        document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
-        await loadAllData(); 
-        await initFaceAPI(); 
-        setInterval(async () => {
-            const [aRes, vRes] = await Promise.all([apiCall({action:'getAttendance'}), apiCall({action:'getLeaves'})]);
-            if(aRes.success) attendance = aRes.data;
-            if(vRes.success) leaves = vRes.data;
-            renderDashboard();
-        }, 30000);
-    };
+// แก้ไข window.onload เพื่อแยกโหลด Face API ออกไปข้างหลัง
+window.onload = async () => {
+    lucide.createIcons();
+    document.getElementById('dashboard-date').value = new Date().toISOString().split('T')[0];
 
+    // โหลดข้อมูล Dashboard ก่อน (อันนี้เร็ว)
+    await loadAllData(); 
+    
+    // ค่อยๆ โหลด Face API ตามมาเบื้องหลัง (ไม่ขวางการแสดงผล Dashboard)
+    console.log("Loading Face API in background...");
+    initFaceAPI().then(() => {
+        console.log("Face API Ready!");
+        renderAllStaffForScan();
+    });
+
+    setInterval(async () => {
+        const [aRes, vRes] = await Promise.all([apiCall({action:'getAttendance'}), apiCall({action:'getLeaves'})]);
+        if(aRes.success) attendance = aRes.data;
+        if(vRes.success) leaves = vRes.data;
+        renderDashboard();
+    }, 30000);
+};
     async function apiCall(p) {
         try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
         catch(e) { return {success:false}; }
     }
 
+// ปรับปรุง loadAllData ให้ดึงข้อมูล Supervisor มาด้วย
 async function loadAllData() {
-    const [sRes, aRes, lRes, vRes] = await Promise.all([
-        apiCall({action:'getStudents'}), apiCall({action:'getAttendance'}), 
-        apiCall({action:'getLocations'}), apiCall({action:'getLeaves'})
+    const [sRes, aRes, lRes, vRes, supRes] = await Promise.all([
+        apiCall({action:'getStudents'}), 
+        apiCall({action:'getAttendance'}), 
+        apiCall({action:'getLocations'}), 
+        apiCall({action:'getLeaves'}),
+        apiCall({action:'getSupervisors'}) // ดึงข้อมูลสิทธิ์จากชีท
     ]);
+    
     if(sRes.success) { students = sRes.data; renderLeaveDropdown(); }
     if(aRes.success) attendance = aRes.data;
-    if(lRes.success) { locationList = lRes.data; renderLocationDropdown(); }
+    if(lRes.success) locationList = lRes.data;
     if(vRes.success) leaves = vRes.data;
+    if(supRes && supRes.success) supervisors = supRes.data; // เก็บรายชื่อผู้มีสิทธิ์
 
-    // ตรวจสอบว่ามีฟังก์ชันนี้ก่อนเรียกใช้ เพื่อป้องกัน Error (รูปที่ 2)
-    if (typeof renderStudentTable === 'function') renderStudentTable();
-    
     renderDashboard();
-    // --- วางบรรทัดนี้ลงไปครับ ---
     renderUpcomingLeaves(leaves, students); 
-    // -------------------------
-    renderAllStaffForScan(); // บรรทัดนี้จะทำงานได้แล้ว
 }
 
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
@@ -531,31 +541,26 @@ const createItem = (a, s) => {
 
 // วางทับของเดิมที่เป็นชื่อนี้ได้เลย
 async function approveAction(id, date) {
-    // ใช้ currentUserName ที่ได้จากการ Login (เช่น Weera, Jang)
-    const approver = (typeof currentUserName !== 'undefined' && currentUserName) ? currentUserName : "Admin";
+    // ดึงชื่อผู้อนุมัติจากตัวแปร currentUser ที่ได้จากการ Login
+    const approverName = currentUser || "Admin"; 
     
-    if(!confirm(`ยืนยันการอนุมัติรายการนี้ โดยคุณ ${approver}?`)) return;
+    if(!confirm(`ยืนยันการอนุมัติรายการนี้ โดยคุณ ${approverName}?`)) return;
 
     const res = await apiCall({ 
         action: 'approveLeave', 
         data: { 
             id: id, 
             date: date, 
-            approvedBy: approver 
+            approvedBy: approverName // ส่งชื่อนี้ไปบันทึกใน Sheet
         } 
     });
 
     if(res.success) { 
         alert("✅ อนุมัติสำเร็จ"); 
-        // สำคัญ: โหลดข้อมูลใหม่จาก Sheets และวาดหน้าจอทั้งหมดใหม่ทันที
         await loadAllData(); 
         renderApprovalList(); 
-        // สั่งให้รายงานลาล่วงหน้าอัปเดตตัวเลขและรายชื่อใหม่ด้วย
-        if (typeof renderUpcomingLeaves === 'function') {
-            renderUpcomingLeaves(leaves, students);
-        }
     } else {
-        alert("❌ อนุมัติล้มเหลว: " + (res.message || "ติดต่อแอดมิน"));
+        alert("❌ ผิดพลาด: " + (res.message || "ติดต่อแอดมิน"));
     }
 }
 
@@ -628,36 +633,22 @@ function checkAccess(menuType) {
 }
 // 3. ฟังก์ชันที่ปุ่ม "ยืนยัน" ใน Modal เรียกใช้
 function processAuth() {
-    const user = document.getElementById('auth-user').value.trim();
-    const pass = document.getElementById('auth-pass').value.trim();
+    const userIn = document.getElementById('auth-user').value.trim();
+    const passIn = document.getElementById('auth-pass').value.trim();
 
-    // --- ตรวจสอบสิทธิ์ (รวม Step 1 และ 2 เข้าด้วยกัน) ---
-    
-    // เช็คจากรหัสผ่านเดิม (Weera/Jang) ให้เป็น Admin
-    if (AUTHORIZED_USERS[user] && AUTHORIZED_USERS[user] === pass) {
-        currentUserRole = 'admin';
-        currentUser = user;
-    } 
-    // เช็คสิทธิ์ HR
-    else if (user === 'hr' && pass === 'hr123') {
-        currentUserRole = 'hr';
-        currentUser = 'HR Staff';
-    }
-    // เช็คสิทธิ์ Boss
-    else if (user === 'boss' && pass === 'boss123') {
-        currentUserRole = 'supervisor';
-        currentUser = 'Supervisor';
-    } 
-    else {
-        alert("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-        return;
-    }
+    // ค้นหาคนที่มีชื่อผู้ใช้และรหัสผ่านตรงกับใน Sheet Supervisors
+    const found = supervisors.find(s => s.username === userIn && s.password === passIn);
 
-    // ถ้าผ่านแล้ว ให้รันฟังก์ชันเปลี่ยนหน้า
-    executeNavigation();
+    if (found) {
+        currentUser = found.name; // เก็บชื่อจริง (Name) ไว้ใช้บันทึกการอนุมัติ
+        currentUserRole = found.role; // เก็บสิทธิ์ (Role)
+        
+        // เมื่อผ่านแล้วให้ไปหน้าต่อไป
+        executeNavigation();
+    } else {
+        alert("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง\n(กรุณาเช็คข้อมูลในหน้าชีท Supervisors)");
+    }
 }
-
-// 4. ฟังก์ชันจัดการการสลับหน้าตามสิทธิ์
 function executeNavigation() {
     if (targetMenu === 'manage') {
         if (currentUserRole === 'admin' || currentUserRole === 'hr') {
