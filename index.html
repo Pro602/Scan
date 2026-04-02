@@ -316,6 +316,7 @@
     let currentUserRole = null; // เก็บสิทธิ์: 'admin', 'hr', 'supervisor'
     let targetMenu = null; // เก็บไว้ว่าเขากำลังจะเข้าเมนูไหน
     let supervisors = [];
+    let croppedImg = null; 
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
 
 // แก้ไข window.onload เพื่อแยกโหลด Face API ออกไปข้างหลัง
@@ -952,44 +953,22 @@ function getDistance(lat1, lon1, lat2, lon2) {
     }
 
 function renderStudentTable() {
-    const tbody = document.getElementById('student-table-body');
-    if (!tbody) return;
-    
-    tbody.innerHTML = '';
-    
-    students.forEach((s) => {
-        // ดึงค่าให้ตรงตามหัวตารางใน Sheets (StudentID, Name, Class, ImageDataBase64)
-        const sID = s.studentid || s.id || "-";
-        const sName = s.name || "-";
-        const sClass = s.class || "-";
-        const sImg = s.imagedatabase64 || "";
-        const rIndex = s.rowIndex; // เลขแถวจาก Google Sheets
-
-        const tr = document.createElement('tr');
-        tr.className = "border-b border-slate-700 hover:bg-slate-800/50 transition-colors";
-        tr.innerHTML = `
-            <td class="p-4 text-center text-xs font-mono text-slate-400">${sID}</td>
-            <td class="p-4">
-                <div class="flex items-center gap-3">
-                    <img src="${sImg}" class="w-10 h-10 rounded-full object-cover border border-slate-600 shadow-sm" onerror="this.src='https://via.placeholder.com/40'">
-                    <span class="font-medium text-sm text-slate-200">${sName}</span>
-                </div>
-            </td>
-            <td class="p-4 text-sm text-slate-300 text-center">${sClass}</td>
+    document.getElementById('student-table-body').innerHTML = students.map((s, i) => `
+        <tr>
+            <td class="p-4"><img src="${s.imagedatabase64}" class="w-10 h-10 rounded-lg object-cover border"></td>
+            <td class="p-4 font-mono text-xs">${s.studentid}</td>
+            <td class="p-4 font-bold text-slate-700">${s.name}</td>
+            <td class="p-4 text-xs text-blue-700 font-bold">${s.class || '-'}</td>
             <td class="p-4 text-center">
-                <button onclick="deleteStudent('${rIndex}', '${sName}')" class="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors">
+                <button onclick="deleteStudent(${i + 2}, \`${s.name}\`)" class="text-rose-500">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </td>
-        `;
-        tbody.appendChild(tr);
-    });
-    
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+        </tr>`).join('');
+    lucide.createIcons();
 }
-    // --- วางตัวแปรไว้ด้านบนสุดของกลุ่มฟังก์ชัน ---
-    let croppedImg = null; 
 
+    // --- วางตัวแปรไว้ด้านบนสุดของกลุ่มฟังก์ชัน ---
     async function startCamera(id) { try { document.getElementById(id).srcObject = await navigator.mediaDevices.getUserMedia({video:true}); } catch(e){} }
     function stopCamera(id) { const v = document.getElementById(id); if(v?.srcObject) v.srcObject.getTracks().forEach(t => t.stop()); }
     function speak(t) { const m = new SpeechSynthesisUtterance(t); m.lang = 'th-TH'; window.speechSynthesis.speak(m); }
