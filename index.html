@@ -324,6 +324,7 @@
     let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
     let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
     let currentUserRole = null; // เก็บสิทธิ์: 'admin', 'hr', 'supervisor'
+    let targetMenu = null; // เก็บไว้ว่าเขากำลังจะเข้าเมนูไหน
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
 
     window.onload = async () => {
@@ -625,43 +626,58 @@ function switchTab(tab) {
     if (tab === 'approve') renderApprovalList();
 }
 
-    function checkAccess(menuType) {
-    // 1. ถ้ายังไม่ได้ Login ให้ถามหา User/Pass ก่อน
-    if (!currentUserRole) {
-        const userVal = prompt("Username (ชื่อผู้ใช้):");
-        const passVal = prompt("Password (รหัสผ่าน):");
+    function processAuth() {
+    const user = document.getElementById('auth-user').value;
+    const pass = document.getElementById('auth-pass').value;
 
-        if (userVal === 'Weera' && passVal === '7803') {
-            currentUserRole = 'admin';
-        } else if (userVal === 'Hr' && passVal === 'hr123') {
-            currentUserRole = 'hr';
-        } else if (userVal === 'Admin' && passVal === 'admin0123') {
-            currentUserRole = 'supervisor';
-        } else {
-            alert("❌ ข้อมูลไม่ถูกต้อง");
-            return;
-        }
-        alert("✅ เข้าสู่ระบบในฐานะ: " + currentUserRole);
+    // 1. เช็คจากชุด AUTHORIZED_USERS (Weera/Jang) ให้เป็นสิทธิ์ Admin
+    if (AUTHORIZED_USERS[user] && AUTHORIZED_USERS[user] === pass) {
+        currentUserRole = 'admin';
+        currentUser = user; // เก็บชื่อผู้ใช้ไว้แสดงผลด้วย
+    } 
+    // 2. เช็คสิทธิ์ Admin สำรอง (เผื่อไว้)
+    else if (user === 'admin' && pass === '1234') {
+        currentUserRole = 'admin';
+        currentUser = 'Admin';
+    }
+    // 3. เช็คสิทธิ์ HR (จัดการพนักงาน)
+    else if (user === 'hr' && pass === 'hr123') {
+        currentUserRole = 'hr';
+        currentUser = 'HR Staff';
+    }
+    // 4. เช็คสิทธิ์ Boss/Supervisor (จัดการการลา)
+    else if (user === 'boss' && pass === 'boss123') {
+        currentUserRole = 'supervisor';
+        currentUser = 'Supervisor';
+    } 
+    else {
+        alert("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+        return;
     }
 
-    // 2. เช็คสิทธิ์ตามเมนูที่กด
-    if (menuType === 'manage') {
-        // ให้เฉพาะ admin และ hr เข้าได้
+    // เมื่อผ่านแล้ว ให้ไปที่เมนูที่ต้องการ
+    executeNavigation();
+}
+
+    function executeNavigation() {
+    if (targetMenu === 'manage') {
         if (currentUserRole === 'admin' || currentUserRole === 'hr') {
             switchTab('manage');
+            document.getElementById('auth-modal').classList.add('hidden');
         } else {
-            alert("⚠️ สิทธิ์ของคุณไม่สามารถจัดการพนักงานได้");
+            alert("⚠️ สิทธิ์ของคุณเข้าจัดการพนักงานไม่ได้");
         }
     } 
-    else if (menuType === 'approve') {
-        // ให้เฉพาะ admin และ boss (supervisor) เข้าได้
+    else if (targetMenu === 'approve') {
         if (currentUserRole === 'admin' || currentUserRole === 'supervisor') {
             switchTab('approve');
+            document.getElementById('auth-modal').classList.add('hidden');
         } else {
-            alert("⚠️ สิทธิ์ของคุณไม่สามารถอนุมัติการลาได้");
+            alert("⚠️ สิทธิ์ของคุณเข้าจัดการการลาไม่ได้");
         }
     }
 }
+    
     async function saveLeave() {
         const id = document.getElementById('leave-student-select').value;
         const student = students.find(x => String(x.studentid) === String(id));
@@ -1375,5 +1391,19 @@ async function deleteStudent(rowNum, name) {
     }
 }
 </script>
+    <div id="auth-modal" class="fixed inset-0 bg-slate-900/90 z-[9999] flex items-center justify-center hidden backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-3xl max-w-sm w-full shadow-2xl space-y-4 text-slate-800">
+            <h3 class="text-xl font-bold text-center text-blue-600">ยืนยันสิทธิ์เข้าใช้งาน</h3>
+            <p id="auth-desc" class="text-sm text-center text-slate-500">กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ</p>
+            
+            <input type="text" id="auth-user" placeholder="ชื่อผู้ใช้" class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+            <input type="password" id="auth-pass" placeholder="รหัสผ่าน" class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+            
+            <button onclick="processAuth()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all">ยืนยัน</button>
+            <button onclick="document.getElementById('auth-modal').classList.add('hidden')" class="w-full text-slate-400 text-xs text-center">ยกเลิก</button>
+        </div>
+    </div>
+
+</body> </html>
 </body>
 </html>
