@@ -615,28 +615,40 @@ function switchTab(tab) {
 
     if (tab === 'approve') renderApprovalList();
 }
+// 2. ฟังก์ชันที่ปุ่ม 'จัดการการอนุมัติ' และ 'พนักงาน' เรียกใช้
+function checkAccess(menuType) {
+    targetMenu = menuType; // จำไว้ว่าผู้ใช้จะไปหน้าไหน
+    
+    // แสดง Modal ล็อกอิน (id ต้องตรงกับที่คุณวางใน HTML)
+    const authModal = document.getElementById('auth-modal');
+    if (authModal) {
+        authModal.classList.remove('hidden');
+        document.getElementById('auth-user').value = '';
+        document.getElementById('auth-pass').value = '';
+        document.getElementById('auth-user').focus();
+    } else {
+        alert("❌ หาหน้าต่าง Login (auth-modal) ไม่เจอในไฟล์ Index");
+    }
+}
+// 3. ฟังก์ชันที่ปุ่ม "ยืนยัน" ใน Modal เรียกใช้
+function processAuth() {
+    const user = document.getElementById('auth-user').value.trim();
+    const pass = document.getElementById('auth-pass').value.trim();
 
-    function processAuth() {
-    const user = document.getElementById('auth-user').value;
-    const pass = document.getElementById('auth-pass').value;
-
-    // 1. เช็คจากชุด AUTHORIZED_USERS (Weera/Jang) ให้เป็นสิทธิ์ Admin
+    // --- ตรวจสอบสิทธิ์ (รวม Step 1 และ 2 เข้าด้วยกัน) ---
+    
+    // เช็คจากรหัสผ่านเดิม (Weera/Jang) ให้เป็น Admin
     if (AUTHORIZED_USERS[user] && AUTHORIZED_USERS[user] === pass) {
         currentUserRole = 'admin';
-        currentUser = user; // เก็บชื่อผู้ใช้ไว้แสดงผลด้วย
+        currentUser = user;
     } 
-    // 2. เช็คสิทธิ์ Admin สำรอง (เผื่อไว้)
-    else if (user === 'Weera' && pass === '7803') {
-        currentUserRole = 'admin';
-        currentUser = 'Admin';
-    }
-    // 3. เช็คสิทธิ์ HR (จัดการพนักงาน)
-    else if (user === 'Hr' && pass === 'hr1234') {
+    // เช็คสิทธิ์ HR
+    else if (user === 'hr' && pass === 'hr123') {
         currentUserRole = 'hr';
         currentUser = 'HR Staff';
     }
-    // 4. เช็คสิทธิ์ Boss/Supervisor (จัดการการลา)
-    else if (user === 'Boss' && pass === 'boss01234') {
+    // เช็คสิทธิ์ Boss
+    else if (user === 'boss' && pass === 'boss123') {
         currentUserRole = 'supervisor';
         currentUser = 'Supervisor';
     } 
@@ -645,17 +657,18 @@ function switchTab(tab) {
         return;
     }
 
-    // เมื่อผ่านแล้ว ให้ไปที่เมนูที่ต้องการ
+    // ถ้าผ่านแล้ว ให้รันฟังก์ชันเปลี่ยนหน้า
     executeNavigation();
 }
 
-    function executeNavigation() {
+// 4. ฟังก์ชันจัดการการสลับหน้าตามสิทธิ์
+function executeNavigation() {
     if (targetMenu === 'manage') {
         if (currentUserRole === 'admin' || currentUserRole === 'hr') {
             switchTab('manage');
             document.getElementById('auth-modal').classList.add('hidden');
         } else {
-            alert("⚠️ สิทธิ์ของคุณเข้าจัดการพนักงานไม่ได้");
+            alert("⚠️ สิทธิ์ของคุณ (Supervisor) ไม่สามารถจัดการพนักงานได้");
         }
     } 
     else if (targetMenu === 'approve') {
@@ -663,11 +676,10 @@ function switchTab(tab) {
             switchTab('approve');
             document.getElementById('auth-modal').classList.add('hidden');
         } else {
-            alert("⚠️ สิทธิ์ของคุณเข้าจัดการการลาไม่ได้");
+            alert("⚠️ สิทธิ์ของคุณ (HR) ไม่สามารถอนุมัติการลาได้");
         }
     }
 }
-    
     async function saveLeave() {
         const id = document.getElementById('leave-student-select').value;
         const student = students.find(x => String(x.studentid) === String(id));
