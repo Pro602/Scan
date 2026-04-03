@@ -309,7 +309,7 @@
     <audio id="snd-ok" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
 <script>
-    const gasUrl = "https://script.google.com/macros/s/AKfycbxOXrKnDjFF7Ie60dJZHK8lwMSaAD-KJhy-A2NepUuYBUTGZyJN1UKQ3oWyGaYWpk81/exec";
+    const gasUrl = "https://script.google.com/macros/s/AKfycbyrcW-FT3KmkuAzoLvbgTrIcx43zbppHca7NCAkadDOQCi6314iFTofb00n-G97tskD/exec";
     let students = [], attendance = [], locationList = [], leaves = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
     let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
     let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
@@ -1437,17 +1437,21 @@ function closeQuickSearch() {
 
 // ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
-  var idField = document.getElementById('inputSearchId');
-  var id = idField.value.trim();
+  var idInput = document.getElementById('inputSearchId');
+  if (!idInput) {
+    console.error("หา Element 'inputSearchId' ไม่เจอ");
+    return;
+  }
   
+  var id = idInput.value.trim();
   if (!id) {
-    Swal.fire('กรุณาระบุรหัส', '', 'warning');
+    alert("กรุณากรอกรหัสพนักงาน");
     return;
   }
 
-  // แสดง Loading
+  // ใช้ Swal แสดงว่ากำลังทำงาน
   Swal.fire({
-    title: 'กำลังตรวจสอบ...',
+    title: 'กำลังค้นหา...',
     allowOutsideClick: false,
     didOpen: () => { Swal.showLoading(); }
   });
@@ -1456,20 +1460,20 @@ function processQuickSearch() {
     .withSuccessHandler(function(emp) {
       Swal.close();
       if (emp && emp.error) {
-        Swal.fire('Error', emp.error, 'error');
+        Swal.fire('Error ในระบบ', emp.error, 'error');
       } else if (emp) {
         closeQuickSearch();
-        // เรียกใช้ฟังก์ชันเดิมในระบบคุณ: selectEmployee(id, name, image, classname)
+        // เรียกใช้ฟังก์ชันเดิมของโปรแกรมคุณ
         selectEmployee(emp.id, emp.name, emp.img, emp.position);
       } else {
-        Swal.fire('ไม่พบรหัสพนักงาน', 'รหัส ' + id + ' ไม่มีในฐานข้อมูล', 'error');
+        Swal.fire('ไม่พบข้อมูล', 'ไม่พบรหัส: ' + id, 'error');
       }
     })
     .withFailureHandler(function(err) {
       Swal.close();
-      Swal.fire('System Error', 'ไม่สามารถเชื่อมต่อ Server ได้: ' + err, 'error');
+      Swal.fire('Connection Error', 'ติดต่อ Server ไม่ได้: ' + err.message, 'error');
     })
-    .getEmployeeBySearchId(id); // ชื่อฟังก์ชันนี้ต้องตรงกับใน Code.gs
+    .getEmployeeBySearchId(id);
 }
 // ปรับปรุงฟังก์ชันเดิมของคุณให้รับค่าตรงๆ
 function showScanSection(id, name, img) {
