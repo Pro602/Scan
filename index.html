@@ -309,7 +309,7 @@
     <audio id="snd-ok" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
 <script>
-    const gasUrl = "https://script.google.com/macros/s/AKfycbxoKWlVUfPnWFjqlMAUPu4Kgm7dCrVgJpkOYPIlk2UJYLLb2fpVFPQZfYOyBeAW4_Ea/exec";
+    const gasUrl = "https://script.google.com/macros/s/AKfycbyd82Ih7ZhrwwZ6orXYFMWzN3AMDsthfLkxemzMQELB3eNABRqy4TkC7GjmV2QlNWuW/exec";
     let students = [], attendance = [], locationList = [], leaves = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
     let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
     let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
@@ -1439,44 +1439,35 @@ function closeQuickSearch() {
 // ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
   var idField = document.getElementById('inputSearchId');
-  var id = idField.value.trim(); // ย้ายประกาศตัวแปรขึ้นมาตรงนี้
+  var id = idField.value.trim(); // สร้างตัวแปรก่อนเรียกใช้
   
-  // ทดสอบดูว่าค่า ID มาไหม
-  console.log("ID ที่ป้อนคือ:", id); 
-
   if (!id) {
     Swal.fire('กรุณาระบุรหัส', '', 'warning');
     return;
   }
 
-  // แสดง Loading
   Swal.fire({
     title: 'กำลังตรวจสอบ...',
     allowOutsideClick: false,
     didOpen: () => { Swal.showLoading(); }
   });
 
-  // เรียกใช้ฟังก์ชันฝั่ง Server
   google.script.run
     .withSuccessHandler(function(emp) {
       Swal.close();
-      console.log("ข้อมูลที่ได้รับ:", emp);
-
       if (emp) {
         closeQuickSearch();
-        // เรียกใช้ฟังก์ชันเดิมของระบบคุณ
-        // โครงสร้างเดิม: selectEmployee(id, name, image, classname)
+        // เรียกฟังก์ชันเปิดหน้าสแกน พร้อมส่งค่า (id, name, image, class)
         selectEmployee(emp.id, emp.name, emp.img, emp.position);
       } else {
-        Swal.fire('ไม่พบรหัสพนักงาน', 'รหัส ' + id + ' ไม่มีในระบบ', 'error');
+        Swal.fire('ไม่พบรหัสพนักงาน', 'ไม่พบรหัส ' + id + ' ในระบบ', 'error');
       }
     })
     .withFailureHandler(function(err) {
       Swal.close();
-      console.error("Error:", err);
-      Swal.fire('System Error', 'ติดต่อ Server ไม่ได้: ' + err.message, 'error');
+      Swal.fire('System Error', err.message, 'error');
     })
-    .getEmployeeBySearchId(id);
+    .getEmployeeBySearchId(id); // เรียกฟังก์ชันในไฟล์ .gs
 }
 // ปรับปรุงฟังก์ชันเดิมของคุณให้รับค่าตรงๆ
 function showScanSection(id, name, img) {
