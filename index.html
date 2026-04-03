@@ -1440,7 +1440,13 @@ function closeQuickSearch() {
 function processQuickSearch() {
   var idField = document.getElementById('inputSearchId');
   var id = idField.value.trim();
-  if (!id) return;
+  
+  if (!id) {
+    Swal.fire('กรุณาระบุรหัส', '', 'warning');
+    return;
+  }
+
+  console.log("กำลังค้นหา ID:", id); // ตรวจสอบใน Console
 
   Swal.fire({
     title: 'กำลังตรวจสอบ...',
@@ -1450,26 +1456,32 @@ function processQuickSearch() {
 
   google.script.run
     .withSuccessHandler(function(emp) {
+      console.log("ผลลัพธ์จาก Server:", emp); // ตรวจสอบข้อมูลที่ได้จาก Google Sheets
       Swal.close();
+
       if (emp) {
         closeQuickSearch();
-        // เรียกฟังก์ชันหลักของระบบคุณ
-        selectEmployee(emp.id, emp.name, emp.img, emp.position);
+        
+        // --- จุดที่ต้องเช็คให้ดี ---
+        // ระบบเดิมของคุณต้องการ (id, name, image, classname)
+        // เราต้องมั่นใจว่าส่งครบ 4 ค่า
+        if (typeof selectEmployee === "function") {
+            selectEmployee(emp.id, emp.name, emp.img, emp.position);
+        } else {
+            console.error("หาฟังก์ชัน selectEmployee ไม่เจอในระบบ!");
+            Swal.fire('Error', 'หาฟังก์ชันสำหรับเปิดหน้าสแกนไม่เจอ', 'error');
+        }
+        
       } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'ไม่พบรหัสนี้',
-          text: 'รหัส ' + id + ' ไม่มีในฐานข้อมูล',
-          confirmButtonColor: '#2563eb'
-        });
+        Swal.fire('ไม่พบรหัสพนักงาน', 'รหัส ' + id + ' ไม่มีในระบบ', 'error');
       }
     })
     .withFailureHandler(function(err) {
+      console.error("Script Error:", err);
       Swal.close();
-      // ถ้ามี Error ฝั่ง Google Script จะเด้งบอกที่นี่
-      Swal.fire('System Error', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+      Swal.fire('System Error', 'เชื่อมต่อ Server ไม่ได้: ' + err.message, 'error');
     })
-    .getEmployeeBySearchId(id); // ชื่อฟังก์ชันนี้ต้องตรงกับในไฟล์ .gs เป๊ะๆ
+    .getEmployeeBySearchId(id); // <--- เช็คชื่อฟังก์ชันนี้ในไฟล์ .gs ต้องตรงกันเป๊ะ
 }
 
 // ปรับปรุงฟังก์ชันเดิมของคุณให้รับค่าตรงๆ
