@@ -1436,44 +1436,38 @@ function closeQuickSearch() {
 }
 
 // ฟังก์ชันประมวลผลการค้นหา
-// ลบอันเก่าทิ้งก่อน แล้ววางอันนี้แทนครับ
 function processQuickSearch() {
-  // 1. ดึง Element มาเก็บในตัวแปรก่อน
   var idField = document.getElementById('inputSearchId');
-  if (!idField) return; // กันเหนียวถ้าหา Input ไม่เจอ
+  if (!idField) return;
 
-  // 2. ดึงค่า Value และตัดช่องว่าง
-  var studentId = idField.value.trim(); 
+  var studentId = idField.value.trim(); // ใช้ชื่อตัวแปร studentId เพื่อไม่ให้สับสน
   
-  // 3. เช็คว่ากรอกข้อมูลหรือยัง
   if (!studentId) {
-    Swal.fire('กรุณาระบุรหัส', 'โปรดกรอก Student ID', 'warning');
+    Swal.fire('กรุณาระบุรหัส', 'โปรดกรอก Student ID ก่อนกดตกลง', 'warning');
     return;
   }
 
-  // 4. แสดง Loading
   Swal.fire({
     title: 'กำลังตรวจสอบ...',
     allowOutsideClick: false,
     didOpen: () => { Swal.showLoading(); }
   });
 
-  // 5. เรียก Server (ใช้ชื่อตัวแปร studentId ที่เราเพิ่งสร้าง)
   google.script.run
     .withSuccessHandler(function(emp) {
       Swal.close();
       if (emp) {
         closeQuickSearch();
-        // เรียกใช้ฟังก์ชันเดิมของระบบคุณ: selectEmployee(id, name, image, classname)
-        // ตรวจสอบว่าในไฟล์ gs คุณใช้ img หรือ image (ในที่นี้ผมใช้ตามที่ตกลงกันไว้)
+        // เรียกใช้ฟังก์ชันเดิมของระบบคุณ
+        // โครงสร้าง: id, name, image, classname
         selectEmployee(emp.id, emp.name, emp.img, emp.position);
       } else {
-        Swal.fire('ไม่พบรหัสพนักงาน', 'รหัส ' + studentId + ' ไม่มีในระบบ', 'error');
+        Swal.fire('ไม่พบรหัสพนักงาน', 'ไม่พบรหัส ' + studentId + ' ในระบบ', 'error');
       }
     })
     .withFailureHandler(function(err) {
       Swal.close();
-      Swal.fire('System Error', err.message, 'error');
+      Swal.fire('System Error', 'ติดต่อ Server ไม่ได้: ' + err.message, 'error');
     })
     .getEmployeeBySearchId(studentId);
 }
