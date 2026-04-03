@@ -358,7 +358,6 @@ window.onload = async () => {
 
 // ปรับปรุง loadAllData ให้ดึงข้อมูล Supervisor มาด้วย
 async function loadAllData() {
-    // เพิ่มการเรียก getSupervisors เพื่อดึงสิทธิ์จากชีทใหม่
     const [sRes, aRes, lRes, vRes, supRes] = await Promise.all([
         apiCall({action:'getStudents'}), 
         apiCall({action:'getAttendance'}), 
@@ -367,23 +366,25 @@ async function loadAllData() {
         apiCall({action:'getSupervisors'})
     ]);
     
-if(sRes.success) { 
-        students = sRes.data; 
-        renderStudentTable(); // <--- เพิ่มเพื่อให้แสดงรายชื่อพนักงาน
-        renderLeaveDropdown(); 
-    }
-
+    // โหลดข้อมูลเข้าตัวแปรหลัก
+    if(sRes.success) students = sRes.data;
+    if(aRes.success) attendance = aRes.data;
     if(lRes.success) {
         locationList = lRes.data;
-        renderLocationDropdown(); // <--- เพิ่มบรรทัดนี้เพื่อให้สถานที่แสดงผลใน Dropdown
+        renderLocationDropdown(); // วาด Dropdown สถานที่
     }
-    if(aRes.success) attendance = aRes.data;
-    if(lRes.success) locationList = lRes.data;
     if(vRes.success) leaves = vRes.data;
-    if(supRes && supRes.success) supervisors = supRes.data; // เก็บรายชื่อผู้มีสิทธิ์จากชีท
+    if(supRes && supRes.success) supervisors = supRes.data;
 
+    // ส่วนที่ทำให้ช้า ให้แยกออกมาทำงานทีหลังเล็กน้อย (Non-blocking)
     renderDashboard();
     renderUpcomingLeaves(leaves, students); 
+    
+    // ทยอยวาดส่วนที่กินทรัพยากรสูง
+    setTimeout(() => {
+        renderStudentTable(); // วาดตารางพนักงาน
+        renderLeaveDropdown(); // วาด Dropdown การลา
+    }, 100);
 }
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
 function renderDashboard() {
@@ -959,30 +960,32 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
 function renderStudentTable() {
     const tbody = document.getElementById('student-table-body');
-    if (!tbody) return;
+    if (!tbody || !students.length) return;
 
-    tbody.innerHTML = students.map((s, i) => `
-        <tr class="border-b border-slate-700 hover:bg-slate-800/50 transition-colors">
+    // สร้าง DocumentFragment เพื่อประสิทธิภาพที่สูงกว่าการต่อ String
+    const fragment = document.createDocumentFragment();
+    
+    students.forEach((s, i) => {
+        const tr = document.createElement('tr');
+        tr.className = "border-b border-slate-700 hover:bg-slate-800/50 transition-colors";
+        tr.innerHTML = `
             <td class="p-4">
-                <img src="${s.imagedatabase64}" 
-                     class="w-10 h-10 rounded-full object-cover border border-slate-600 shadow-sm" 
-                     onerror="this.src='https://via.placeholder.com/40'">
+                <img src="${s.imagedatabase64 || ''}" class="w-10 h-10 rounded-full object-cover border border-slate-600 shadow-sm" loading="lazy">
             </td>
-
             <td class="p-4 font-mono text-xs text-slate-400">${s.studentid || '-'}</td>
-
             <td class="p-4 font-bold text-slate-200 text-sm">${s.name || '-'}</td>
-
             <td class="p-4 text-xs text-blue-400 font-bold">${s.class || '-'}</td>
-
             <td class="p-4 text-center">
-                <button onclick="deleteStudent(${i + 2}, \`${s.name}\`)" class="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors">
+                <button onclick="deleteStudent(${i + 2}, \`${s.name}\`)" class="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </td>
-        </tr>`).join('');
+        `;
+        fragment.appendChild(tr);
+    });
 
-    // อัปเดตไอคอน Lucide
+    tbody.innerHTML = '';
+    tbody.appendChild(fragment);
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -1003,22 +1006,21 @@ function renderStudentTable() {
     }
 
     // ฟังก์ชันถ่ายรูปพร้อมระบบ Auto-Crop ใบหน้า
-    // ฟังก์ชันถ่ายรูปจากกล้อง (Snap)
-   async function snapPhoto() {
+async function snapPhoto() {
     const v = document.getElementById('modal-video');
     const previewImg = document.getElementById('preview-img');
     const cropCanvas = document.getElementById('crop-canvas');
     const cropStatus = document.getElementById('crop-status');
     
-    // ตรวจจับด้วย Score ที่สูงขึ้นเพื่อความชัดเจน
-    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.6 }));
+    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.5 }));
 
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = v.videoWidth;
     tempCanvas.height = v.videoHeight;
     tempCanvas.getContext('2d').drawImage(v, 0, 0);
     
-    capturedImg = tempCanvas.toDataURL('image/jpeg', 0.9);
+    // --- จุดที่ 1: บีบอัดรูปเต็ม (Preview) ให้เหลือ 0.6 ---
+    capturedImg = tempCanvas.toDataURL('image/jpeg', 0.6); 
     previewImg.src = capturedImg;
     previewImg.classList.remove('hidden');
     v.classList.add('hidden');
@@ -1028,22 +1030,28 @@ function renderStudentTable() {
     stopCamera('modal-video');
 
     document.getElementById('crop-preview-container').classList.remove('hidden');
-    cropCanvas.width = 250; // ขยายขนาดรูปโปรไฟล์ให้ชัดขึ้น
-    cropCanvas.height = 250;
+    cropCanvas.width = 200; // ปรับขนาด Canvas ลงเล็กน้อย (200x200 ก็เพียงพอแล้ว)
+    cropCanvas.height = 200;
     const ctx = cropCanvas.getContext('2d');
 
     if (detections) {
         const { x, y, width, height } = detections.box;
-        // เพิ่มระยะขอบ (Margin) ให้เห็นใบหน้าและไหล่เล็กน้อยเพื่อความสวยงาม
         const margin = width * 0.3;
-        ctx.drawImage(tempCanvas, x - margin, y - margin, width + (margin * 2), height + (margin * 2), 0, 0, 250, 250);
-        croppedImg = cropCanvas.toDataURL('image/jpeg', 0.9);
-        cropStatus.innerText = "✅ ตรวจพบใบหน้าชัดเจน (แนะนำให้ใช้รูปนี้)";
+        // วาดรูปลงบน Canvas ขนาด 200x200
+        ctx.drawImage(tempCanvas, x - margin, y - margin, width + (margin * 2), height + (margin * 2), 0, 0, 200, 200);
+        
+        // --- จุดที่ 2: บีบอัดรูปที่ Crop แล้ว (รูปที่จะลง Database) ให้เหลือ 0.5 ---
+        // ใช้คุณภาพ 0.5 จะได้ไฟล์ขนาดประมาณ 15-30 KB เท่านั้น
+        croppedImg = cropCanvas.toDataURL('image/jpeg', 0.5); 
+        
+        cropStatus.innerText = "✅ ตรวจพบใบหน้าชัดเจน (บีบอัดไฟล์เพื่อความรวดเร็ว)";
         cropStatus.className = "text-xs font-bold text-emerald-400";
     } else {
-        // หากไม่พบใบหน้า สุ่ม Crop ตรงกลาง
-        ctx.drawImage(tempCanvas, (tempCanvas.width/2)-150, (tempCanvas.height/2)-150, 300, 300, 0, 0, 250, 250);
-        croppedImg = cropCanvas.toDataURL('image/jpeg', 0.9);
+        ctx.drawImage(tempCanvas, (tempCanvas.width/2)-150, (tempCanvas.height/2)-150, 300, 300, 0, 0, 200, 200);
+        
+        // --- จุดที่ 3: บีบอัดกรณีไม่พบใบหน้า ---
+        croppedImg = cropCanvas.toDataURL('image/jpeg', 0.5); 
+        
         cropStatus.innerText = "⚠️ ไม่พบใบหน้าในตำแหน่งที่ถูกต้อง";
         cropStatus.className = "text-xs font-bold text-amber-400";
     }
