@@ -1441,28 +1441,25 @@ function processQuickSearch() {
   var id = document.getElementById('inputSearchId').value.trim();
   if (!id) return;
 
-  // แสดง Loading ให้รู้ว่าระบบกำลังทำงาน
-  Swal.fire({ 
-    title: 'กำลังค้นหา...', 
-    allowOutsideClick: false, 
-    didOpen: () => { Swal.showLoading(); } 
+  Swal.fire({
+    title: 'กำลังตรวจสอบ...',
+    allowOutsideClick: false,
+    didOpen: () => { Swal.showLoading(); }
   });
 
   google.script.run.withSuccessHandler(function(emp) {
-    Swal.close(); // ปิด Loading
+    Swal.close();
     if (emp) {
-      closeQuickSearch(); // ปิดหน้าต่างกรอก ID
-      
-      // *** จุดสำคัญ: เรียกใช้ฟังก์ชันเดิมของระบบคุณ ***
-      // ระบบเดิมของคุณใช้ selectEmployee(id, name, img, position)
+      closeQuickSearch();
+      // เรียกฟังก์ชัน selectEmployee ที่อยู่ในไฟล์ Master Index ของคุณ
+      // โครงสร้างคือ selectEmployee(id, name, image, class)
       selectEmployee(emp.id, emp.name, emp.img, emp.position);
-      
     } else {
       Swal.fire({
         icon: 'error',
-        title: 'ไม่พบข้อมูล',
-        text: 'รหัสพนักงาน ' + id + ' ไม่ถูกต้อง',
-        timer: 2000
+        title: 'ไม่พบรหัสนี้',
+        text: 'กรุณาตรวจสอบ Student ID อีกครั้ง',
+        confirmButtonColor: '#2563eb'
       });
     }
   }).getEmployeeBySearchId(id);
@@ -1492,14 +1489,19 @@ function showScanSection(id, name, img) {
             <button onclick="document.getElementById('auth-modal').classList.add('hidden')" class="w-full text-slate-400 text-xs text-center">ยกเลิก</button>
         </div>
     </div>
-<div id="quickSearchModal" class="modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.8);">
-  <div style="background:#1e293b; margin:15% auto; padding:30px; width:400px; border-radius:15px; text-align:center; border: 2px solid #3b82f6;">
-    <h3 style="color:white; margin-bottom:20px;">กรุณาป้อนรหัสพนักงาน</h3>
-    <input type="text" id="inputSearchId" placeholder="ตัวอย่าง: TS0048" 
-           style="width:100%; padding:15px; font-size:20px; border-radius:10px; border:none; text-align:center;">
-    <p style="color:#94a3b8; margin-top:10px;">(หรือใช้เครื่องสแกนบาร์โค้ดสแกนได้ทันที)</p>
-    <button onclick="processQuickSearch()" style="margin-top:20px; padding:10px 30px; background:#10b981; color:white; border:none; border-radius:5px; cursor:pointer;">ตกลง</button>
-    <button onclick="closeQuickSearch()" style="margin-top:20px; padding:10px 30px; background:#ef4444; color:white; border:none; border-radius:5px; cursor:pointer;">ยกเลิก</button>
+<div id="quickSearchModal" class="modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-blur: 5px;">
+  <div style="background:#ffffff; margin:15% auto; padding:30px; width:90%; max-width:400px; border-radius:24px; text-align:center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+    <h3 style="color:#1e293b; margin-bottom:20px; font-size:1.25rem; font-weight:600;">สแกนเข้างานด้วยรหัส</h3>
+    
+    <input type="text" id="inputSearchId" placeholder="ป้อน Student ID" 
+           style="width:100%; padding:15px; font-size:24px; border-radius:12px; border:2px solid #e2e8f0; text-align:center; color:#000000; background:#f8fafc; font-weight:bold; margin-bottom:10px;">
+    
+    <p style="color:#64748b; font-size:0.875rem; margin-bottom:20px;">ใช้เครื่องสแกนบาร์โค้ดได้ทันที</p>
+    
+    <div style="display: flex; gap: 10px;">
+      <button onclick="closeQuickSearch()" style="flex:1; padding:12px; background:#f1f5f9; color:#475569; border:none; border-radius:12px; font-weight:600; cursor:pointer;">ยกเลิก</button>
+      <button onclick="processQuickSearch()" style="flex:2; padding:12px; background:#2563eb; color:white; border:none; border-radius:12px; font-weight:600; cursor:pointer;">ตกลง</button>
+    </div>
   </div>
 </div>
 </body>
