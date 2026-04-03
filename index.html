@@ -309,7 +309,7 @@
     <audio id="snd-ok" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
 <script>
-    const gasUrl = "https://script.google.com/macros/s/AKfycbyd82Ih7ZhrwwZ6orXYFMWzN3AMDsthfLkxemzMQELB3eNABRqy4TkC7GjmV2QlNWuW/exec";
+    const gasUrl = "https://script.google.com/macros/s/AKfycbxOXrKnDjFF7Ie60dJZHK8lwMSaAD-KJhy-A2NepUuYBUTGZyJN1UKQ3oWyGaYWpk81/exec";
     let students = [], attendance = [], locationList = [], leaves = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
     let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
     let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
@@ -1438,13 +1438,14 @@ function closeQuickSearch() {
 // ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
   var idField = document.getElementById('inputSearchId');
-  var id = idField.value.trim(); // สร้างตัวแปรก่อนเรียกใช้
+  var id = idField.value.trim();
   
   if (!id) {
     Swal.fire('กรุณาระบุรหัส', '', 'warning');
     return;
   }
 
+  // แสดง Loading
   Swal.fire({
     title: 'กำลังตรวจสอบ...',
     allowOutsideClick: false,
@@ -1454,19 +1455,21 @@ function processQuickSearch() {
   google.script.run
     .withSuccessHandler(function(emp) {
       Swal.close();
-      if (emp) {
+      if (emp && emp.error) {
+        Swal.fire('Error', emp.error, 'error');
+      } else if (emp) {
         closeQuickSearch();
-        // เรียกฟังก์ชันเปิดหน้าสแกน พร้อมส่งค่า (id, name, image, class)
+        // เรียกใช้ฟังก์ชันเดิมในระบบคุณ: selectEmployee(id, name, image, classname)
         selectEmployee(emp.id, emp.name, emp.img, emp.position);
       } else {
-        Swal.fire('ไม่พบรหัสพนักงาน', 'ไม่พบรหัส ' + id + ' ในระบบ', 'error');
+        Swal.fire('ไม่พบรหัสพนักงาน', 'รหัส ' + id + ' ไม่มีในฐานข้อมูล', 'error');
       }
     })
     .withFailureHandler(function(err) {
       Swal.close();
-      Swal.fire('System Error', err.message, 'error');
+      Swal.fire('System Error', 'ไม่สามารถเชื่อมต่อ Server ได้: ' + err, 'error');
     })
-    .getEmployeeBySearchId(id); // เรียกฟังก์ชันในไฟล์ .gs
+    .getEmployeeBySearchId(id); // ชื่อฟังก์ชันนี้ต้องตรงกับใน Code.gs
 }
 // ปรับปรุงฟังก์ชันเดิมของคุณให้รับค่าตรงๆ
 function showScanSection(id, name, img) {
