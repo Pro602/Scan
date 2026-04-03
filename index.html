@@ -1439,6 +1439,7 @@ function closeQuickSearch() {
 // ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
   var idField = document.getElementById('inputSearchId');
+    alert('ปุ่มทำงานแล้ว ID คือ: ' + id); // <--- เพิ่มบรรทัดนี้
   var id = idField.value.trim();
   
   if (!id) {
