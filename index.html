@@ -1437,43 +1437,38 @@ function closeQuickSearch() {
 
 // ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
-  var idInput = document.getElementById('inputSearchId');
-  if (!idInput) {
-    console.error("หา Element 'inputSearchId' ไม่เจอ");
-    return;
-  }
-  
-  var id = idInput.value.trim();
-  if (!id) {
-    alert("กรุณากรอกรหัสพนักงาน");
-    return;
-  }
+    var idField = document.getElementById('inputSearchId');
+    var id = idField.value.trim(); // สร้างตัวแปร id ก่อน
+    
+    // alert('ปุ่มทำงานแล้ว ID คือ: ' + id); // ถ้าจะใช้ alert ต้องไว้หลังบรรทัดประกาศตัวแปร id
+    
+    if (!id) {
+        Swal.fire('กรุณาระบุรหัส', '', 'warning');
+        return;
+    }
 
-  // ใช้ Swal แสดงว่ากำลังทำงาน
-  Swal.fire({
-    title: 'กำลังค้นหา...',
-    allowOutsideClick: false,
-    didOpen: () => { Swal.showLoading(); }
-  });
+    Swal.fire({
+        title: 'กำลังตรวจสอบ...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
 
-  google.script.run
-    .withSuccessHandler(function(emp) {
-      Swal.close();
-      if (emp && emp.error) {
-        Swal.fire('Error ในระบบ', emp.error, 'error');
-      } else if (emp) {
-        closeQuickSearch();
-        // เรียกใช้ฟังก์ชันเดิมของโปรแกรมคุณ
-        selectEmployee(emp.id, emp.name, emp.img, emp.position);
-      } else {
-        Swal.fire('ไม่พบข้อมูล', 'ไม่พบรหัส: ' + id, 'error');
-      }
-    })
-    .withFailureHandler(function(err) {
-      Swal.close();
-      Swal.fire('Connection Error', 'ติดต่อ Server ไม่ได้: ' + err.message, 'error');
-    })
-    .getEmployeeBySearchId(id);
+    google.script.run
+        .withSuccessHandler(function(emp) {
+            Swal.close();
+            if (emp) {
+                closeQuickSearch();
+                // เรียกใช้ฟังก์ชันเดิมในระบบคุณ
+                selectEmployee(emp.id, emp.name, emp.img, emp.position);
+            } else {
+                Swal.fire('ไม่พบรหัสพนักงาน', 'รหัส ' + id + ' ไม่มีในระบบ', 'error');
+            }
+        })
+        .withFailureHandler(function(err) {
+            Swal.close();
+            Swal.fire('System Error', err.message, 'error');
+        })
+        .getEmployeeBySearchId(id);
 }
 // ปรับปรุงฟังก์ชันเดิมของคุณให้รับค่าตรงๆ
 function showScanSection(id, name, img) {
