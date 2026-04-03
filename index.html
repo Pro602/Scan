@@ -1441,17 +1441,29 @@ function processQuickSearch() {
   var id = document.getElementById('inputSearchId').value.trim();
   if (!id) return;
 
-  Swal.fire({ title: 'กำลังค้นหา...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+  // แสดง Loading ให้รู้ว่าระบบกำลังทำงาน
+  Swal.fire({ 
+    title: 'กำลังค้นหา...', 
+    allowOutsideClick: false, 
+    didOpen: () => { Swal.showLoading(); } 
+  });
 
   google.script.run.withSuccessHandler(function(emp) {
-    Swal.close();
+    Swal.close(); // ปิด Loading
     if (emp) {
-      closeQuickSearch();
-      // เรียกฟังก์ชันเดิมของคุณเพื่อเปิดหน้าสแกนหน้า
-      // ส่งค่าข้อมูลพนักงานที่หาได้เข้าไปโดยตรง
-      showScanSection(emp.id, emp.name, emp.img); 
+      closeQuickSearch(); // ปิดหน้าต่างกรอก ID
+      
+      // *** จุดสำคัญ: เรียกใช้ฟังก์ชันเดิมของระบบคุณ ***
+      // ระบบเดิมของคุณใช้ selectEmployee(id, name, img, position)
+      selectEmployee(emp.id, emp.name, emp.img, emp.position);
+      
     } else {
-      Swal.fire('ไม่พบข้อมูล', 'รหัสพนักงานไม่ถูกต้อง', 'error');
+      Swal.fire({
+        icon: 'error',
+        title: 'ไม่พบข้อมูล',
+        text: 'รหัสพนักงาน ' + id + ' ไม่ถูกต้อง',
+        timer: 2000
+      });
     }
   }).getEmployeeBySearchId(id);
 }
