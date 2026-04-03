@@ -309,7 +309,7 @@
     <audio id="snd-ok" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
 
 <script>
-    const gasUrl = "https://script.google.com/macros/s/AKfycbyrcW-FT3KmkuAzoLvbgTrIcx43zbppHca7NCAkadDOQCi6314iFTofb00n-G97tskD/exec";
+    const gasUrl = "https://script.google.com/macros/s/AKfycbxc0WRRPIx8q-HMyNl2XbjSQ6iJSoJ3uZi-6unDB7em0arp4uhofu1ZwRevJhVMWWaj/exec";
     let students = [], attendance = [], locationList = [], leaves = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
     let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
     let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
@@ -1436,39 +1436,46 @@ function closeQuickSearch() {
 }
 
 // ฟังก์ชันประมวลผลการค้นหา
+// ลบอันเก่าทิ้งก่อน แล้ววางอันนี้แทนครับ
 function processQuickSearch() {
-    var idField = document.getElementById('inputSearchId');
-    var id = idField.value.trim(); // สร้างตัวแปร id ก่อน
-    
-    // alert('ปุ่มทำงานแล้ว ID คือ: ' + id); // ถ้าจะใช้ alert ต้องไว้หลังบรรทัดประกาศตัวแปร id
-    
-    if (!id) {
-        Swal.fire('กรุณาระบุรหัส', '', 'warning');
-        return;
-    }
+  // 1. ดึง Element มาเก็บในตัวแปรก่อน
+  var idField = document.getElementById('inputSearchId');
+  if (!idField) return; // กันเหนียวถ้าหา Input ไม่เจอ
 
-    Swal.fire({
-        title: 'กำลังตรวจสอบ...',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
+  // 2. ดึงค่า Value และตัดช่องว่าง
+  var studentId = idField.value.trim(); 
+  
+  // 3. เช็คว่ากรอกข้อมูลหรือยัง
+  if (!studentId) {
+    Swal.fire('กรุณาระบุรหัส', 'โปรดกรอก Student ID', 'warning');
+    return;
+  }
 
-    google.script.run
-        .withSuccessHandler(function(emp) {
-            Swal.close();
-            if (emp) {
-                closeQuickSearch();
-                // เรียกใช้ฟังก์ชันเดิมในระบบคุณ
-                selectEmployee(emp.id, emp.name, emp.img, emp.position);
-            } else {
-                Swal.fire('ไม่พบรหัสพนักงาน', 'รหัส ' + id + ' ไม่มีในระบบ', 'error');
-            }
-        })
-        .withFailureHandler(function(err) {
-            Swal.close();
-            Swal.fire('System Error', err.message, 'error');
-        })
-        .getEmployeeBySearchId(id);
+  // 4. แสดง Loading
+  Swal.fire({
+    title: 'กำลังตรวจสอบ...',
+    allowOutsideClick: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
+
+  // 5. เรียก Server (ใช้ชื่อตัวแปร studentId ที่เราเพิ่งสร้าง)
+  google.script.run
+    .withSuccessHandler(function(emp) {
+      Swal.close();
+      if (emp) {
+        closeQuickSearch();
+        // เรียกใช้ฟังก์ชันเดิมของระบบคุณ: selectEmployee(id, name, image, classname)
+        // ตรวจสอบว่าในไฟล์ gs คุณใช้ img หรือ image (ในที่นี้ผมใช้ตามที่ตกลงกันไว้)
+        selectEmployee(emp.id, emp.name, emp.img, emp.position);
+      } else {
+        Swal.fire('ไม่พบรหัสพนักงาน', 'รหัส ' + studentId + ' ไม่มีในระบบ', 'error');
+      }
+    })
+    .withFailureHandler(function(err) {
+      Swal.close();
+      Swal.fire('System Error', err.message, 'error');
+    })
+    .getEmployeeBySearchId(studentId);
 }
 // ปรับปรุงฟังก์ชันเดิมของคุณให้รับค่าตรงๆ
 function showScanSection(id, name, img) {
