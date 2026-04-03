@@ -1438,7 +1438,8 @@ function closeQuickSearch() {
 
 // ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
-  var id = document.getElementById('inputSearchId').value.trim();
+  var idField = document.getElementById('inputSearchId');
+  var id = idField.value.trim();
   if (!id) return;
 
   Swal.fire({
@@ -1447,22 +1448,28 @@ function processQuickSearch() {
     didOpen: () => { Swal.showLoading(); }
   });
 
-  google.script.run.withSuccessHandler(function(emp) {
-    Swal.close();
-    if (emp) {
-      closeQuickSearch();
-      // เรียกฟังก์ชัน selectEmployee ที่อยู่ในไฟล์ Master Index ของคุณ
-      // โครงสร้างคือ selectEmployee(id, name, image, class)
-      selectEmployee(emp.id, emp.name, emp.img, emp.position);
-    } else {
-      Swal.fire({
-        icon: 'error',
-        title: 'ไม่พบรหัสนี้',
-        text: 'กรุณาตรวจสอบ Student ID อีกครั้ง',
-        confirmButtonColor: '#2563eb'
-      });
-    }
-  }).getEmployeeBySearchId(id);
+  google.script.run
+    .withSuccessHandler(function(emp) {
+      Swal.close();
+      if (emp) {
+        closeQuickSearch();
+        // เรียกฟังก์ชันหลักของระบบคุณ
+        selectEmployee(emp.id, emp.name, emp.img, emp.position);
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'ไม่พบรหัสนี้',
+          text: 'รหัส ' + id + ' ไม่มีในฐานข้อมูล',
+          confirmButtonColor: '#2563eb'
+        });
+      }
+    })
+    .withFailureHandler(function(err) {
+      Swal.close();
+      // ถ้ามี Error ฝั่ง Google Script จะเด้งบอกที่นี่
+      Swal.fire('System Error', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+    })
+    .getEmployeeBySearchId(id); // ชื่อฟังก์ชันนี้ต้องตรงกับในไฟล์ .gs เป๊ะๆ
 }
 
 // ปรับปรุงฟังก์ชันเดิมของคุณให้รับค่าตรงๆ
