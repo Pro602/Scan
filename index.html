@@ -1437,40 +1437,41 @@ function closeQuickSearch() {
 
 // ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
-  var idField = document.getElementById('inputSearchId');
-  if (!idField) return;
+  console.log("1. เริ่มทำงาน");
+  try {
+    var idField = document.getElementById('inputSearchId');
+    var studentId = idField.value.trim();
+    console.log("2. ID ที่ได้คือ:", studentId);
+    
+    // ลองใช้ alert ธรรมดาแทน Swal ก่อนเพื่อเช็คว่า Library Swal พังไหม
+    if (!studentId) {
+      alert("กรุณาระบุรหัส");
+      return;
+    }
 
-  var studentId = idField.value.trim(); // ใช้ชื่อตัวแปร studentId เพื่อไม่ให้สับสน
-  
-  if (!studentId) {
-    Swal.fire('กรุณาระบุรหัส', 'โปรดกรอก Student ID ก่อนกดตกลง', 'warning');
-    return;
+    console.log("3. กำลังส่งค่าไป Server...");
+    google.script.run
+      .withSuccessHandler(function(emp) {
+        console.log("4. Server ตอบกลับมาแล้ว:", emp);
+        if (emp) {
+          selectEmployee(emp.id, emp.name, emp.img, emp.position);
+          closeQuickSearch();
+        } else {
+          alert("ไม่พบข้อมูล");
+        }
+      })
+      .withFailureHandler(function(err) {
+        console.error("5. Server Error:", err);
+        alert("Server Error: " + err);
+      })
+      .getEmployeeBySearchId(studentId);
+
+  } catch (e) {
+    console.error("เกิด Error ใน JS:", e);
+    alert("โปรแกรมพังที่: " + e.message);
   }
-
-  Swal.fire({
-    title: 'กำลังตรวจสอบ...',
-    allowOutsideClick: false,
-    didOpen: () => { Swal.showLoading(); }
-  });
-
-  google.script.run
-    .withSuccessHandler(function(emp) {
-      Swal.close();
-      if (emp) {
-        closeQuickSearch();
-        // เรียกใช้ฟังก์ชันเดิมของระบบคุณ
-        // โครงสร้าง: id, name, image, classname
-        selectEmployee(emp.id, emp.name, emp.img, emp.position);
-      } else {
-        Swal.fire('ไม่พบรหัสพนักงาน', 'ไม่พบรหัส ' + studentId + ' ในระบบ', 'error');
-      }
-    })
-    .withFailureHandler(function(err) {
-      Swal.close();
-      Swal.fire('System Error', 'ติดต่อ Server ไม่ได้: ' + err.message, 'error');
-    })
-    .getEmployeeBySearchId(studentId);
 }
+    
 // ปรับปรุงฟังก์ชันเดิมของคุณให้รับค่าตรงๆ
 function showScanSection(id, name, img) {
     // โค้ดส่วนที่สั่งเปิดหน้าสแกน (ตามภาพที่ 2 ของคุณ)
