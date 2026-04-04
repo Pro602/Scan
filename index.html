@@ -720,29 +720,22 @@ let lastAngle = 0;
 let moveDetected = false;
 let isFacePassed = false; // ตัวล็อกสถานะ (Flag)
 
+let detectorInterval = null;
+
 async function startDetector() {
   const video = document.getElementById("video");
+
+  let matchCount = 0;
+  let verified = false;
 
   let lastNoseX = null;
   let blinkDetected = false;
   let challengePassed = false;
-  let matchCount = 0;
 
-  // 🎯 Random Challenge
   const challenges = ["blink", "left", "right"];
   const challenge = challenges[Math.floor(Math.random() * challenges.length)];
 
-  console.log("🎯 Challenge:", challenge);
-
-  speak(
-    challenge === "blink"
-      ? "กรุณากะพริบตา"
-      : challenge === "left"
-      ? "กรุณาหันซ้าย"
-      : "กรุณาหันขวา"
-  );
-
-  const interval = setInterval(async () => {
+  detectorInterval = setInterval(async () => {
     if (!window.targetStaff) return;
 
     const detection = await faceapi
@@ -758,17 +751,53 @@ async function startDetector() {
 
     if (!detection) return;
 
-    // ❌ กันภาพนิ่ง
-    if (isStaticFace(detection.descriptor)) {
-      speak("กรุณาขยับหน้า");
+    // 🧠 ตรวจหน้าก่อน (เหมือนระบบเดิม)
+    const match = faceMatcher.findBestMatch(detection.descriptor);
+
+    if (
+      match.label === String(window.targetStaff.studentid) &&
+      match.distance < 0.4
+    ) {
+      matchCount++;
+    } else {
+      matchCount = 0;
+    }
+
+    // ❌ ถ้าไม่ผ่านภายใน 3 วิ → ออก
+    if (!verified && matchCount === 0) {
+      console.log("❌ ไม่ใช่เจ้าของใบหน้า");
       return;
     }
 
-    const landmarks = detection.landmarks;
+    // ✅ ผ่านตัวจริงก่อน
+    if (matchCount >= 3 && !verified) {
+      verified = true;
+
+      console.log("✅ ยืนยันตัวตนแล้ว");
+
+      speak("ยืนยันตัวตนแล้ว");
+
+      // 🔥 แสดงปุ่ม IN / OUT
+      document.getElementById("btn-in").classList.remove("hidden");
+      document.getElementById("btn-out").classList.remove("hidden");
+
+      // 🔊 เริ่ม challenge ทีหลัง
+      setTimeout(() => {
+        speak(
+          challenge === "blink"
+            ? "กรุณากะพริบตา"
+            : challenge === "left"
+            ? "กรุณาหันซ้าย"
+            : "กรุณาหันขวา"
+        );
+      }, 1000);
+    }
+
+    if (!verified) return;
 
     // 👁️ Blink
-    const leftEye = landmarks.getLeftEye();
-    const rightEye = landmarks.getRightEye();
+    const leftEye = detection.landmarks.getLeftEye();
+    const rightEye = detection.landmarks.getRightEye();
 
     function getEAR(eye) {
       const A = Math.hypot(eye[1].x - eye[5].x, eye[1].y - eye[5].y);
@@ -782,7 +811,7 @@ async function startDetector() {
     if (ear < 0.22) blinkDetected = true;
 
     // 👃 Movement
-    const nose = landmarks.getNose();
+    const nose = detection.landmarks.getNose();
     const currentNoseX = nose[3].x;
 
     if (lastNoseX !== null) {
@@ -798,32 +827,13 @@ async function startDetector() {
 
     lastNoseX = currentNoseX;
 
+    // ❌ ยังไม่ผ่าน challenge
     if (!challengePassed) return;
 
-    // 🧠 Match
-    const match = faceMatcher.findBestMatch(detection.descriptor);
-
-    if (
-      match.label === String(window.targetStaff.studentid) &&
-      match.distance < 0.4
-    ) {
-      matchCount++;
-    } else {
-      matchCount = 0;
-    }
-
-    // ✅ ต้องผ่าน 3 ครั้ง
-    if (matchCount >= 3) {
-      clearInterval(interval);
-
-      speak("บันทึกเวลาสำเร็จ");
-
-      handleScanSuccess(window.targetStaff);
-    }
+    console.log("✅ ผ่าน Liveness");
 
   }, 120);
 }
-
     let lastDescriptor = null;
 
 function isStaticFace(newDesc) {
