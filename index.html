@@ -1436,44 +1436,39 @@ function closeQuickSearch() {
 }
 
 // ฟังก์ชันประมวลผลการค้นหา
-// ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
-  console.log("1. เริ่มทำงานการค้นหา");
+  console.log("เริ่มค้นหาด้วย StudentID...");
   var idField = document.getElementById('inputSearchId');
-  var studentId = idField.value.trim();
+  var inputId = idField.value.trim();
   
-  if (!studentId) {
-    alert("กรุณาระบุรหัส");
+  if (!inputId) {
+    alert("กรุณาระบุ Student ID");
     return;
   }
 
-  // เช็คว่าข้อมูล students โหลดมาหรือยัง
-  if (typeof students === 'undefined' || !students) {
-    alert("ระบบยังโหลดข้อมูลไม่เสร็จ กรุณารอสักครู่ครับ");
-    return;
-  }
-
-  // ค้นหาพนักงาน (เน้นเช็ค studentid ให้ตรงกับในระบบ)
-  const emp = students.find(s => String(s.studentid).trim() === String(studentId));
+  // ค้นหาพนักงานจากตัวแปร students
+  // ปรับให้เช็คทั้ง studentid (ตัวเล็ก) และ StudentID (ตามหัวตาราง)
+  const emp = students.find(s => {
+    return String(s.studentid || s.StudentID || "").trim() === String(inputId);
+  });
 
   if (emp) {
-    console.log("2. พบข้อมูล:", emp.name);
-    
-    // ปิดหน้าต่างค้นหา
+    console.log("พบข้อมูลพนักงาน:", emp.name);
     closeQuickSearch();
     
-    // --- จุดสำคัญ: ส่งค่าไปที่ฟังก์ชันหลักเพื่อเปิดกล้องสแกนหน้า ---
-    // ระบบของคุณต้องการ: id, name, image, position
+    // ส่งค่าไปเปิดหน้าสแกนหน้า
+    // ใช้ชื่อตัวแปรให้ยืดหยุ่นตามโครงสร้างข้อมูล
     selectEmployee(
-      emp.studentid, 
+      emp.studentid || emp.StudentID, 
       emp.name, 
-      emp.imagedatabase64, 
-      emp.class
+      emp.imagedatabase64 || emp.image, 
+      emp.class || emp.position
     );
-    
   } else {
-    console.log("2. ไม่พบรหัส:", studentId);
-    alert("ไม่พบรหัสพนักงาน: " + studentId + " ในระบบ");
+    // ถ้าหาไม่เจอ ให้แจ้งเตือน (เพื่อไม่ให้เด้งไป Dashboard)
+    alert("ไม่พบ Student ID: " + inputId + " ในระบบ");
+    idField.value = '';
+    idField.focus();
   }
 }
     
