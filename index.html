@@ -1438,30 +1438,61 @@ function closeQuickSearch() {
 // ฟังก์ชันประมวลผลการค้นหา
 // ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
-  console.log("เริ่มทำงาน...");
+  console.log("1. เริ่มทำงานการค้นหาแบบรวดเร็ว");
+  
+  // 1. ดึง Element และค่าจากช่อง Input
   var idField = document.getElementById('inputSearchId');
-  if (!idField) return;
-
-  var studentId = idField.value.trim();
-
-  if (students && students.length > 0) {
-    console.log("โครงสร้างข้อมูลคนแรกคือ:", students[0]);
-  }
-  if (!studentId) {
-    alert("กรุณาระบุรหัสพนักงาน");
+  if (!idField) {
+    console.error("ไม่พบ Element id: 'inputSearchId'");
     return;
   }
 
-  // ค้นหาพนักงานจากตัวแปร students ที่โหลดไว้แล้วในหน้าเว็บ
-  const emp = students.find(s => String(s.studentid) === studentId);
+  var studentId = idField.value.trim();
+  console.log("2. ID ที่ผู้ใช้กรอกคือ:", studentId);
+  
+  // 2. ตรวจสอบว่ากรอกข้อมูลหรือยัง
+  if (!studentId) {
+    alert("กรุณาระบุรหัสพนักงาน/นักเรียน");
+    idField.focus();
+    return;
+  }
+
+  // 3. ตรวจสอบว่าตัวแปรข้อมูล (students) โหลดมาหรือยัง
+  // หมายเหตุ: ระบบของคุณปกติจะเก็บข้อมูลไว้ในตัวแปร global ที่ชื่อ students
+  if (typeof students === 'undefined' || students === null || students.length === 0) {
+    console.error("ตัวแปร students ยังไม่มีข้อมูล");
+    alert("ระบบยังโหลดข้อมูลพื้นฐานไม่เสร็จ หรือไม่มีข้อมูลในฐานข้อมูล กรุณารอสักครู่แล้วลองใหม่ครับ");
+    return;
+  }
+
+  // 4. เริ่มทำการค้นหาในตัวแปร students
+  // ใช้ String() เพื่อป้องกันปัญหาประเภทข้อมูลไม่ตรงกัน และ trim() เพื่อตัดช่องว่าง
+  const emp = students.find(s => 
+    String(s.studentid).trim() === String(studentId)
+  );
 
   if (emp) {
-    console.log("พบข้อมูล:", emp.name);
-    // เรียกใช้ฟังก์ชันเดิมเพื่อเปิดหน้าสแกน
-    selectEmployee(emp.studentid, emp.name, emp.imagedatabase64, emp.class);
+    console.log("3. พบข้อมูลพนักงาน:", emp.name);
+    
+    // ปิดหน้าต่าง Modal ค้นหา
     closeQuickSearch();
+    
+    // 5. ส่งข้อมูลไปยังฟังก์ชันหลักของระบบ (selectEmployee) เพื่อเข้าสู่หน้าสแกนหน้า
+    // อ้างอิงชื่อ property ตามโครงสร้างระบบของคุณ (studentid, name, imagedatabase64, class)
+    selectEmployee(
+      emp.studentid, 
+      emp.name, 
+      emp.imagedatabase64, 
+      emp.class
+    );
+    
   } else {
-    alert("ไม่พบข้อมูลพนักงานรหัส: " + studentId);
+    console.log("3. ไม่พบข้อมูลสำหรับรหัส:", studentId);
+    alert("ไม่พบข้อมูลในระบบ! รหัส '" + studentId + "' ไม่ถูกต้องหรือยังไม่ได้ลงทะเบียน");
+    
+    // ล้างค่าในช่อง Input เพื่อให้พิมพ์ใหม่ได้ทันที
+    idField.value = '';
+    idField.focus();
   }
 }
     
