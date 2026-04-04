@@ -1437,7 +1437,7 @@ function closeQuickSearch() {
 
 // ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
-  console.log("เริ่มค้นหาแบบละเอียด...");
+  console.log("เริ่มค้นหาแบบจำลองการคลิก...");
   var idField = document.getElementById('inputSearchId');
   var inputId = idField.value.trim();
   
@@ -1446,40 +1446,36 @@ function processQuickSearch() {
     return;
   }
 
-  if (typeof students === 'undefined' || !students) {
-    alert("ระบบยังโหลดข้อมูลไม่เสร็จ กรุณารอสักครู่ครับ");
-    return;
-  }
-
-  // ค้นหาแบบครอบคลุมทุกชื่อตัวแปรที่เป็นไปได้ (studentid, StudentID, id)
-  const emp = students.find(s => {
-    // ดึงค่า ID ออกมาเช็ค ไม่ว่ามันจะชื่อ property อะไรก็ตาม
+  // 1. ค้นหาหาลำดับ (Index) ของพนักงานในตัวแปร students
+  // โดยเช็คทั้ง studentid และ StudentID
+  const empIndex = students.findIndex(s => {
     const sID = String(s.studentid || s.StudentID || s.id || "").trim();
     return sID === String(inputId);
   });
 
-  if (emp) {
-    console.log("พบพนักงาน:", emp.name);
+  if (empIndex !== -1) {
+    const emp = students[empIndex];
+    console.log("พบพนักงาน:", emp.name, "ลำดับที่:", empIndex);
+    
+    // 2. ปิดหน้าต่างค้นหา
     closeQuickSearch();
-    
-    // ดึงค่า Image และ Class ออกมาแบบครอบคลุมทุกชื่อตัวแปร
-    const empImage = emp.imagedatabase64 || emp.image || emp.ImageData || "";
-    const empClass = emp.class || emp.position || emp.Class || "";
-    const empName = emp.name || emp.Name || "";
-    const empID = emp.studentid || emp.StudentID || emp.id || "";
 
-    // ส่งค่าไปเปิดหน้าสแกนหน้า
-    selectEmployee(empID, empName, empImage, empClass);
-    
+    // 3. ใช้วิธีเรียกใช้ฟังก์ชันเดิมเป๊ะๆ ตามที่ระบบคุณใช้ (อ้างอิงจากไฟล์ index ของคุณ)
+    // โดยส่งค่าตามลำดับที่ระบบคุณต้องการ: id, name, image, class
+    selectEmployee(
+      String(emp.studentid || emp.StudentID || ""), 
+      String(emp.name || ""), 
+      String(emp.imagedatabase64 || emp.image || ""), 
+      String(emp.class || emp.position || "")
+    );
+
   } else {
-    // จุดสำคัญ: ถ้าหาไม่เจอ ให้ Alert เตือนตรงนี้ "ห้ามปล่อยให้ฟังก์ชันทำงานต่อ"
-    // เพื่อไม่ให้มันไปเรียก selectEmployee แบบว่างๆ จนเด้งไป Dashboard
-    alert("ไม่พบรหัส: " + inputId + " ในฐานข้อมูล\nกรุณาตรวจสอบ StudentID อีกครั้ง");
+    // ถ้าหาไม่เจอ ให้แจ้งเตือนและหยุดทำงาน (ป้องกันการเด้งไป Dashboard)
+    alert("ไม่พบ Student ID: " + inputId + " ในระบบครับ");
     idField.value = '';
     idField.focus();
   }
 }
-    
 // ปรับปรุงฟังก์ชันเดิมของคุณให้รับค่าตรงๆ
 function showScanSection(id, name, img) {
     // โค้ดส่วนที่สั่งเปิดหน้าสแกน (ตามภาพที่ 2 ของคุณ)
