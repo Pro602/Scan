@@ -1437,41 +1437,48 @@ function closeQuickSearch() {
 
 // ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
-  console.log("เริ่มค้นหาแบบจำลองการคลิก...");
-  var idField = document.getElementById('inputSearchId');
-  var inputId = idField.value.trim();
-  
+  console.log("🔍 เริ่มค้นหา...");
+
+  const idField = document.getElementById('inputSearchId');
+  const inputId = idField.value.trim();
+
   if (!inputId) {
     alert("กรุณาระบุ Student ID");
+    idField.focus();
     return;
   }
 
-  // 1. ค้นหาหาลำดับ (Index) ของพนักงานในตัวแปร students
-  // โดยเช็คทั้ง studentid และ StudentID
-  const empIndex = students.findIndex(s => {
+  // 🔎 ค้นหาพนักงาน
+  const emp = students.find(s => {
     const sID = String(s.studentid || s.StudentID || s.id || "").trim();
-    return sID === String(inputId);
+    return sID === inputId;
   });
 
-  if (empIndex !== -1) {
-    const emp = students[empIndex];
-    console.log("พบพนักงาน:", emp.name, "ลำดับที่:", empIndex);
-    
-    // 2. ปิดหน้าต่างค้นหา
+  if (emp) {
+    console.log("✅ พบพนักงาน:", emp.name);
+
+    // 1. ปิด popup
     closeQuickSearch();
 
-    // 3. ใช้วิธีเรียกใช้ฟังก์ชันเดิมเป๊ะๆ ตามที่ระบบคุณใช้ (อ้างอิงจากไฟล์ index ของคุณ)
-    // โดยส่งค่าตามลำดับที่ระบบคุณต้องการ: id, name, image, class
-    selectEmployee(
-      String(emp.studentid || emp.StudentID || ""), 
-      String(emp.name || ""), 
-      String(emp.imagedatabase64 || emp.image || ""), 
-      String(emp.class || emp.position || "")
-    );
+    // 2. ตั้งค่าพนักงานเป้าหมาย (สำคัญมาก!)
+    window.targetStaff = emp;
+
+    // 3. ใส่ข้อมูลลงหน้าสแกนทันที
+    document.getElementById('res-name').innerText = emp.name;
+    document.getElementById('res-id').innerText = `ID: ${emp.studentid || emp.id}`;
+
+    const resImg = document.getElementById('res-img');
+    if (emp.imagedatabase64 || emp.image) {
+      resImg.src = emp.imagedatabase64 || emp.image;
+      resImg.classList.remove('hidden');
+      document.getElementById('res-img-placeholder').classList.add('hidden');
+    }
+
+    // 4. ไปหน้าสแกน
+    switchTab('scan');
 
   } else {
-    // ถ้าหาไม่เจอ ให้แจ้งเตือนและหยุดทำงาน (ป้องกันการเด้งไป Dashboard)
-    alert("ไม่พบ Student ID: " + inputId + " ในระบบครับ");
+    alert("❌ ไม่พบ Student ID: " + inputId);
     idField.value = '';
     idField.focus();
   }
