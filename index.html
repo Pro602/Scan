@@ -720,123 +720,102 @@ let lastAngle = 0;
 let moveDetected = false;
 let isFacePassed = false; // ตัวล็อกสถานะ (Flag)
 
-aasync function startDetector() {
-  const video = document.getElementById("video");
+async function startDetector() {
+    const v = document.getElementById('video'), o = document.getElementById('overlay');
+    if (!v) return;
+    const dim = { width: v.clientWidth, height: v.clientHeight };
+    faceapi.matchDimensions(o, dim);
+    
+    if(window.detectorInterval) clearInterval(window.detectorInterval);
+    wrongFaceCount = 0;
+    hasBlinked = false;
+    moveDetected = false; 
+    isFacePassed = false; // รีเซ็ตสถานะทุกครั้งที่เริ่ม
 
-  let lastNoseX = null;
-  let blinkDetected = false;
+    window.detectorInterval = setInterval(async () => {
+        // --- [จุดสำคัญ 1: ถ้าผ่านแล้ว หรือกำลังประมวลผลรอบเก่าอยู่ ให้หยุดทันที] ---
+        if(v.paused || v.ended || isFacePassed) return; 
+        
+        const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
+            .withFaceLandmarks()
+            .withFaceDescriptor();
+            
+        const ctx = o.getContext('2d');
+        ctx.clearRect(0,0,o.width,o.height);
+        
+        if(faceMatcher && det) {
+            // เช็คซ้ำอีกรอบเผื่อรอบก่อนหน้าเพิ่งเปลี่ยนสถานะเป็น true ไปสดๆ ร้อนๆ
+            if (isFacePassed) return;
 
-  let challengePassed = false;
-  let matchCount = 0;
+            const match = faceMatcher.findBestMatch(det.descriptor);
+            const targetId = window.targetStaff ? String(window.targetStaff.studentid) : null;
 
-  // 🎯 สุ่มคำสั่ง
-  const challenges = [
-    { type: "blink", text: "กรุณากะพริบตา" },
-    { type: "left", text: "กรุณาหันหน้าไปทางซ้าย" },
-    { type: "right", text: "กรุณาหันหน้าไปทางขวา" }
-  ];
+            const landmarks = det.landmarks;
+            
+            // --- [จุดแก้ไข 1: EAR (การกะพริบตา) ปรับเกณฑ์ EAR < 0.22 เพื่อให้จับได้แม่นยำขึ้น] ---
+            const ear = (getEAR(landmarks.getLeftEye()) + getEAR(landmarks.getRightEye())) / 2;
+            if (ear < 0.22) hasBlinked = true; 
 
-  const currentChallenge = challenges[Math.floor(Math.random() * challenges.length)];
+            // --- [จุดแก้ไข 2: ปรับความไวการขยับจมูก (Move Detected) เป็น > 1.8 เพื่อความรัดกุม] ---
+            const currentNoseX = landmarks.getNose()[0].x;
+            if (Math.abs(currentNoseX - lastAngle) > 1.8) moveDetected = true;
+            lastAngle = currentNoseX;
 
-  console.log("🎯 Challenge:", currentChallenge.type);
+            const resNameEl = document.getElementById('res-name');
+            const btnIn = document.getElementById('btn-in');
+            const btnOut = document.getElementById('btn-out');
+            const wrongAction = document.getElementById('wrong-face-actions');
 
-  // 🔊 พูดคำสั่ง
-  speak(currentChallenge.text);
+            if (targetId && match.label !== targetId) {
+                wrongFaceCount++;
+                if (wrongFaceCount >= 5) { 
+                    resNameEl.innerText = "❌ ใบหน้าไม่ตรงกับพนักงานที่เลือก!";
+                    resNameEl.style.color = "#f43f5e";
+                    if(wrongAction) wrongAction.classList.remove('hidden');
+                }
+            } else if (match.label === targetId && match.distance < 0.45) {
+                // --- [จุดแก้ไข 3: ตัดเงื่อนไข isVeryCloseMatch ออกอย่างเด็ดขาด!] ---
+                // ไม่ว่าจะหน้าตรงแค่ไหน ก็ *ต้อง* ผ่านการตรวจ Liveness เสมอ เพื่อป้องกันภาพถ่าย
 
-  let lastInstructionTime = Date.now();
+                if (!hasBlinked || !moveDetected) {
+                    resNameEl.innerHTML = `<span style="color: #fbbf24;">✨ กรุณากะพริบตาหรือขยับหน้าเล็กน้อย</span>`;
+                } else {
+                    // ผ่านการสแกน (ผ่าน Liveness)
+                    isFacePassed = true; 
+                    clearInterval(window.detectorInterval);
+                    window.detectorInterval = null;
 
-  const interval = setInterval(async () => {
-    if (!window.targetStaff) return;
+                    if (window.speechSynthesis) {
+                        window.speechSynthesis.cancel(); // หยุดเสียงที่กำลังรอคิวอยู่ทั้งหมดทันที
+                    }
+                    
+                    const snd = document.getElementById('snd-ok');
+                    if(snd) {
+                        snd.pause();       // หยุดไฟล์เสียงเดิม (ถ้ามี)
+                        snd.currentTime = 0; // รีเซ็ตไปจุดเริ่มต้น
+                        snd.play();        // เล่นใหม่
+                    }
 
-    const detection = await faceapi
-      .detectSingleFace(
-        video,
-        new faceapi.TinyFaceDetectorOptions({
-          inputSize: 128,
-          scoreThreshold: 0.4
-        })
-      )
-      .withFaceLandmarks()
-      .withFaceDescriptor();
+                    speak("สแกนใบหน้าสำเร็จค่ะ");
 
-    if (!detection) return;
-
-    const landmarks = detection.landmarks;
-
-    // 👁️ Blink
-    const leftEye = landmarks.getLeftEye();
-    const rightEye = landmarks.getRightEye();
-
-    function getEAR(eye) {
-      const A = Math.hypot(eye[1].x - eye[5].x, eye[1].y - eye[5].y);
-      const B = Math.hypot(eye[2].x - eye[4].x, eye[2].y - eye[4].y);
-      const C = Math.hypot(eye[0].x - eye[3].x, eye[0].y - eye[3].y);
-      return (A + B) / (2.0 * C);
-    }
-
-    const ear = (getEAR(leftEye) + getEAR(rightEye)) / 2;
-
-    if (ear < 0.22) blinkDetected = true;
-
-    // 👃 Movement
-    const nose = landmarks.getNose();
-    const currentNoseX = nose[3].x;
-
-    if (lastNoseX !== null) {
-      const diff = currentNoseX - lastNoseX;
-
-      if (currentChallenge.type === "left" && diff > 2) {
-        challengePassed = true;
-      }
-
-      if (currentChallenge.type === "right" && diff < -2) {
-        challengePassed = true;
-      }
-    }
-
-    if (currentChallenge.type === "blink" && blinkDetected) {
-      challengePassed = true;
-    }
-
-    lastNoseX = currentNoseX;
-
-    // ❌ ยังไม่ผ่าน
-    if (!challengePassed) {
-      // 🔊 เตือนทุก 3 วิ
-      if (Date.now() - lastInstructionTime > 3000) {
-        speak(currentChallenge.text);
-        lastInstructionTime = Date.now();
-      }
-      return;
-    }
-
-    // 🧠 Face Matching
-    const match = faceMatcher.findBestMatch(detection.descriptor);
-
-    if (
-      match.label === String(window.targetStaff.studentid) &&
-      match.distance < 0.4
-    ) {
-      matchCount++;
-    } else {
-      matchCount = 0;
-    }
-
-    // ✅ ผ่านจริง (กัน false)
-    if (matchCount >= 3) {
-      clearInterval(interval);
-
-      speak("บันทึกเวลาสำเร็จ");
-
-      console.log("✅ SUCCESS");
-
-      handleScanSuccess(window.targetStaff);
-
-      matchCount = 0;
-    }
-
-  }, 120);
+                    // อัปเดต UI ครั้งสุดท้าย
+                    btnIn.disabled = false; btnOut.disabled = false;
+                    btnIn.style.opacity = "1"; btnOut.style.opacity = "1";
+                    resNameEl.innerText = window.targetStaff.name;
+                    resNameEl.style.color = "#10b981";
+                    
+                    document.getElementById('res-id').innerText = `ID: ${match.label}`;
+                    if(window.targetStaff.imagedatabase64) {
+                        document.getElementById('res-img').src = window.targetStaff.imagedatabase64;
+                        document.getElementById('res-img').classList.remove('hidden');
+                    }
+                    if(wrongAction) wrongAction.classList.add('hidden');
+                }
+            }
+        }
+    }, 200); 
 }
+
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
 function getEAR(eye) {
     const v1 = Math.abs(eye[1].y - eye[5].y);
@@ -1011,47 +990,21 @@ function renderStudentTable() {
 
     // --- วางตัวแปรไว้ด้านบนสุดของกลุ่มฟังก์ชัน ---
     let croppedImg = null; 
-   async function startCamera(id) {
-  try {
-    const video = document.getElementById(id);
-
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        width: { ideal: 320 },   // 🔥 เร็วขึ้น
-        height: { ideal: 240 },
-        facingMode: "user"
-      },
-      audio: false
-    });
-
-    video.srcObject = stream;
-
-    await video.play(); // 🔥 สำคัญมาก (กันจอดำ)
-
-    console.log("📷 Camera Ready:", id);
-
-  } catch (e) {
-    console.error("❌ Camera Error:", e);
-    alert("ไม่สามารถเปิดกล้องได้");
-  }
-}
+    async function startCamera(id) { try { document.getElementById(id).srcObject = await navigator.mediaDevices.getUserMedia({video:true}); } catch(e){} }
     function stopCamera(id) { const v = document.getElementById(id); if(v?.srcObject) v.srcObject.getTracks().forEach(t => t.stop()); }
     function speak(t) { const m = new SpeechSynthesisUtterance(t); m.lang = 'th-TH'; window.speechSynthesis.speak(m); }
     function checkLogin() { const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value; if (AUTHORIZED_USERS[u] === p) { isLoggedIn = true; currentUserName = u; document.getElementById('login-modal').classList.add('hidden'); if(pendingAction) switchTab(pendingAction); } else alert("Error"); }
     function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
     
-function startModalCamera() { 
-    stopCamera('modal-video'); // 🔥 เพิ่มบรรทัดนี้
+    function startModalCamera() { 
+        startCamera('modal-video'); 
+        document.getElementById('modal-video').classList.remove('hidden'); 
+        document.getElementById('preview-img').classList.add('hidden'); 
+        document.getElementById('btn-snap').classList.remove('hidden'); 
+        document.getElementById('face-guide').classList.remove('hidden'); // แสดงเส้นไกด์
+    }
 
-    startCamera('modal-video'); 
-
-    document.getElementById('modal-video').classList.remove('hidden'); 
-    document.getElementById('preview-img').classList.add('hidden'); 
-    document.getElementById('btn-snap').classList.remove('hidden'); 
-    document.getElementById('face-guide').classList.remove('hidden');
-}
-
-// ฟังก์ชันถ่ายรูปพร้อมระบบ Auto-Crop ใบหน้า
+    // ฟังก์ชันถ่ายรูปพร้อมระบบ Auto-Crop ใบหน้า
 async function snapPhoto() {
     const v = document.getElementById('modal-video');
     const previewImg = document.getElementById('preview-img');
@@ -1484,37 +1437,50 @@ function closeQuickSearch() {
 
 // ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
+  console.log("🔍 เริ่มค้นหา...");
+
   const idField = document.getElementById('inputSearchId');
   const inputId = idField.value.trim();
 
   if (!inputId) {
-    alert("กรุณาระบุ ID");
+    alert("กรุณาระบุ Student ID");
+    idField.focus();
     return;
   }
 
+  // 🔎 ค้นหาพนักงาน
   const emp = students.find(s => {
     const sID = String(s.studentid || s.StudentID || s.id || "").trim();
     return sID === inputId;
   });
 
   if (emp) {
+    console.log("✅ พบพนักงาน:", emp.name);
+
+    // 1. ปิด popup
     closeQuickSearch();
 
+    // 2. ตั้งค่าพนักงานเป้าหมาย (สำคัญมาก!)
     window.targetStaff = emp;
 
+    // 3. ใส่ข้อมูลลงหน้าสแกนทันที
     document.getElementById('res-name').innerText = emp.name;
     document.getElementById('res-id').innerText = `ID: ${emp.studentid || emp.id}`;
 
+    const resImg = document.getElementById('res-img');
+    if (emp.imagedatabase64 || emp.image) {
+      resImg.src = emp.imagedatabase64 || emp.image;
+      resImg.classList.remove('hidden');
+      document.getElementById('res-img-placeholder').classList.add('hidden');
+    }
+
+    // 4. ไปหน้าสแกน
     switchTab('scan');
 
-    // 🔥 Auto เปิดกล้อง + เริ่มสแกน
-    setTimeout(() => {
-      startCamera("video");
-      startDetector();
-    }, 300);
-
   } else {
-    alert("ไม่พบ ID");
+    alert("❌ ไม่พบ Student ID: " + inputId);
+    idField.value = '';
+    idField.focus();
   }
 }
 // ปรับปรุงฟังก์ชันเดิมของคุณให้รับค่าตรงๆ
@@ -1527,12 +1493,6 @@ function showScanSection(id, name, img) {
     
     // เปลี่ยนหน้าไปยังส่วนสแกน (ใช้คำสั่งเดิมในโปรแกรมคุณ)
     switchPage('scan-page'); 
-}
-    function speak(text) {
-  const msg = new SpeechSynthesisUtterance(text);
-  msg.lang = "th-TH";
-  msg.rate = 1;
-  window.speechSynthesis.speak(msg);
 }
 </script>
     <div id="auth-modal" class="fixed inset-0 bg-slate-900/90 z-[9999] flex items-center justify-center hidden backdrop-blur-sm">
