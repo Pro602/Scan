@@ -1436,6 +1436,7 @@ function closeQuickSearch() {
 }
 
 // ฟังก์ชันประมวลผลการค้นหา
+// ฟังก์ชันประมวลผลการค้นหา (คัดลอกชุดนี้ไปวางทับอันเดิมได้เลยครับ)
 function processQuickSearch() {
   console.log("1. เริ่มทำงาน");
   try {
@@ -1443,32 +1444,30 @@ function processQuickSearch() {
     var studentId = idField.value.trim();
     console.log("2. ID ที่ได้คือ:", studentId);
     
-    // ลองใช้ alert ธรรมดาแทน Swal ก่อนเพื่อเช็คว่า Library Swal พังไหม
     if (!studentId) {
       alert("กรุณาระบุรหัส");
       return;
     }
 
-    console.log("3. กำลังส่งค่าไป Server...");
-    google.script.run
-      .withSuccessHandler(function(emp) {
-        console.log("4. Server ตอบกลับมาแล้ว:", emp);
-        if (emp) {
-          selectEmployee(emp.id, emp.name, emp.img, emp.position);
-          closeQuickSearch();
-        } else {
-          alert("ไม่พบข้อมูล");
-        }
-      })
-      .withFailureHandler(function(err) {
-        console.error("5. Server Error:", err);
-        alert("Server Error: " + err);
-      })
-      .getEmployeeBySearchId(studentId);
+    // ส่วนที่แก้ไข: เปลี่ยนมาใช้โครงสร้างการเรียกแบบเดียวกับระบบหลักของคุณ
+    console.log("3. กำลังค้นหาในฐานข้อมูล...");
+    
+    // ค้นหาพนักงานจากตัวแปร students ที่โหลดมาแล้วในหน้าเว็บ (วิธีนี้จะเร็วกว่า)
+    const emp = students.find(s => String(s.studentid) === studentId);
+    
+    if (emp) {
+      console.log("4. พบข้อมูล:", emp.name);
+      // เรียกใช้ฟังก์ชันเดิมของระบบเพื่อส่งค่าไปหน้าสแกน
+      selectEmployee(emp.studentid, emp.name, emp.imagedatabase64, emp.class);
+      closeQuickSearch();
+    } else {
+      console.log("4. ไม่พบข้อมูลรหัส:", studentId);
+      alert("ไม่พบข้อมูลพนักงานรหัสนี้ในระบบ");
+    }
 
   } catch (e) {
     console.error("เกิด Error ใน JS:", e);
-    alert("โปรแกรมพังที่: " + e.message);
+    alert("โปรแกรมขัดข้อง: " + e.message);
   }
 }
     
