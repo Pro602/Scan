@@ -351,22 +351,10 @@ window.onload = async () => {
         renderDashboard();
     }, 30000);
 };
-async function apiCall(p) {
-    try {
-        await fetch(gasUrl, {
-            method: "POST",
-            mode: "no-cors", // 🔥 สำคัญ
-            body: JSON.stringify(p)
-        });
-
-        // ⚠️ no-cors จะไม่ได้ response กลับ
-        return { success: true };
-
-    } catch (e) {
-        console.error("❌ API ERROR:", e);
-        return { success: false };
+    async function apiCall(p) {
+        try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
+        catch(e) { return {success:false}; }
     }
-}
 
 // ปรับปรุง loadAllData ให้ดึงข้อมูล Supervisor มาด้วย
 async function loadAllData() {
@@ -728,27 +716,10 @@ function executeNavigation() {
         } catch(e) {}
     }
 
-let lastDescriptor = null;
-
-function isStaticFace(newDesc) {
-    if (!lastDescriptor) {
-        lastDescriptor = newDesc;
-        return false;
-    }
-
-    let diff = 0;
-    for (let i = 0; i < newDesc.length; i++) {
-        diff += Math.abs(newDesc[i] - lastDescriptor[i]);
-    }
-
-    lastDescriptor = newDesc;
-
-    return diff < 0.015; // 🔥 ปรับให้จับรูปถ่ายได้ดีขึ้น
-}
-    
 let lastAngle = 0;
 let moveDetected = false;
 let isFacePassed = false; // ตัวล็อกสถานะ (Flag)
+
 async function startDetector() {
     const v = document.getElementById('video'), o = document.getElementById('overlay');
     if (!v) return;
@@ -765,21 +736,14 @@ async function startDetector() {
         // --- [จุดสำคัญ 1: ถ้าผ่านแล้ว หรือกำลังประมวลผลรอบเก่าอยู่ ให้หยุดทันที] ---
         if(v.paused || v.ended || isFacePassed) return; 
         
-        const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.4 }))
+        const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
             .withFaceLandmarks()
             .withFaceDescriptor();
             
         const ctx = o.getContext('2d');
         ctx.clearRect(0,0,o.width,o.height);
         
-     if(faceMatcher && det) {
-
-    // 🔥 กันภาพนิ่ง / รูปถ่าย
-    if (isStaticFace(det.descriptor)) {
-        document.getElementById('res-name').innerHTML = 
-          `<span style="color:#f43f5e;">⚠️ กรุณาขยับใบหน้า (ตรวจพบภาพนิ่ง)</span>`;
-        return;
-    }
+        if(faceMatcher && det) {
             // เช็คซ้ำอีกรอบเผื่อรอบก่อนหน้าเพิ่งเปลี่ยนสถานะเป็น true ไปสดๆ ร้อนๆ
             if (isFacePassed) return;
 
@@ -809,7 +773,7 @@ async function startDetector() {
                     resNameEl.style.color = "#f43f5e";
                     if(wrongAction) wrongAction.classList.remove('hidden');
                 }
-            } else if (match.label === targetId && match.distance < 0.40) {
+            } else if (match.label === targetId && match.distance < 0.45) {
                 // --- [จุดแก้ไข 3: ตัดเงื่อนไข isVeryCloseMatch ออกอย่างเด็ดขาด!] ---
                 // ไม่ว่าจะหน้าตรงแค่ไหน ก็ *ต้อง* ผ่านการตรวจ Liveness เสมอ เพื่อป้องกันภาพถ่าย
 
@@ -849,7 +813,7 @@ async function startDetector() {
                 }
             }
         }
-    }, 120); 
+    }, 200); 
 }
 
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
