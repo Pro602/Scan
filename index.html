@@ -1436,31 +1436,32 @@ function closeQuickSearch() {
 }
 
 // ฟังก์ชันประมวลผลการค้นหา
+// ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
-  console.log("1. เริ่มทำงาน");
+  console.log("เริ่มทำงาน...");
   var idField = document.getElementById('inputSearchId');
   if (!idField) return;
 
-  var studentId = idField.value.trim(); // สร้างตัวแปรก่อนเรียกใช้
-  console.log("2. ID ที่ได้คือ:", studentId);
-  
+  var studentId = idField.value.trim();
+
+  if (students && students.length > 0) {
+    console.log("โครงสร้างข้อมูลคนแรกคือ:", students[0]);
+  }
   if (!studentId) {
-    alert("กรุณาระบุรหัส");
+    alert("กรุณาระบุรหัสพนักงาน");
     return;
   }
 
-  // ค้นหาพนักงานจากตัวแปร students ที่โหลดมาแล้วในหน้าเว็บ (เร็วกว่า)
-  // หมายเหตุ: เช็คชื่อ property ในตัวแปร students ของคุณให้ตรง (เช่น studentid หรือ id)
+  // ค้นหาพนักงานจากตัวแปร students ที่โหลดไว้แล้วในหน้าเว็บ
   const emp = students.find(s => String(s.studentid) === studentId);
 
   if (emp) {
-    console.log("3. พบข้อมูล:", emp.name);
-    // เรียกใช้ฟังก์ชันเดิมของระบบเพื่อส่งค่าไปหน้าสแกน
+    console.log("พบข้อมูล:", emp.name);
+    // เรียกใช้ฟังก์ชันเดิมเพื่อเปิดหน้าสแกน
     selectEmployee(emp.studentid, emp.name, emp.imagedatabase64, emp.class);
     closeQuickSearch();
   } else {
-    console.log("3. ไม่พบข้อมูลรหัส:", studentId);
-    alert("ไม่พบข้อมูลพนักงานรหัสนี้ในระบบ");
+    alert("ไม่พบข้อมูลพนักงานรหัส: " + studentId);
   }
 }
     
