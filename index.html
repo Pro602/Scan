@@ -351,10 +351,30 @@ window.onload = async () => {
         renderDashboard();
     }, 30000);
 };
-    async function apiCall(p) {
-        try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
-        catch(e) { return {success:false}; }
+async function apiCall(p) {
+    try {
+        const r = await fetch(gasUrl, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(p)
+        });
+
+        const text = await r.text(); // 🔥 กันพังถ้า response ไม่ใช่ JSON
+
+        try {
+            return JSON.parse(text);
+        } catch {
+            console.error("❌ Response ไม่ใช่ JSON:", text);
+            return { success: false, error: "Invalid JSON response" };
+        }
+
+    } catch (e) {
+        console.error("❌ API ERROR:", e);
+        return { success: false, error: e.message };
     }
+}
 
 // ปรับปรุง loadAllData ให้ดึงข้อมูล Supervisor มาด้วย
 async function loadAllData() {
