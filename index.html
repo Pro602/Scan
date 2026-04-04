@@ -1449,13 +1449,13 @@ function processQuickSearch() {
     return;
   }
 
-  // ใช้ข้อมูลจากตัวแปร students ที่โหลดไว้แล้วในระบบ (ไม่ต้องรอ Server)
-  // หมายเหตุ: เช็คตัวเล็กตัวใหญ่ของคำว่า studentid ให้ตรงกับฐานข้อมูลคุณ
+  // ค้นหาพนักงานจากตัวแปร students ที่โหลดมาแล้วในหน้าเว็บ (เร็วกว่า)
+  // หมายเหตุ: เช็คชื่อ property ในตัวแปร students ของคุณให้ตรง (เช่น studentid หรือ id)
   const emp = students.find(s => String(s.studentid) === studentId);
 
   if (emp) {
     console.log("3. พบข้อมูล:", emp.name);
-    // เรียกใช้ฟังก์ชันเดิมของระบบคุณ เพื่อเปิดหน้าสแกนหน้า
+    // เรียกใช้ฟังก์ชันเดิมของระบบเพื่อส่งค่าไปหน้าสแกน
     selectEmployee(emp.studentid, emp.name, emp.imagedatabase64, emp.class);
     closeQuickSearch();
   } else {
