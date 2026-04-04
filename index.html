@@ -1437,7 +1437,7 @@ function closeQuickSearch() {
 
 // ฟังก์ชันประมวลผลการค้นหา
 function processQuickSearch() {
-  console.log("เริ่มค้นหาด้วย StudentID...");
+  console.log("เริ่มค้นหาแบบละเอียด...");
   var idField = document.getElementById('inputSearchId');
   var inputId = idField.value.trim();
   
@@ -1446,27 +1446,35 @@ function processQuickSearch() {
     return;
   }
 
-  // ค้นหาพนักงานจากตัวแปร students
-  // ปรับให้เช็คทั้ง studentid (ตัวเล็ก) และ StudentID (ตามหัวตาราง)
+  if (typeof students === 'undefined' || !students) {
+    alert("ระบบยังโหลดข้อมูลไม่เสร็จ กรุณารอสักครู่ครับ");
+    return;
+  }
+
+  // ค้นหาแบบครอบคลุมทุกชื่อตัวแปรที่เป็นไปได้ (studentid, StudentID, id)
   const emp = students.find(s => {
-    return String(s.studentid || s.StudentID || "").trim() === String(inputId);
+    // ดึงค่า ID ออกมาเช็ค ไม่ว่ามันจะชื่อ property อะไรก็ตาม
+    const sID = String(s.studentid || s.StudentID || s.id || "").trim();
+    return sID === String(inputId);
   });
 
   if (emp) {
-    console.log("พบข้อมูลพนักงาน:", emp.name);
+    console.log("พบพนักงาน:", emp.name);
     closeQuickSearch();
     
+    // ดึงค่า Image และ Class ออกมาแบบครอบคลุมทุกชื่อตัวแปร
+    const empImage = emp.imagedatabase64 || emp.image || emp.ImageData || "";
+    const empClass = emp.class || emp.position || emp.Class || "";
+    const empName = emp.name || emp.Name || "";
+    const empID = emp.studentid || emp.StudentID || emp.id || "";
+
     // ส่งค่าไปเปิดหน้าสแกนหน้า
-    // ใช้ชื่อตัวแปรให้ยืดหยุ่นตามโครงสร้างข้อมูล
-    selectEmployee(
-      emp.studentid || emp.StudentID, 
-      emp.name, 
-      emp.imagedatabase64 || emp.image, 
-      emp.class || emp.position
-    );
+    selectEmployee(empID, empName, empImage, empClass);
+    
   } else {
-    // ถ้าหาไม่เจอ ให้แจ้งเตือน (เพื่อไม่ให้เด้งไป Dashboard)
-    alert("ไม่พบ Student ID: " + inputId + " ในระบบ");
+    // จุดสำคัญ: ถ้าหาไม่เจอ ให้ Alert เตือนตรงนี้ "ห้ามปล่อยให้ฟังก์ชันทำงานต่อ"
+    // เพื่อไม่ให้มันไปเรียก selectEmployee แบบว่างๆ จนเด้งไป Dashboard
+    alert("ไม่พบรหัส: " + inputId + " ในฐานข้อมูล\nกรุณาตรวจสอบ StudentID อีกครั้ง");
     idField.value = '';
     idField.focus();
   }
