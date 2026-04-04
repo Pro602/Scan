@@ -1436,38 +1436,31 @@ function closeQuickSearch() {
 }
 
 // ฟังก์ชันประมวลผลการค้นหา
-// ฟังก์ชันประมวลผลการค้นหา (คัดลอกชุดนี้ไปวางทับอันเดิมได้เลยครับ)
 function processQuickSearch() {
   console.log("1. เริ่มทำงาน");
-  try {
-    var idField = document.getElementById('inputSearchId');
-    var studentId = idField.value.trim();
-    console.log("2. ID ที่ได้คือ:", studentId);
-    
-    if (!studentId) {
-      alert("กรุณาระบุรหัส");
-      return;
-    }
+  var idField = document.getElementById('inputSearchId');
+  if (!idField) return;
 
-    // ส่วนที่แก้ไข: เปลี่ยนมาใช้โครงสร้างการเรียกแบบเดียวกับระบบหลักของคุณ
-    console.log("3. กำลังค้นหาในฐานข้อมูล...");
-    
-    // ค้นหาพนักงานจากตัวแปร students ที่โหลดมาแล้วในหน้าเว็บ (วิธีนี้จะเร็วกว่า)
-    const emp = students.find(s => String(s.studentid) === studentId);
-    
-    if (emp) {
-      console.log("4. พบข้อมูล:", emp.name);
-      // เรียกใช้ฟังก์ชันเดิมของระบบเพื่อส่งค่าไปหน้าสแกน
-      selectEmployee(emp.studentid, emp.name, emp.imagedatabase64, emp.class);
-      closeQuickSearch();
-    } else {
-      console.log("4. ไม่พบข้อมูลรหัส:", studentId);
-      alert("ไม่พบข้อมูลพนักงานรหัสนี้ในระบบ");
-    }
+  var studentId = idField.value.trim(); // สร้างตัวแปรก่อนเรียกใช้
+  console.log("2. ID ที่ได้คือ:", studentId);
+  
+  if (!studentId) {
+    alert("กรุณาระบุรหัส");
+    return;
+  }
 
-  } catch (e) {
-    console.error("เกิด Error ใน JS:", e);
-    alert("โปรแกรมขัดข้อง: " + e.message);
+  // ใช้ข้อมูลจากตัวแปร students ที่โหลดไว้แล้วในระบบ (ไม่ต้องรอ Server)
+  // หมายเหตุ: เช็คตัวเล็กตัวใหญ่ของคำว่า studentid ให้ตรงกับฐานข้อมูลคุณ
+  const emp = students.find(s => String(s.studentid) === studentId);
+
+  if (emp) {
+    console.log("3. พบข้อมูล:", emp.name);
+    // เรียกใช้ฟังก์ชันเดิมของระบบคุณ เพื่อเปิดหน้าสแกนหน้า
+    selectEmployee(emp.studentid, emp.name, emp.imagedatabase64, emp.class);
+    closeQuickSearch();
+  } else {
+    console.log("3. ไม่พบข้อมูลรหัส:", studentId);
+    alert("ไม่พบข้อมูลพนักงานรหัสนี้ในระบบ");
   }
 }
     
