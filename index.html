@@ -322,13 +322,7 @@
 window.onload = async () => {
     lucide.createIcons();
     const dateInput = document.getElementById('dashboard-date');
-    if (dateInput) dateInput.value = new Date().(function(){
-const d=new Date();
-const yyyy=d.getFullYear();
-const mm=String(d.getMonth()+1).padStart(2,'0');
-const dd=String(d.getDate()).padStart(2,'0');
-return `${yyyy}-${mm}-${dd}`;
-})();
+    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
 
     // --- STEP 1: โหลดข้อมูลจาก Sheets มาแสดงผลก่อน (รวดเร็ว) ---
     await loadAllData(); 
@@ -718,144 +712,117 @@ function executeNavigation() {
                     } catch(e) {}
                 }
             }
-            if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.5);
+            if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.45);
         } catch(e) {}
     }
 
 let lastAngle = 0;
 let moveDetected = false;
 let isFacePassed = false; // ตัวล็อกสถานะ (Flag)
-let lastFaceX = 0;
-let movementCounter = 0;
 
-   async function startDetector() {
-
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('overlay');
-
-    const displaySize = {
-        width: video.videoWidth,
-        height: video.videoHeight
-    };
-
-    faceapi.matchDimensions(canvas, displaySize);
-
-    const ctx = canvas.getContext("2d");
-
-    if (window.detectorInterval) {
-        clearInterval(window.detectorInterval);
-    }
-
+async function startDetector() {
+    const v = document.getElementById('video'), o = document.getElementById('overlay');
+    if (!v) return;
+    const dim = { width: v.clientWidth, height: v.clientHeight };
+    faceapi.matchDimensions(o, dim);
     
-window.detectorInterval = setInterval(async () => {
+    if(window.detectorInterval) clearInterval(window.detectorInterval);
+    wrongFaceCount = 0;
+    hasBlinked = false;
+    moveDetected = false; 
+    isFacePassed = false; // รีเซ็ตสถานะทุกครั้งที่เริ่ม
 
-const detection = await faceapi
-.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({
-inputSize:320,
-scoreThreshold:0.35
-}))
-.withFaceLandmarks()
-.withFaceDescriptor();
+    window.detectorInterval = setInterval(async () => {
+        // --- [จุดสำคัญ 1: ถ้าผ่านแล้ว หรือกำลังประมวลผลรอบเก่าอยู่ ให้หยุดทันที] ---
+        if(v.paused || v.ended || isFacePassed) return; 
+        
+        const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
+            .withFaceLandmarks()
+            .withFaceDescriptor();
+            
+        const ctx = o.getContext('2d');
+        ctx.clearRect(0,0,o.width,o.height);
+        
+        if(faceMatcher && det) {
+            // เช็คซ้ำอีกรอบเผื่อรอบก่อนหน้าเพิ่งเปลี่ยนสถานะเป็น true ไปสดๆ ร้อนๆ
+            if (isFacePassed) return;
 
-ctx.clearRect(0,0,canvas.width,canvas.height);
+            const match = faceMatcher.findBestMatch(det.descriptor);
+            const targetId = window.targetStaff ? String(window.targetStaff.studentid) : null;
 
-if(!detection){
-movementCounter=0;
-return;
-}
+            const landmarks = det.landmarks;
+            
+            // --- [จุดแก้ไข 1: EAR (การกะพริบตา) ปรับเกณฑ์ EAR < 0.22 เพื่อให้จับได้แม่นยำขึ้น] ---
+            const ear = (getEAR(landmarks.getLeftEye()) + getEAR(landmarks.getRightEye())) / 2;
+            if (ear < 0.22) hasBlinked = true; 
 
-const resized = faceapi.resizeResults(detection, displaySize);
-const box = resized.detection.box;
+            // --- [จุดแก้ไข 2: ปรับความไวการขยับจมูก (Move Detected) เป็น > 1.8 เพื่อความรัดกุม] ---
+            const currentNoseX = landmarks.getNose()[0].x;
+            if (Math.abs(currentNoseX - lastAngle) > 1.8) moveDetected = true;
+            lastAngle = currentNoseX;
 
-ctx.strokeStyle="#00ff88";
-ctx.lineWidth=3;
-ctx.strokeRect(box.x,box.y,box.width,box.height);
+            const resNameEl = document.getElementById('res-name');
+            const btnIn = document.getElementById('btn-in');
+            const btnOut = document.getElementById('btn-out');
+            const wrongAction = document.getElementById('wrong-face-actions');
 
-if(Math.abs(box.x-lastFaceX)>2){
-movementCounter++;
-}
+            if (targetId && match.label !== targetId) {
+                wrongFaceCount++;
+                if (wrongFaceCount >= 5) { 
+                    resNameEl.innerText = "❌ ใบหน้าไม่ตรงกับพนักงานที่เลือก!";
+                    resNameEl.style.color = "#f43f5e";
+                    if(wrongAction) wrongAction.classList.remove('hidden');
+                }
+            } else if (match.label === targetId && match.distance < 0.45) {
+                // --- [จุดแก้ไข 3: ตัดเงื่อนไข isVeryCloseMatch ออกอย่างเด็ดขาด!] ---
+                // ไม่ว่าจะหน้าตรงแค่ไหน ก็ *ต้อง* ผ่านการตรวจ Liveness เสมอ เพื่อป้องกันภาพถ่าย
 
-lastFaceX=box.x;
+                if (!hasBlinked || !moveDetected) {
+                    resNameEl.innerHTML = `<span style="color: #fbbf24;">✨ กรุณากะพริบตาหรือขยับหน้าเล็กน้อย</span>`;
+                } else {
+                    // ผ่านการสแกน (ผ่าน Liveness)
+                    isFacePassed = true; 
+                    clearInterval(window.detectorInterval);
+                    window.detectorInterval = null;
 
-if(movementCounter<1) return;
+                    if (window.speechSynthesis) {
+                        window.speechSynthesis.cancel(); // หยุดเสียงที่กำลังรอคิวอยู่ทั้งหมดทันที
+                    }
+                    
+                    const snd = document.getElementById('snd-ok');
+                    if(snd) {
+                        snd.pause();       // หยุดไฟล์เสียงเดิม (ถ้ามี)
+                        snd.currentTime = 0; // รีเซ็ตไปจุดเริ่มต้น
+                        snd.play();        // เล่นใหม่
+                    }
 
-const now=Date.now();
-if(now-lastScanTime<2000) return;
+                    speak("สแกนใบหน้าสำเร็จค่ะ");
 
-lastScanTime=now;
-movementCounter=0;
-
-if(!faceMatcher) return;
-
-const match=faceMatcher.findBestMatch(detection.descriptor);
-
-if(match.label!=="unknown"){
-if(isFacePassed) return;
-
-isFacePassed=true;
-
-const student = students.find(s=>String(s.studentid)===match.label);
-
-if(student){
-
-google.script.run
-.withSuccessHandler((res)=>{
-if(res && res.status==="success"){
-alert("บันทึกเวลาเรียบร้อย");
-}else{
-alert("ไม่สามารถบันทึกเวลาได้");
-}
-isFacePassed=false;
-})
-.recordTime(student.studentid);
-
-}else{
-isFacePassed=false;
-}
-}
-
-},150);
-ctx.clearRect(0,0,canvas.width,canvas.height);
-
-        if (!detection) return;
-
-        const resized = faceapi.resizeResults(detection, displaySize);
-
-        const box = resized.detection.box;
-if (Math.abs(box.x - lastFaceX) > 2) {
-    movementCounter++;
-}
-
-lastFaceX = box.x;
-
-// อนุญาตให้ตรวจจับได้หลัง 3 frame
-if (movementCounter < 3) {
-    // ยังไม่ผ่าน Anti Photo แต่ยังให้ระบบ detect ต่อ
-} 
-
-        ctx.strokeStyle = "#00ff88";
-        ctx.lineWidth = 3;
-        ctx.strokeRect(box.x, box.y, box.width, box.height);
-
-        if (faceMatcher) {
-
-            const bestMatch = faceMatcher.findBestMatch(resized.descriptor);
-
-            if (bestMatch.distance < 0.42) {
-
-                clearInterval(window.detectorInterval);
-
-                console.log("Face matched:", bestMatch.label);
-
-                onFaceSuccess(bestMatch.label);
-
+                    // อัปเดต UI ครั้งสุดท้าย
+                    btnIn.disabled = false; btnOut.disabled = false;
+                    btnIn.style.opacity = "1"; btnOut.style.opacity = "1";
+                    resNameEl.innerText = window.targetStaff.name;
+                    resNameEl.style.color = "#10b981";
+                    
+                    document.getElementById('res-id').innerText = `ID: ${match.label}`;
+                    if(window.targetStaff.imagedatabase64) {
+                        document.getElementById('res-img').src = window.targetStaff.imagedatabase64;
+                        document.getElementById('res-img').classList.remove('hidden');
+                    }
+                    if(wrongAction) wrongAction.classList.add('hidden');
+                }
             }
-
         }
-
-    }, 120); // ตรวจทุก 0.12 วินาที
+    }, 200); 
 }
 
+// ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
+function getEAR(eye) {
+    const v1 = Math.abs(eye[1].y - eye[5].y);
+    const v2 = Math.abs(eye[2].y - eye[4].y);
+    const h = Math.abs(eye[0].x - eye[3].x);
+    return (v1 + v2) / (2 * h);
+}
 
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
 function getEAR(eye) {
@@ -987,13 +954,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
     function renderLeaveDropdown() {
         document.getElementById('leave-student-select').innerHTML = students.map(s => `<option value="${s.studentid}">${s.name}</option>`).join('');
-        document.getElementById('leave-date').value = new Date().(function(){
-const d=new Date();
-const yyyy=d.getFullYear();
-const mm=String(d.getMonth()+1).padStart(2,'0');
-const dd=String(d.getDate()).padStart(2,'0');
-return `${yyyy}-${mm}-${dd}`;
-})();
+        document.getElementById('leave-date').value = new Date().toISOString().split('T')[0];
     }
 
 function renderStudentTable() {
@@ -1050,7 +1011,7 @@ async function snapPhoto() {
     const cropCanvas = document.getElementById('crop-canvas');
     const cropStatus = document.getElementById('crop-status');
     
-    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 256, scoreThreshold: 0.5 }));
+    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.5 }));
 
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = v.videoWidth;
