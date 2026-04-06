@@ -712,7 +712,7 @@ function executeNavigation() {
                     } catch(e) {}
                 }
             }
-            if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.42);
+            if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.5);
         } catch(e) {}
     }
 
@@ -766,7 +766,7 @@ let movementCounter = 0;
 
 lastFaceX = box.x;
 
-if (movementCounter < 2) {
+if (movementCounter < 1) {
     return;
 }
 
@@ -988,7 +988,7 @@ async function snapPhoto() {
     const cropCanvas = document.getElementById('crop-canvas');
     const cropStatus = document.getElementById('crop-status');
     
-    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.5 }));
+    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }));
 
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = v.videoWidth;
