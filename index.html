@@ -746,8 +746,8 @@ let movementCounter = 0;
         .detectSingleFace(
             video,
             new faceapi.TinyFaceDetectorOptions({
-                inputSize: 320,      // เพิ่มความเร็ว
-                scoreThreshold: 0.6
+                inputSize: 256,      // เพิ่มความเร็ว
+                scoreThreshold: 0.5
             })
         )
         .withFaceLandmarks()
@@ -760,13 +760,14 @@ let movementCounter = 0;
         const resized = faceapi.resizeResults(detection, displaySize);
 
         const box = resized.detection.box;
-        if (Math.abs(box.x - lastFaceX) > 3) {
+if (Math.abs(box.x - lastFaceX) > 2) {
     movementCounter++;
 }
 
 lastFaceX = box.x;
 
-if (movementCounter < 1) {
+// ต้องขยับหน้าอย่างน้อย 2 frame
+if (movementCounter < 2) {
     return;
 }
 
@@ -780,6 +781,16 @@ if (movementCounter < 1) {
 
             if (bestMatch.distance < 0.42) {
 
+    movementCounter = 0;
+    lastFaceX = 0;
+
+    clearInterval(window.detectorInterval);
+
+    console.log("Face matched:", bestMatch.label);
+
+    onFaceSuccess(bestMatch.label);
+}
+
                 clearInterval(window.detectorInterval);
 
                 console.log("Face matched:", bestMatch.label);
@@ -790,7 +801,7 @@ if (movementCounter < 1) {
 
         }
 
-    }, 120); // ตรวจทุก 0.12 วินาที
+    }, 80); // ตรวจทุก 0.12 วินาที
 }
 
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
@@ -988,7 +999,7 @@ async function snapPhoto() {
     const cropCanvas = document.getElementById('crop-canvas');
     const cropStatus = document.getElementById('crop-status');
     
-    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }));
+    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 256, scoreThreshold: 0.5 }));
 
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = v.videoWidth;
