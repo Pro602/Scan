@@ -715,26 +715,40 @@ function executeNavigation() {
             if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.5);
         } catch(e) {}
     }
+// ===== ฟังก์ชันประมวลผลหลังตรวจเจอหน้า =====
+function processFaceScan(descriptor) {
+
+    console.log("Face Detected");
+
+    // เรียก logic เดิมของระบบ
+    if (typeof recognizeFace === "function") {
+        recognizeFace(descriptor);
+    }
+
+}
 
 let lastAngle = 0;
 let moveDetected = false;
 let isFacePassed = false; // ตัวล็อกสถานะ (Flag)
 let lastFaceX = 0;
 let movementCounter = 0;
+let lastScanTime = 0;
 
-   async function startDetector() {
+  async function startDetector() {
 
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('overlay');
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("overlay");
+    const ctx = canvas.getContext("2d");
 
     const displaySize = {
         width: video.videoWidth,
         height: video.videoHeight
     };
 
-    faceapi.matchDimensions(canvas, displaySize);
+    canvas.width = displaySize.width;
+    canvas.height = displaySize.height;
 
-    const ctx = canvas.getContext("2d");
+    faceapi.matchDimensions(canvas, displaySize);
 
     if (window.detectorInterval) {
         clearInterval(window.detectorInterval);
@@ -742,59 +756,52 @@ let movementCounter = 0;
 
     window.detectorInterval = setInterval(async () => {
 
-        const detection = await faceapi
-        .detectSingleFace(
+        const detection = await faceapi.detectSingleFace(
             video,
             new faceapi.TinyFaceDetectorOptions({
-                inputSize: 256,      // เพิ่มความเร็ว
-                scoreThreshold: 0.5
+                inputSize: 320,
+                scoreThreshold: 0.4
             })
-        )
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+        ).withFaceLandmarks().withFaceDescriptor();
 
         ctx.clearRect(0,0,canvas.width,canvas.height);
 
-        if (!detection) return;
+        if (!detection) {
+            movementCounter = 0;
+            return;
+        }
 
         const resized = faceapi.resizeResults(detection, displaySize);
-
         const box = resized.detection.box;
-if (Math.abs(box.x - lastFaceX) > 2) {
-    movementCounter++;
-}
 
-lastFaceX = box.x;
-
-// อนุญาตให้ตรวจจับได้หลัง 3 frame
-if (movementCounter < 3) {
-    // ยังไม่ผ่าน Anti Photo แต่ยังให้ระบบ detect ต่อ
-} 
-
+        // วาดกรอบหน้า
         ctx.strokeStyle = "#00ff88";
         ctx.lineWidth = 3;
         ctx.strokeRect(box.x, box.y, box.width, box.height);
 
-        if (faceMatcher) {
-
-            const bestMatch = faceMatcher.findBestMatch(resized.descriptor);
-
-            if (bestMatch.distance < 0.42) {
-
-                clearInterval(window.detectorInterval);
-
-                console.log("Face matched:", bestMatch.label);
-
-                onFaceSuccess(bestMatch.label);
-
-            }
-
+        // ตรวจการขยับหน้า (กันใช้รูป)
+        if (Math.abs(box.x - lastFaceX) > 3) {
+            movementCounter++;
         }
 
-    }, 120); // ตรวจทุก 0.12 วินาที
+        lastFaceX = box.x;
+
+        if (movementCounter < 1) {
+            return;
+        }
+
+        // ป้องกันยิงซ้ำ
+        const now = Date.now();
+        if (now - lastScanTime < 2000) return;
+        lastScanTime = now;
+
+        // เรียกระบบสแกนเดิม
+        processFaceScan(detection.descriptor);
+
+        movementCounter = 0;
+
+    }, 200); // ตรวจทุก 0.2 วิ
 }
-
-
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
 function getEAR(eye) {
     const v1 = Math.abs(eye[1].y - eye[5].y);
