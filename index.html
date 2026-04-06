@@ -322,7 +322,13 @@
 window.onload = async () => {
     lucide.createIcons();
     const dateInput = document.getElementById('dashboard-date');
-    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+    if (dateInput) dateInput.value = new Date().(function(){
+const d=new Date();
+const yyyy=d.getFullYear();
+const mm=String(d.getMonth()+1).padStart(2,'0');
+const dd=String(d.getDate()).padStart(2,'0');
+return `${yyyy}-${mm}-${dd}`;
+})();
 
     // --- STEP 1: โหลดข้อมูลจาก Sheets มาแสดงผลก่อน (รวดเร็ว) ---
     await loadAllData(); 
@@ -715,121 +721,142 @@ function executeNavigation() {
             if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.5);
         } catch(e) {}
     }
-// ===== ฟังก์ชันประมวลผลหลังตรวจเจอหน้า =====
-function processFaceScan(descriptor) {
-
-    console.log("Face Detected");
-
-    // เรียก logic เดิมของระบบ
-    if (typeof recognizeFace === "function") {
-        recognizeFace(descriptor);
-    }
-
-}
 
 let lastAngle = 0;
 let moveDetected = false;
-let isFacePassed = false;
-
+let isFacePassed = false; // ตัวล็อกสถานะ (Flag)
 let lastFaceX = 0;
 let movementCounter = 0;
-let lastScanTime = 0;
 
-  async function startDetector() {
+   async function startDetector() {
 
-    const video = document.getElementById("video");
-    const canvas = document.getElementById("overlay");
-    const ctx = canvas.getContext("2d");
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('overlay');
 
     const displaySize = {
         width: video.videoWidth,
         height: video.videoHeight
     };
 
-    canvas.width = displaySize.width;
-    canvas.height = displaySize.height;
-
     faceapi.matchDimensions(canvas, displaySize);
+
+    const ctx = canvas.getContext("2d");
 
     if (window.detectorInterval) {
         clearInterval(window.detectorInterval);
     }
 
-    window.detectorInterval = setInterval(async () => {
+    
+window.detectorInterval = setInterval(async () => {
 
-    const detection = await faceapi
-    .detectSingleFace(
-        video,
-        new faceapi.TinyFaceDetectorOptions({
-            inputSize: 320,
-            scoreThreshold: 0.35
-        })
-    )
-    .withFaceLandmarks()
-    .withFaceDescriptor();
+const detection = await faceapi
+.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({
+inputSize:320,
+scoreThreshold:0.35
+}))
+.withFaceLandmarks()
+.withFaceDescriptor();
 
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    if (!detection) {
-        movementCounter = 0;
-        return;
-    }
+if(!detection){
+movementCounter=0;
+return;
+}
 
-    const resized = faceapi.resizeResults(detection, displaySize);
-    const box = resized.detection.box;
+const resized = faceapi.resizeResults(detection, displaySize);
+const box = resized.detection.box;
 
-    // วาดกรอบหน้า
-    ctx.strokeStyle = "#00ff88";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(box.x, box.y, box.width, box.height);
+ctx.strokeStyle="#00ff88";
+ctx.lineWidth=3;
+ctx.strokeRect(box.x,box.y,box.width,box.height);
 
-    // ตรวจการขยับหน้า (กันโกงภาพ)
-    if (Math.abs(box.x - lastFaceX) > 2) {
-        movementCounter++;
-    }
+if(Math.abs(box.x-lastFaceX)>2){
+movementCounter++;
+}
 
-    lastFaceX = box.x;
+lastFaceX=box.x;
 
-    if (movementCounter < 1) return;
+if(movementCounter<1) return;
 
-    const now = Date.now();
-    if (now - lastScanTime < 2000) return;
+const now=Date.now();
+if(now-lastScanTime<2000) return;
 
-    lastScanTime = now;
-    movementCounter = 0;
+lastScanTime=now;
+movementCounter=0;
 
-    if (!faceMatcher) return;
+if(!faceMatcher) return;
 
-    const match = faceMatcher.findBestMatch(detection.descriptor);
+const match=faceMatcher.findBestMatch(detection.descriptor);
 
-    if (match.label !== "unknown") {
+if(match.label!=="unknown"){
+if(isFacePassed) return;
 
-        if (isFacePassed) return;
+isFacePassed=true;
 
-        isFacePassed = true;
+const student = students.find(s=>String(s.studentid)===match.label);
 
-        const student = students.find(s => String(s.studentid) === match.label);
+if(student){
 
-        if (student) {
+google.script.run
+.withSuccessHandler((res)=>{
+if(res && res.status==="success"){
+alert("บันทึกเวลาเรียบร้อย");
+}else{
+alert("ไม่สามารถบันทึกเวลาได้");
+}
+isFacePassed=false;
+})
+.recordTime(student.studentid);
 
-            google.script.run
-            .withSuccessHandler((res)=>{
-                if(res && res.status==="success"){
-                    alert("บันทึกเวลาเรียบร้อย");
-                }else{
-                    alert("ไม่สามารถบันทึกเวลาได้");
-                }
-                isFacePassed=false;
-            })
-            .recordTime(student.studentid);
+}else{
+isFacePassed=false;
+}
+}
 
-        } else {
-            isFacePassed=false;
+},150);
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+        if (!detection) return;
+
+        const resized = faceapi.resizeResults(detection, displaySize);
+
+        const box = resized.detection.box;
+if (Math.abs(box.x - lastFaceX) > 2) {
+    movementCounter++;
+}
+
+lastFaceX = box.x;
+
+// อนุญาตให้ตรวจจับได้หลัง 3 frame
+if (movementCounter < 3) {
+    // ยังไม่ผ่าน Anti Photo แต่ยังให้ระบบ detect ต่อ
+} 
+
+        ctx.strokeStyle = "#00ff88";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+        if (faceMatcher) {
+
+            const bestMatch = faceMatcher.findBestMatch(resized.descriptor);
+
+            if (bestMatch.distance < 0.42) {
+
+                clearInterval(window.detectorInterval);
+
+                console.log("Face matched:", bestMatch.label);
+
+                onFaceSuccess(bestMatch.label);
+
+            }
+
         }
 
-    }
+    }, 120); // ตรวจทุก 0.12 วินาที
+}
 
-}, 150);
+
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
 function getEAR(eye) {
     const v1 = Math.abs(eye[1].y - eye[5].y);
@@ -960,7 +987,13 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
     function renderLeaveDropdown() {
         document.getElementById('leave-student-select').innerHTML = students.map(s => `<option value="${s.studentid}">${s.name}</option>`).join('');
-        document.getElementById('leave-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('leave-date').value = new Date().(function(){
+const d=new Date();
+const yyyy=d.getFullYear();
+const mm=String(d.getMonth()+1).padStart(2,'0');
+const dd=String(d.getDate()).padStart(2,'0');
+return `${yyyy}-${mm}-${dd}`;
+})();
     }
 
 function renderStudentTable() {
