@@ -729,7 +729,8 @@ function processFaceScan(descriptor) {
 
 let lastAngle = 0;
 let moveDetected = false;
-let isFacePassed = false; // ตัวล็อกสถานะ (Flag)
+let isFacePassed = false;
+
 let lastFaceX = 0;
 let movementCounter = 0;
 let lastScanTime = 0;
@@ -756,52 +757,79 @@ let lastScanTime = 0;
 
     window.detectorInterval = setInterval(async () => {
 
-        const detection = await faceapi.detectSingleFace(
-            video,
-            new faceapi.TinyFaceDetectorOptions({
-                inputSize: 320,
-                scoreThreshold: 0.4
-            })
-        ).withFaceLandmarks().withFaceDescriptor();
+    const detection = await faceapi
+    .detectSingleFace(
+        video,
+        new faceapi.TinyFaceDetectorOptions({
+            inputSize: 320,
+            scoreThreshold: 0.35
+        })
+    )
+    .withFaceLandmarks()
+    .withFaceDescriptor();
 
-        ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-        if (!detection) {
-            movementCounter = 0;
-            return;
-        }
-
-        const resized = faceapi.resizeResults(detection, displaySize);
-        const box = resized.detection.box;
-
-        // วาดกรอบหน้า
-        ctx.strokeStyle = "#00ff88";
-        ctx.lineWidth = 3;
-        ctx.strokeRect(box.x, box.y, box.width, box.height);
-
-        // ตรวจการขยับหน้า (กันใช้รูป)
-        if (Math.abs(box.x - lastFaceX) > 3) {
-            movementCounter++;
-        }
-
-        lastFaceX = box.x;
-
-        if (movementCounter < 1) {
-            return;
-        }
-
-        // ป้องกันยิงซ้ำ
-        const now = Date.now();
-        if (now - lastScanTime < 2000) return;
-        lastScanTime = now;
-
-        // เรียกระบบสแกนเดิม
-        processFaceScan(detection.descriptor);
-
+    if (!detection) {
         movementCounter = 0;
+        return;
+    }
 
-    }, 200); // ตรวจทุก 0.2 วิ
-}
+    const resized = faceapi.resizeResults(detection, displaySize);
+    const box = resized.detection.box;
+
+    // วาดกรอบหน้า
+    ctx.strokeStyle = "#00ff88";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+    // ตรวจการขยับหน้า (กันโกงภาพ)
+    if (Math.abs(box.x - lastFaceX) > 2) {
+        movementCounter++;
+    }
+
+    lastFaceX = box.x;
+
+    if (movementCounter < 1) return;
+
+    const now = Date.now();
+    if (now - lastScanTime < 2000) return;
+
+    lastScanTime = now;
+    movementCounter = 0;
+
+    if (!faceMatcher) return;
+
+    const match = faceMatcher.findBestMatch(detection.descriptor);
+
+    if (match.label !== "unknown") {
+
+        if (isFacePassed) return;
+
+        isFacePassed = true;
+
+        const student = students.find(s => String(s.studentid) === match.label);
+
+        if (student) {
+
+            google.script.run
+            .withSuccessHandler((res)=>{
+                if(res && res.status==="success"){
+                    alert("บันทึกเวลาเรียบร้อย");
+                }else{
+                    alert("ไม่สามารถบันทึกเวลาได้");
+                }
+                isFacePassed=false;
+            })
+            .recordTime(student.studentid);
+
+        } else {
+            isFacePassed=false;
+        }
+
+    }
+
+}, 150);
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
 function getEAR(eye) {
     const v1 = Math.abs(eye[1].y - eye[5].y);
