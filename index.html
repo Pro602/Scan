@@ -760,13 +760,16 @@ let movementCounter = 0;
         const resized = faceapi.resizeResults(detection, displaySize);
 
         const box = resized.detection.box;
-        if (Math.abs(box.x - lastFaceX) > 2) {
+if (Math.abs(box.x - lastFaceX) > 2) {
     movementCounter++;
 }
 
 lastFaceX = box.x;
 
-if (movementCounter < 2) {
+// อนุญาตให้ตรวจจับได้หลัง 3 frame
+if (movementCounter < 3) {
+    // ยังไม่ผ่าน Anti Photo แต่ยังให้ระบบ detect ต่อ
+} 
     return;
 }
 
@@ -793,13 +796,6 @@ if (movementCounter < 2) {
     }, 120); // ตรวจทุก 0.12 วินาที
 }
 
-// ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
-function getEAR(eye) {
-    const v1 = Math.abs(eye[1].y - eye[5].y);
-    const v2 = Math.abs(eye[2].y - eye[4].y);
-    const h = Math.abs(eye[0].x - eye[3].x);
-    return (v1 + v2) / (2 * h);
-}
 
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
 function getEAR(eye) {
