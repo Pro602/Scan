@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบสแกนหน้าเข้าออกพนักงาน - THAISIAM INKJET</title>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
@@ -339,7 +340,12 @@ window.onload = async () => {
         // ถ้าหน้าสแกนต้องการข้อมูลค่อยสั่ง Render เพิ่มตรงนี้
         if (typeof renderAllStaffForScan === 'function') renderAllStaffForScan();
     });
+    
+window.addEventListener("load", async ()=>{
 
+ await loadFaceModels()
+
+})
     // อัปเดตข้อมูลทุก 30 วินาที
     setInterval(async () => {
         const [aRes, vRes] = await Promise.all([
@@ -716,171 +722,112 @@ function executeNavigation() {
         } catch(e) {}
     }
 
-let isFacePassed = false;
-let hasBlinked = false;
-let moveDetected = false;
+    async function loadFaceModels(){
 
-let lastNoseX = 0;
-let stableFrames = 0;
+ await faceapi.nets.tinyFaceDetector.loadFromUri(
+ 'https://cdn.jsdelivr.net/npm/face-api.js/models'
+ )
+
+ await faceapi.nets.faceLandmark68Net.loadFromUri(
+ 'https://cdn.jsdelivr.net/npm/face-api.js/models'
+ )
+
+ await faceapi.nets.faceRecognitionNet.loadFromUri(
+ 'https://cdn.jsdelivr.net/npm/face-api.js/models'
+ )
+
+ console.log("Face Models Loaded")
+
+}
+
+let passed=false
+let blink=false
+let move=false
+let lastNose=0
 
 async function startDetector(){
 
-    const video = document.getElementById("video");
-    const overlay = document.getElementById("overlay");
+ const video=document.getElementById("video")
+ const overlay=document.getElementById("overlay")
 
-    if(!video) return;
+ if(!video) return
 
-    const ctx = overlay.getContext("2d");
+ const ctx=overlay.getContext("2d")
 
-    const dim = {
-        width: video.clientWidth,
-        height: video.clientHeight
-    };
+ if(window.scanLoop) clearInterval(window.scanLoop)
 
-    faceapi.matchDimensions(overlay, dim);
+ passed=false
+ blink=false
+ move=false
 
-    if(window.detectorInterval)
-        clearInterval(window.detectorInterval);
+ window.scanLoop=setInterval(async()=>{
 
-    isFacePassed = false;
-    hasBlinked = false;
-    moveDetected = false;
-    stableFrames = 0;
+  if(passed) return
 
-    window.detectorInterval = setInterval(async ()=>{
+  const faces=await faceapi
+  .detectAllFaces(
+   video,
+   new faceapi.TinyFaceDetectorOptions({
+    inputSize:320,
+    scoreThreshold:0.3
+   })
+  )
+  .withFaceLandmarks()
+  .withFaceDescriptors()
 
-        if(video.paused || video.ended || isFacePassed) return;
+  ctx.clearRect(0,0,overlay.width,overlay.height)
 
-        const detections = await faceapi
-            .detectAllFaces(
-                video,
-                new faceapi.TinyFaceDetectorOptions({
-                    inputSize:320,
-                    scoreThreshold:0.3
-                })
-            )
-            .withFaceLandmarks()
-            .withFaceDescriptors();
+  if(!faces.length) return
 
-        ctx.clearRect(0,0,overlay.width,overlay.height);
+  let face=faces.reduce((a,b)=>
+   a.detection.box.width>b.detection.box.width?a:b
+  )
 
-        if(!detections.length) return;
+  const box=face.detection.box
 
-        // เลือกหน้าที่ใหญ่ที่สุด
-        let face = detections.reduce((a,b)=>
-            a.detection.box.width > b.detection.box.width ? a : b
-        );
+  ctx.strokeStyle="#00ff88"
+  ctx.lineWidth=2
+  ctx.strokeRect(box.x,box.y,box.width,box.height)
 
-        const box = face.detection.box;
+  if(!faceMatcher) return
 
-        ctx.strokeStyle="#00ff88";
-        ctx.lineWidth=2;
-        ctx.strokeRect(box.x,box.y,box.width,box.height);
+  const match=faceMatcher.findBestMatch(face.descriptor)
 
-        if(!faceMatcher) return;
+  const nose=face.landmarks.getNose()[0].x
 
-        const match = faceMatcher.findBestMatch(face.descriptor);
+  if(Math.abs(nose-lastNose)>1.2) move=true
 
-        const targetId = window.targetStaff
-            ? String(window.targetStaff.studentid)
-            : null;
+  lastNose=nose
 
-        const landmarks = face.landmarks;
+  const ear=
+  (getEAR(face.landmarks.getLeftEye())+
+   getEAR(face.landmarks.getRightEye()))/2
 
-        // -------- Blink Detection --------
+  if(ear<0.23) blink=true
 
-        const ear =
-        (getEAR(landmarks.getLeftEye()) +
-         getEAR(landmarks.getRightEye())) / 2;
+  if(match.distance<0.45){
 
-        if(ear < 0.23)
-            hasBlinked = true;
+   if(match.distance<0.35){
+    blink=true
+    move=true
+   }
 
-        // -------- Movement Detection --------
+   if(blink||move){
 
-        const noseX = landmarks.getNose()[0].x;
+    passed=true
 
-        if(Math.abs(noseX-lastNoseX) > 1.1)
-            moveDetected = true;
+    clearInterval(window.scanLoop)
 
-        lastNoseX = noseX;
+    console.log("Face Scan Passed")
 
-        const resNameEl = document.getElementById("res-name");
-        const btnIn = document.getElementById("btn-in");
-        const btnOut = document.getElementById("btn-out");
+    document.getElementById("res-name").style.color="#10b981"
 
-        if(targetId && match.label !== targetId){
+   }
 
-            stableFrames = 0;
+  }
 
-            resNameEl.innerText="❌ ใบหน้าไม่ตรงกับพนักงาน";
-            resNameEl.style.color="#f43f5e";
+ },100)
 
-            return;
-        }
-
-        // -------- PASS LOGIC --------
-
-        if(match.label === targetId && match.distance < 0.50){
-
-            stableFrames++;
-
-            // ถ้า match ดีมาก ผ่านทันที
-            if(match.distance < 0.36){
-                hasBlinked = true;
-                moveDetected = true;
-            }
-
-            if(!hasBlinked && !moveDetected){
-
-                resNameEl.innerHTML=
-                `<span style="color:#fbbf24">
-                กรุณากะพริบตาหรือขยับหน้าเล็กน้อย
-                </span>`;
-
-                return;
-            }
-
-            if(stableFrames > 2){
-
-                isFacePassed = true;
-
-                clearInterval(window.detectorInterval);
-
-                const snd=document.getElementById("snd-ok");
-
-                if(snd){
-                    snd.pause();
-                    snd.currentTime=0;
-                    snd.play();
-                }
-
-                speak("สแกนใบหน้าสำเร็จ");
-
-                btnIn.disabled=false;
-                btnOut.disabled=false;
-
-                btnIn.style.opacity="1";
-                btnOut.style.opacity="1";
-
-                resNameEl.innerText=window.targetStaff.name;
-                resNameEl.style.color="#10b981";
-
-                document.getElementById("res-id").innerText=
-                `ID: ${match.label}`;
-
-                if(window.targetStaff.imagedatabase64){
-
-                    const img=document.getElementById("res-img");
-
-                    img.src=window.targetStaff.imagedatabase64;
-
-                    img.classList.remove("hidden");
-                }
-            }
-        }
-
-    },100); // ~10 FPS
 }
 
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
