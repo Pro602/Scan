@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบสแกนหน้าเข้าออกพนักงาน - THAISIAM INKJET</title>
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
@@ -722,19 +721,16 @@ function executeNavigation() {
         } catch(e) {}
     }
 
-    async function loadFaceModels(){
+async function loadFaceModels(){
 
- await faceapi.nets.tinyFaceDetector.loadFromUri(
- 'https://cdn.jsdelivr.net/npm/face-api.js/models'
- )
+ const MODEL_URL =
+ "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights"
 
- await faceapi.nets.faceLandmark68Net.loadFromUri(
- 'https://cdn.jsdelivr.net/npm/face-api.js/models'
- )
-
- await faceapi.nets.faceRecognitionNet.loadFromUri(
- 'https://cdn.jsdelivr.net/npm/face-api.js/models'
- )
+ await Promise.all([
+  faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+  faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+  faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+ ])
 
  console.log("Face Models Loaded")
 
@@ -752,6 +748,14 @@ async function startDetector(){
 
  if(!video) return
 
+ await new Promise(res=>{
+  if(video.readyState>=2) res()
+  else video.onloadedmetadata=res
+ })
+
+ overlay.width=video.videoWidth
+ overlay.height=video.videoHeight
+
  const ctx=overlay.getContext("2d")
 
  if(window.scanLoop) clearInterval(window.scanLoop)
@@ -764,26 +768,22 @@ async function startDetector(){
 
   if(passed) return
 
-  const faces=await faceapi
-  .detectAllFaces(
+  const result=await faceapi
+  .detectSingleFace(
    video,
    new faceapi.TinyFaceDetectorOptions({
-    inputSize:320,
-    scoreThreshold:0.3
+    inputSize:416,
+    scoreThreshold:0.25
    })
   )
   .withFaceLandmarks()
-  .withFaceDescriptors()
+  .withFaceDescriptor()
 
   ctx.clearRect(0,0,overlay.width,overlay.height)
 
-  if(!faces.length) return
+  if(!result) return
 
-  let face=faces.reduce((a,b)=>
-   a.detection.box.width>b.detection.box.width?a:b
-  )
-
-  const box=face.detection.box
+  const box=result.detection.box
 
   ctx.strokeStyle="#00ff88"
   ctx.lineWidth=2
@@ -791,31 +791,25 @@ async function startDetector(){
 
   if(!faceMatcher) return
 
-  const match=faceMatcher.findBestMatch(face.descriptor)
+  const match=faceMatcher.findBestMatch(result.descriptor)
 
-  const nose=face.landmarks.getNose()[0].x
+  const nose=result.landmarks.getNose()[0].x
 
-  if(Math.abs(nose-lastNose)>1.2) move=true
+  if(Math.abs(nose-lastNose)>1.5) move=true
 
   lastNose=nose
 
   const ear=
-  (getEAR(face.landmarks.getLeftEye())+
-   getEAR(face.landmarks.getRightEye()))/2
+  (getEAR(result.landmarks.getLeftEye())+
+   getEAR(result.landmarks.getRightEye()))/2
 
-  if(ear<0.23) blink=true
+  if(ear<0.22) blink=true
 
   if(match.distance<0.45){
-
-   if(match.distance<0.35){
-    blink=true
-    move=true
-   }
 
    if(blink||move){
 
     passed=true
-
     clearInterval(window.scanLoop)
 
     console.log("Face Scan Passed")
@@ -826,10 +820,9 @@ async function startDetector(){
 
   }
 
- },100)
+ },120)
 
 }
-
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
 function getEAR(eye) {
     const v1 = Math.abs(eye[1].y - eye[5].y);
@@ -996,7 +989,41 @@ function renderStudentTable() {
 
     // --- วางตัวแปรไว้ด้านบนสุดของกลุ่มฟังก์ชัน ---
     let croppedImg = null; 
-    async function startCamera(id) { try { document.getElementById(id).srcObject = await navigator.mediaDevices.getUserMedia({video:true}); } catch(e){} }
+    async function startCamera(id){
+
+ try{
+
+  const video=document.getElementById(id)
+  const overlay=document.getElementById("overlay")
+
+  const stream=await navigator.mediaDevices.getUserMedia({
+   video:true,
+   audio:false
+  })
+
+  video.srcObject=stream
+
+  await video.play()
+
+  // ตั้งขนาด canvas ให้ตรง video
+  video.addEventListener("play",()=>{
+
+   if(overlay){
+
+    overlay.width=video.videoWidth
+    overlay.height=video.videoHeight
+
+   }
+
+  })
+
+ }catch(e){
+
+  console.error("Camera error",e)
+
+ }
+
+}
     function stopCamera(id) { const v = document.getElementById(id); if(v?.srcObject) v.srcObject.getTracks().forEach(t => t.stop()); }
     function speak(t) { const m = new SpeechSynthesisUtterance(t); m.lang = 'th-TH'; window.speechSynthesis.speak(m); }
     function checkLogin() { const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value; if (AUTHORIZED_USERS[u] === p) { isLoggedIn = true; currentUserName = u; document.getElementById('login-modal').classList.add('hidden'); if(pendingAction) switchTab(pendingAction); } else alert("Error"); }
