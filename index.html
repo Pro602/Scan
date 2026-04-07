@@ -795,7 +795,7 @@ async function startDetector(){
 
   const nose=result.landmarks.getNose()[0].x
 
-  if(Math.abs(nose-lastNose)>1.5) move=true
+  if(Math.abs(nose-lastNose)>0.5) move=true
 
   lastNose=nose
 
@@ -803,9 +803,9 @@ async function startDetector(){
   (getEAR(result.landmarks.getLeftEye())+
    getEAR(result.landmarks.getRightEye()))/2
 
-  if(ear<0.22) blink=true
+  if(ear<0.26) blink=true
 
-  if(match.distance<0.45){
+  if(match.distance<0.55){
 
    if(blink||move){
 
