@@ -725,7 +725,10 @@ function executeNavigation() {
                 if (s.imagedatabase64) {
                     try {
                         const img = await faceapi.fetchImage(s.imagedatabase64);
-                        const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                        const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({
+ inputSize:320,
+ scoreThreshold:0.4
+}).withFaceLandmarks().withFaceDescriptor();
                         if (det) labeled.push(new faceapi.LabeledFaceDescriptors(String(s.studentid), [det.descriptor]));
                     } catch(e) {}
                 }
@@ -735,11 +738,15 @@ function executeNavigation() {
     }
 async function loadFaceModels(){
 
- const MODEL_URL="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights"
+ const MODEL_URL="https://justadudewhohacks.github.io/face-api.js/models"
 
- await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
+ await Promise.all([
+  faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+  faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+  faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+ ])
 
- console.log("Model Loaded")
+ console.log("Face Models Loaded")
 
 }
 
@@ -750,8 +757,11 @@ let lastNoseX=0
 
 async function startDetector(){
 
- const video=document.getElementById("video")
- const overlay=document.getElementById("overlay")
+const video=document.getElementById("video")
+const canvas=document.getElementById("overlay")
+
+canvas.width = video.videoWidth
+canvas.height = video.videoHeight
 
  const ctx=overlay.getContext("2d")
 
@@ -991,19 +1001,32 @@ function renderStudentTable() {
 
     // --- วางตัวแปรไว้ด้านบนสุดของกลุ่มฟังก์ชัน ---
     let croppedImg = null; 
-async function startCamera(id) {
-  try {
-    document.getElementById(id).srcObject =
-      await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: 640,
-          height: 480,
-          facingMode: "user"
-        }
-      });
-  } catch(e) {
-    console.log(e);
-  }
+async function startCamera(id){
+
+ try{
+
+  const stream = await navigator.mediaDevices.getUserMedia({
+
+   video:{
+    width:{ideal:1280},
+    height:{ideal:720},
+    facingMode:"user"
+   },
+   audio:false
+
+  })
+
+  const video = document.getElementById(id)
+  video.srcObject = stream
+
+  await video.play()
+
+ }catch(e){
+
+  console.log("Camera error",e)
+
+ }
+
 }
     function stopCamera(id) { const v = document.getElementById(id); if(v?.srcObject) v.srcObject.getTracks().forEach(t => t.stop()); }
     function speak(t) { const m = new SpeechSynthesisUtterance(t); m.lang = 'th-TH'; window.speechSynthesis.speak(m); }
@@ -1025,7 +1048,7 @@ async function snapPhoto() {
     const cropCanvas = document.getElementById('crop-canvas');
     const cropStatus = document.getElementById('crop-status');
     
-    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.5 }));
+    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.4 }));
 
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = v.videoWidth;
@@ -1134,7 +1157,10 @@ async function snapPhoto() {
                 const cropStatus = document.getElementById('crop-status');
                 document.getElementById('crop-preview-container').classList.remove('hidden');
 
-                const detections = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions());
+                const detections = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({
+ inputSize:320,
+ scoreThreshold:0.4
+});
                 
                 cropCanvas.width = 200;
                 cropCanvas.height = 200;
