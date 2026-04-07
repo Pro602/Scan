@@ -320,41 +320,54 @@
 
 // แก้ไข window.onload เพื่อแยกโหลด Face API ออกไปข้างหลัง
 window.onload = async () => {
+
     lucide.createIcons();
+
     const dateInput = document.getElementById('dashboard-date');
-    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
 
-    // --- STEP 1: โหลดข้อมูลจาก Sheets มาแสดงผลก่อน (รวดเร็ว) ---
-    await loadAllData(); 
-    
-    // --- STEP 2: สั่งวาดตารางพนักงานทันทีหลังจากได้ข้อมูล ---
-    if (typeof renderStudentTable === 'function') {
+    if (dateInput)
+        dateInput.value = new Date().toISOString().split('T')[0];
+
+    // STEP 1 โหลดข้อมูล
+    await loadAllData();
+
+    // STEP 2 วาดตาราง
+    if (typeof renderStudentTable === 'function')
         renderStudentTable();
-    }
 
-    // --- STEP 3: ค่อยๆ โหลด AI Face API ไว้เบื้องหลัง (ไม่ขวางการแสดงผล) ---
+    // STEP 3 โหลด Face Scan
     console.log("Loading Face API in background...");
-    initFaceAPI().then(() => {
-        console.log("Face API Ready!");
-        // ถ้าหน้าสแกนต้องการข้อมูลค่อยสั่ง Render เพิ่มตรงนี้
-        if (typeof renderAllStaffForScan === 'function') renderAllStaffForScan();
-    });
-    
-window.addEventListener("load", async ()=>{
 
- await loadFaceModels()
+    (async () => {
 
-})
-    // อัปเดตข้อมูลทุก 30 วินาที
+        await loadFaceModels()
+
+        console.log("Face Models Ready")
+
+        await startCamera("video")
+
+        startDetector()
+
+        if (typeof renderAllStaffForScan === 'function')
+            renderAllStaffForScan()
+
+    })();
+
+    // Auto refresh dashboard
     setInterval(async () => {
+
         const [aRes, vRes] = await Promise.all([
-            apiCall({action:'getAttendance'}), 
+            apiCall({action:'getAttendance'}),
             apiCall({action:'getLeaves'})
         ]);
+
         if(aRes.success) attendance = aRes.data;
         if(vRes.success) leaves = vRes.data;
+
         renderDashboard();
-    }, 30000);
+
+    },30000);
+
 };
     async function apiCall(p) {
         try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
@@ -736,48 +749,38 @@ async function loadFaceModels(){
 
 }
 
-let passed=false
+let scanPassed=false
 let blink=false
 let move=false
-let lastNose=0
+let lastNoseX=0
 
 async function startDetector(){
 
  const video=document.getElementById("video")
  const overlay=document.getElementById("overlay")
 
- if(!video) return
-
- await new Promise(res=>{
-  if(video.readyState>=2) res()
-  else video.onloadedmetadata=res
- })
-
- overlay.width=video.videoWidth
- overlay.height=video.videoHeight
-
  const ctx=overlay.getContext("2d")
 
  if(window.scanLoop) clearInterval(window.scanLoop)
 
- passed=false
+ scanPassed=false
  blink=false
  move=false
 
  window.scanLoop=setInterval(async()=>{
 
-  if(passed) return
+  if(scanPassed) return
 
   const result=await faceapi
-  .detectSingleFace(
-   video,
-   new faceapi.TinyFaceDetectorOptions({
-    inputSize:416,
-    scoreThreshold:0.25
-   })
-  )
-  .withFaceLandmarks()
-  .withFaceDescriptor()
+   .detectSingleFace(
+    video,
+    new faceapi.TinyFaceDetectorOptions({
+     inputSize:416,
+     scoreThreshold:0.25
+    })
+   )
+   .withFaceLandmarks()
+   .withFaceDescriptor()
 
   ctx.clearRect(0,0,overlay.width,overlay.height)
 
@@ -795,21 +798,24 @@ async function startDetector(){
 
   const nose=result.landmarks.getNose()[0].x
 
-  if(Math.abs(nose-lastNose)>0.5) move=true
+  if(Math.abs(nose-lastNoseX)>0.4) move=true
 
-  lastNose=nose
+  lastNoseX=nose
 
   const ear=
   (getEAR(result.landmarks.getLeftEye())+
    getEAR(result.landmarks.getRightEye()))/2
 
-  if(ear<0.26) blink=true
+  if(ear<0.27) blink=true
+
+  console.log("distance:",match.distance)
 
   if(match.distance<0.55){
 
    if(blink||move){
 
-    passed=true
+    scanPassed=true
+
     clearInterval(window.scanLoop)
 
     console.log("Face Scan Passed")
@@ -824,13 +830,15 @@ async function startDetector(){
 
 }
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
-function getEAR(eye) {
-    const v1 = Math.abs(eye[1].y - eye[5].y);
-    const v2 = Math.abs(eye[2].y - eye[4].y);
-    const h = Math.abs(eye[0].x - eye[3].x);
-    return (v1 + v2) / (2 * h);
-}
+function getEAR(eye){
 
+ const a=Math.hypot(eye[1].x-eye[5].x,eye[1].y-eye[5].y)
+ const b=Math.hypot(eye[2].x-eye[4].x,eye[2].y-eye[4].y)
+ const c=Math.hypot(eye[0].x-eye[3].x,eye[0].y-eye[3].y)
+
+ return (a+b)/(2.0*c)
+
+}
 async function finishAttendance(type) {
     const btnIn = document.getElementById('btn-in');
     const btnOut = document.getElementById('btn-out');
@@ -989,7 +997,7 @@ function renderStudentTable() {
 
     // --- วางตัวแปรไว้ด้านบนสุดของกลุ่มฟังก์ชัน ---
     let croppedImg = null; 
-    async function startCamera(id){
+async function startCamera(id){
 
  try{
 
@@ -997,29 +1005,30 @@ function renderStudentTable() {
   const overlay=document.getElementById("overlay")
 
   const stream=await navigator.mediaDevices.getUserMedia({
-   video:true,
+   video:{facingMode:"user"},
    audio:false
   })
 
   video.srcObject=stream
 
+  // รอ metadata ของ video
+  await new Promise(resolve=>{
+   video.onloadedmetadata=resolve
+  })
+
   await video.play()
 
-  // ตั้งขนาด canvas ให้ตรง video
-  video.addEventListener("play",()=>{
+  // sync canvas กับ video จริง
+  overlay.width=video.videoWidth
+  overlay.height=video.videoHeight
 
-   if(overlay){
-
-    overlay.width=video.videoWidth
-    overlay.height=video.videoHeight
-
-   }
-
-  })
+  console.log("Camera Ready",
+   video.videoWidth,
+   video.videoHeight)
 
  }catch(e){
 
-  console.error("Camera error",e)
+  console.error("Camera Error",e)
 
  }
 
