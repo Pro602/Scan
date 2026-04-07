@@ -1011,20 +1011,18 @@ async function startCamera(id){
 
   video.srcObject=stream
 
-  // รอ metadata ของ video
   await new Promise(resolve=>{
    video.onloadedmetadata=resolve
   })
 
   await video.play()
 
-  // sync canvas กับ video จริง
   overlay.width=video.videoWidth
   overlay.height=video.videoHeight
 
-  console.log("Camera Ready",
-   video.videoWidth,
-   video.videoHeight)
+  faceapi.matchDimensions(overlay, video)
+
+  console.log("Camera Ready")
 
  }catch(e){
 
