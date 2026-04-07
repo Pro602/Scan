@@ -716,104 +716,134 @@ function executeNavigation() {
         } catch(e) {}
     }
 
-let lastAngle = 0;
+let lastNoseX = 0;
 let moveDetected = false;
-let isFacePassed = false; // ตัวล็อกสถานะ (Flag)
+let hasBlinked = false;
+let isFacePassed = false;
 
 async function startDetector() {
-    const v = document.getElementById('video'), o = document.getElementById('overlay');
+
+    const v = document.getElementById('video');
+    const o = document.getElementById('overlay');
+
     if (!v) return;
+
     const dim = { width: v.clientWidth, height: v.clientHeight };
     faceapi.matchDimensions(o, dim);
-    
-    if(window.detectorInterval) clearInterval(window.detectorInterval);
+
+    if (window.detectorInterval) clearInterval(window.detectorInterval);
+
     wrongFaceCount = 0;
+    moveDetected = false;
     hasBlinked = false;
-    moveDetected = false; 
-    isFacePassed = false; // รีเซ็ตสถานะทุกครั้งที่เริ่ม
+    isFacePassed = false;
 
     window.detectorInterval = setInterval(async () => {
-        // --- [จุดสำคัญ 1: ถ้าผ่านแล้ว หรือกำลังประมวลผลรอบเก่าอยู่ ให้หยุดทันที] ---
-        if(v.paused || v.ended || isFacePassed) return; 
-        
-        const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
+
+        if (v.paused || v.ended || isFacePassed) return;
+
+        const det = await faceapi
+            .detectSingleFace(
+                v,
+                new faceapi.TinyFaceDetectorOptions({
+                    inputSize: 320,
+                    scoreThreshold: 0.3
+                })
+            )
             .withFaceLandmarks()
             .withFaceDescriptor();
-            
+
         const ctx = o.getContext('2d');
         ctx.clearRect(0,0,o.width,o.height);
-        
-        if(faceMatcher && det) {
-            // เช็คซ้ำอีกรอบเผื่อรอบก่อนหน้าเพิ่งเปลี่ยนสถานะเป็น true ไปสดๆ ร้อนๆ
-            if (isFacePassed) return;
 
-            const match = faceMatcher.findBestMatch(det.descriptor);
-            const targetId = window.targetStaff ? String(window.targetStaff.studentid) : null;
+        if (!det || !faceMatcher) return;
 
-            const landmarks = det.landmarks;
-            
-            // --- [จุดแก้ไข 1: EAR (การกะพริบตา) ปรับเกณฑ์ EAR < 0.22 เพื่อให้จับได้แม่นยำขึ้น] ---
-            const ear = (getEAR(landmarks.getLeftEye()) + getEAR(landmarks.getRightEye())) / 2;
-            if (ear < 0.22) hasBlinked = true; 
+        const match = faceMatcher.findBestMatch(det.descriptor);
+        const targetId = window.targetStaff ? String(window.targetStaff.studentid) : null;
 
-            // --- [จุดแก้ไข 2: ปรับความไวการขยับจมูก (Move Detected) เป็น > 1.8 เพื่อความรัดกุม] ---
-            const currentNoseX = landmarks.getNose()[0].x;
-            if (Math.abs(currentNoseX - lastAngle) > 1.8) moveDetected = true;
-            lastAngle = currentNoseX;
+        const landmarks = det.landmarks;
 
-            const resNameEl = document.getElementById('res-name');
-            const btnIn = document.getElementById('btn-in');
-            const btnOut = document.getElementById('btn-out');
-            const wrongAction = document.getElementById('wrong-face-actions');
+        // ตรวจ blink
+        const ear = (getEAR(landmarks.getLeftEye()) + getEAR(landmarks.getRightEye())) / 2;
 
-            if (targetId && match.label !== targetId) {
-                wrongFaceCount++;
-                if (wrongFaceCount >= 5) { 
-                    resNameEl.innerText = "❌ ใบหน้าไม่ตรงกับพนักงานที่เลือก!";
-                    resNameEl.style.color = "#f43f5e";
-                    if(wrongAction) wrongAction.classList.remove('hidden');
-                }
-            } else if (match.label === targetId && match.distance < 0.45) {
-                // --- [จุดแก้ไข 3: ตัดเงื่อนไข isVeryCloseMatch ออกอย่างเด็ดขาด!] ---
-                // ไม่ว่าจะหน้าตรงแค่ไหน ก็ *ต้อง* ผ่านการตรวจ Liveness เสมอ เพื่อป้องกันภาพถ่าย
-
-                if (!hasBlinked || !moveDetected) {
-                    resNameEl.innerHTML = `<span style="color: #fbbf24;">✨ กรุณากะพริบตาหรือขยับหน้าเล็กน้อย</span>`;
-                } else {
-                    // ผ่านการสแกน (ผ่าน Liveness)
-                    isFacePassed = true; 
-                    clearInterval(window.detectorInterval);
-                    window.detectorInterval = null;
-
-                    if (window.speechSynthesis) {
-                        window.speechSynthesis.cancel(); // หยุดเสียงที่กำลังรอคิวอยู่ทั้งหมดทันที
-                    }
-                    
-                    const snd = document.getElementById('snd-ok');
-                    if(snd) {
-                        snd.pause();       // หยุดไฟล์เสียงเดิม (ถ้ามี)
-                        snd.currentTime = 0; // รีเซ็ตไปจุดเริ่มต้น
-                        snd.play();        // เล่นใหม่
-                    }
-
-                    speak("สแกนใบหน้าสำเร็จค่ะ");
-
-                    // อัปเดต UI ครั้งสุดท้าย
-                    btnIn.disabled = false; btnOut.disabled = false;
-                    btnIn.style.opacity = "1"; btnOut.style.opacity = "1";
-                    resNameEl.innerText = window.targetStaff.name;
-                    resNameEl.style.color = "#10b981";
-                    
-                    document.getElementById('res-id').innerText = `ID: ${match.label}`;
-                    if(window.targetStaff.imagedatabase64) {
-                        document.getElementById('res-img').src = window.targetStaff.imagedatabase64;
-                        document.getElementById('res-img').classList.remove('hidden');
-                    }
-                    if(wrongAction) wrongAction.classList.add('hidden');
-                }
-            }
+        if (ear < 0.23) {
+            hasBlinked = true;
         }
-    }, 200); 
+
+        // ตรวจ movement
+        const noseX = landmarks.getNose()[0].x;
+
+        if (Math.abs(noseX - lastNoseX) > 1.2) {
+            moveDetected = true;
+        }
+
+        lastNoseX = noseX;
+
+        const resNameEl = document.getElementById('res-name');
+        const btnIn = document.getElementById('btn-in');
+        const btnOut = document.getElementById('btn-out');
+        const wrongAction = document.getElementById('wrong-face-actions');
+
+        if (targetId && match.label !== targetId) {
+
+            wrongFaceCount++;
+
+            if (wrongFaceCount >= 3) {
+                resNameEl.innerText = "❌ ใบหน้าไม่ตรงกับพนักงานที่เลือก!";
+                resNameEl.style.color = "#f43f5e";
+                if (wrongAction) wrongAction.classList.remove('hidden');
+            }
+
+        }
+
+        else if (match.label === targetId && match.distance < 0.50) {
+
+            if (!hasBlinked && !moveDetected) {
+
+                resNameEl.innerHTML =
+                    `<span style="color:#fbbf24;">✨ กรุณากะพริบตาหรือขยับหน้าเล็กน้อย</span>`;
+
+            } else {
+
+                isFacePassed = true;
+
+                clearInterval(window.detectorInterval);
+
+                const snd = document.getElementById('snd-ok');
+
+                if (snd) {
+                    snd.pause();
+                    snd.currentTime = 0;
+                    snd.play();
+                }
+
+                speak("สแกนใบหน้าสำเร็จค่ะ");
+
+                btnIn.disabled = false;
+                btnOut.disabled = false;
+
+                btnIn.style.opacity = "1";
+                btnOut.style.opacity = "1";
+
+                resNameEl.innerText = window.targetStaff.name;
+                resNameEl.style.color = "#10b981";
+
+                document.getElementById('res-id').innerText =
+                    `ID: ${match.label}`;
+
+                if (window.targetStaff.imagedatabase64) {
+                    document.getElementById('res-img').src =
+                        window.targetStaff.imagedatabase64;
+                    document.getElementById('res-img').classList.remove('hidden');
+                }
+
+                if (wrongAction) wrongAction.classList.add('hidden');
+
+            }
+
+        }
+
+    }, 120); // เร็วขึ้น
 }
 
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
