@@ -733,19 +733,13 @@ function executeNavigation() {
             if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.45);
         } catch(e) {}
     }
-
 async function loadFaceModels(){
 
- const MODEL_URL =
- "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights"
+ const MODEL_URL="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights"
 
- await Promise.all([
-  faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-  faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-  faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
- ])
+ await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
 
- console.log("Face Models Loaded")
+ console.log("Model Loaded")
 
 }
 
@@ -997,39 +991,19 @@ function renderStudentTable() {
 
     // --- วางตัวแปรไว้ด้านบนสุดของกลุ่มฟังก์ชัน ---
     let croppedImg = null; 
-async function startCamera(id){
-
- try{
-
-  const video=document.getElementById(id)
-  const overlay=document.getElementById("overlay")
-
-  const stream=await navigator.mediaDevices.getUserMedia({
-   video:{facingMode:"user"},
-   audio:false
-  })
-
-  video.srcObject=stream
-
-  await new Promise(resolve=>{
-   video.onloadedmetadata=resolve
-  })
-
-  await video.play()
-
-  overlay.width=video.videoWidth
-  overlay.height=video.videoHeight
-
-  faceapi.matchDimensions(overlay, video)
-
-  console.log("Camera Ready")
-
- }catch(e){
-
-  console.error("Camera Error",e)
-
- }
-
+async function startCamera(id) {
+  try {
+    document.getElementById(id).srcObject =
+      await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: 640,
+          height: 480,
+          facingMode: "user"
+        }
+      });
+  } catch(e) {
+    console.log(e);
+  }
 }
     function stopCamera(id) { const v = document.getElementById(id); if(v?.srcObject) v.srcObject.getTracks().forEach(t => t.stop()); }
     function speak(t) { const m = new SpeechSynthesisUtterance(t); m.lang = 'th-TH'; window.speechSynthesis.speak(m); }
