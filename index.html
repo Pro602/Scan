@@ -733,7 +733,7 @@ async function startDetector() {
 
     if (window.detectorInterval) clearInterval(window.detectorInterval);
 
-    // รีเซ็ตค่าเริ่มต้น
+    // รีเซ็ตค่าตัวแปรควบคุม (ใช้ตัวแปรที่ประกาศไว้ด้านบน)
     wrongFaceCount = 0;
     moveDetected = false;
     hasBlinked = false;
@@ -743,16 +743,18 @@ async function startDetector() {
     window.detectorInterval = setInterval(async () => {
         if (video.paused || video.ended || isFacePassed) return;
 
-        // 1. ปรับ TinyFaceDetector ให้เร็วขึ้น (inputSize: 224)
+        // 1. ใช้ขนาด 320 (มาตรฐาน) เพื่อให้ตรวจจับใบหน้าได้แม่นยำขึ้น
         const detections = await faceapi.detectAllFaces(video, 
-            new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
+            new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.3 }))
             .withFaceLandmarks()
             .withFaceDescriptors();
 
         ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+        // ถ้าไม่เจอหน้าเลย ให้หยุดรอรอบถัดไป
         if (!detections || detections.length === 0) return;
 
-        // เลือกใบหน้าที่ชัดที่สุด
+        // เลือกหน้าที่ใหญ่ที่สุด (คนที่ยืนหน้ากล้อง)
         let bestFace = detections[0];
         for (let d of detections) {
             if (d.detection.box.width > bestFace.detection.box.width) bestFace = d;
@@ -767,28 +769,30 @@ async function startDetector() {
         const targetId = window.targetStaff ? String(window.targetStaff.studentid) : null;
         const landmarks = bestFace.landmarks;
 
-        // ---------- สแกนไว & กันภาพถ่าย (Liveness Check) ----------
-        // วัดระยะจมูกเพื่อเช็คการขยับเล็กน้อย (เร็วกว่ารอกะพริบตา)
+        // ---------- ตรวจสอบการเคลื่อนไหวเพื่อกันภาพถ่าย ----------
         const noseX = landmarks.getNose()[0].x;
-        if (lastNoseX !== 0 && Math.abs(noseX - lastNoseX) > 0.8) moveDetected = true;
+        // ปรับให้ตรวจจับการขยับได้ง่ายขึ้น (ลดค่าความต่างเหลือ 0.5)
+        if (lastNoseX !== 0 && Math.abs(noseX - lastNoseX) > 0.5) moveDetected = true;
         lastNoseX = noseX;
 
         const resNameEl = document.getElementById('res-name');
         const wrongAction = document.getElementById('wrong-face-actions');
 
-        // กรณี: ใบหน้าไม่ตรงกับที่เลือก
+        // กรณีที่ 1: หน้าไม่ตรง (Unknown หรือ ผิดคน)
         if (targetId && match.label !== targetId) {
             wrongFaceCount++;
-            if (wrongFaceCount >= 5) { // ปรับให้โอกาส 5 รอบก่อนขึ้นแจ้งเตือน
-                resNameEl.innerText = "❌ ใบหน้าไม่ตรงกับข้อมูล";
+            if (wrongFaceCount >= 10) { // ถ้าผ่านไป 1-2 วินาทีแล้วยังไม่ใช่
+                resNameEl.innerText = "❌ ใบหน้าไม่ตรงกับที่เลือก";
                 resNameEl.style.color = "#f43f5e";
-                if (wrongAction) wrongAction.classList.remove('hidden'); // แสดงปุ่มเลือกพนักงานใหม่
+                if (wrongAction) wrongAction.classList.remove('hidden'); // แสดงปุ่มเลือกใหม่
             }
         } 
-        // กรณี: ใบหน้าตรง (Match)
-        else if (match.label === targetId && match.distance < 0.6) { // ปรับค่า 0.6 ให้สแกนง่ายขึ้น
+        // กรณีที่ 2: หน้าตรง (Match)
+        else if (match.label === targetId && match.distance < 0.65) { 
+            // ปรับค่า 0.65 (จากเดิม 0.5) จะทำให้สแกนติดง่ายขึ้นมากแม้แสงน้อย
             
-            // ถ้าเป็นคนจริง ต้องมีการขยับจมูกเล็กน้อย หรือถ้ามั่นใจในค่า Match (ระยะ < 0.4) ให้ผ่านเลย
+            // ถ้าหน้าตรงกันมาก (Match Distance ต่ำกว่า 0.45) ให้ผ่านเลยไม่ต้องรอขยับหน้า
+            // แต่ถ้าก้ำกึ่ง (0.45 - 0.65) ให้รอขยับหน้าเล็กน้อยเพื่อกันภาพถ่าย
             if (!moveDetected && match.distance > 0.45) {
                 resNameEl.innerHTML = `<span style="color:#fbbf24">กรุณาขยับหน้าเล็กน้อย</span>`;
             } else {
@@ -796,12 +800,11 @@ async function startDetector() {
                 isFacePassed = true;
                 clearInterval(window.detectorInterval);
                 
-                // เสียงแจ้งเตือน
                 const snd = document.getElementById('snd-ok');
                 if (snd) { snd.play(); }
                 speak("สแกนใบหน้าสำเร็จ");
 
-                // เปิดปุ่มบันทึกเวลา
+                // เปิดปุ่มบันทึก
                 const btnIn = document.getElementById('btn-in');
                 const btnOut = document.getElementById('btn-out');
                 btnIn.disabled = false; btnOut.disabled = false;
@@ -819,9 +822,8 @@ async function startDetector() {
                 if (wrongAction) wrongAction.classList.add('hidden');
             }
         }
-    }, 100); // วนลูปทุก 0.1 วินาที (เร็วพอดีสำหรับมือถือ)
+    }, 120); // วนลูปที่ความเร็ว 0.12 วินาที (ค่าที่เสถียรที่สุด)
 }
-
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
 function getEAR(eye) {
     const v1 = Math.abs(eye[1].y - eye[5].y);
