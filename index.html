@@ -10,429 +10,395 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-    body { font-family: 'Kanit', sans-serif; background-color: #1a1c1e; color: #f8fafc; }
-    .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; overflow: hidden; border-radius: 0.75rem; }
-    .logo-fade { animation: fadeInLogo 1.2s ease forwards; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)); }
+    /* สไตล์หลักตามดีไซน์ดั้งเดิมของคุณ */
+    body { font-family: 'Kanit', sans-serif; background-color: #1a1c1e; color: #f8fafc; overflow-x: hidden; }
+    .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; }
+    .logo-fade { animation: fadeInLogo 1.2s ease forwards; }
     .logo-spin { animation: spin360 8s linear infinite; transform-style: preserve-3d; }
     @keyframes fadeInLogo { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
     @keyframes spin360 { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
 
-    .card-glass { 
+    .glass-card { 
         background: rgba(30, 41, 59, 0.7); 
         backdrop-filter: blur(12px); 
         border: 1px solid rgba(255, 255, 255, 0.1); 
+        border-radius: 2.5rem;
     }
     
-    .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
-    
-    .video-box { 
-        position: relative; width: 100%; max-width: 400px; aspect-ratio: 4/5; 
-        background: #000; border-radius: 20px; overflow: hidden; border: 3px solid #334155; 
-    }
-    #video { width: 100%; height: 100%; object-fit: cover; transform: rotateY(180deg); }
+    /* ส่วนของหน้าต่าง Pop-up (Modal) สแกนหน้า */
+    .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); justify-content: center; align-items: center; }
+    .video-wrap { position: relative; width: 100%; max-width: 380px; aspect-ratio: 1/1; border-radius: 2rem; overflow: hidden; border: 4px solid #1e293b; background: #000; box-shadow: 0 0 30px rgba(16, 185, 129, 0.2); }
+    #video-feed, #reg-video { width: 100%; height: 100%; object-fit: cover; transform: rotateY(180deg); }
     #overlay-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; transform: rotateY(180deg); }
     
-    .scan-line {
-        position: absolute; width: 100%; height: 2px; background: #10b981;
-        box-shadow: 0 0 15px #10b981; animation: scanning 2s infinite ease-in-out; z-index: 10;
-    }
-    @keyframes scanning { 0% { top: 10%; } 50% { top: 90%; } 100% { top: 10%; } }
+    .scan-line { position: absolute; width: 100%; height: 3px; background: #10b981; box-shadow: 0 0 20px #10b981; animation: scanning 2s infinite linear; z-index: 10; opacity: 0.7; }
+    @keyframes scanning { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
 
-    /* ตารางรายงานสไตล์เดิม */
-    .table-container { overflow-x: auto; border-radius: 1rem; }
-    table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
-    tr.table-row { background: rgba(51, 65, 85, 0.4); transition: all 0.2s; }
-    tr.table-row:hover { background: rgba(51, 65, 85, 0.6); }
-    td { padding: 12px 16px; }
-    td:first-child { border-radius: 12px 0 0 12px; }
-    td:last-child { border-radius: 0 12px 12px 0; }
+    .custom-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
+    .table-row { background: rgba(51, 65, 85, 0.4); transition: all 0.3s; }
+    .table-row:hover { transform: translateY(-2px); background: rgba(71, 85, 105, 0.5); }
 </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <!-- Header เดิม -->
-    <header class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center mb-8 gap-6">
-        <div class="flex items-center gap-4 logo-fade">
+    <!-- ส่วนหัว (Header) -->
+    <header class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+        <div class="flex items-center gap-6 logo-fade">
             <div class="logo-wrapper">
-                <img src="https://img5.pic.in.th/file/secure-sv1/thaisiam-removebg-preview.png" class="h-16 logo-spin" alt="Logo">
+                <img src="https://img5.pic.in.th/file/secure-sv1/thaisiam-removebg-preview.png" class="h-20 logo-spin" alt="Logo">
             </div>
             <div>
-                <h1 class="text-2xl font-bold text-white tracking-tight">THAISIAM INKJET</h1>
-                <p class="text-emerald-400 text-sm font-medium">ระบบบริหารจัดการพนักงานดิจิทัล</p>
+                <h1 class="text-3xl font-bold text-white tracking-tight">THAISIAM INKJET</h1>
+                <p class="text-emerald-400 font-medium tracking-[0.3em] text-xs uppercase">Attendance AI System</p>
             </div>
         </div>
-        <div class="flex gap-3">
-            <button onclick="openScanModal()" class="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-bold transition-all shadow-lg shadow-emerald-900/20">
+        <div class="flex gap-4">
+            <button onclick="openScanModal()" class="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-bold flex items-center gap-2 shadow-xl shadow-emerald-900/20 transition-all active:scale-95">
                 <i data-lucide="camera"></i> สแกนเข้างาน
             </button>
-            <button onclick="openRegisterModal()" class="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-2xl font-bold transition-all shadow-lg shadow-blue-900/20">
-                <i data-lucide="user-plus"></i> เพิ่มพนักงาน
+            <button onclick="openRegModal()" class="px-6 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl font-bold flex items-center gap-2 border border-white/10 transition-all active:scale-95">
+                <i data-lucide="user-plus" class="text-blue-400"></i> ลงทะเบียนหน้า
             </button>
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- รายงานภาพรวม (ซ้าย) -->
-        <div class="lg:col-span-1 space-y-6">
-            <div class="card-glass p-6 rounded-[2rem]">
-                <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
-                    <i data-lucide="bar-chart-3" class="text-emerald-400"></i> สถิติวันนี้
+    <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- ฝั่งซ้าย: สรุปข้อมูล (Chart) -->
+        <div class="lg:col-span-4 space-y-6">
+            <div class="glass-card p-8 text-center">
+                <h3 class="text-xl font-bold mb-8 flex items-center justify-center gap-2">
+                    <i data-lucide="pie-chart" class="text-emerald-400"></i> สรุปการทำงานวันนี้
                 </h3>
-                <canvas id="attendanceChart" height="250"></canvas>
-            </div>
-            <div class="card-glass p-6 rounded-[2rem]">
-                <h3 class="text-lg font-bold mb-4">ข้อมูลพนักงานเบื้องต้น</h3>
-                <div class="space-y-3">
-                    <div class="flex justify-between p-3 bg-slate-800/50 rounded-xl">
-                        <span class="text-slate-400">พนักงานทั้งหมด</span>
-                        <span id="total-staff" class="font-bold">0 คน</span>
+                <div class="relative w-full max-w-[220px] mx-auto mb-8">
+                    <canvas id="mainChart"></canvas>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-5 bg-slate-800/40 rounded-3xl border border-white/5">
+                        <p class="text-[10px] text-slate-400 mb-1 uppercase font-semibold">พนักงานทั้งหมด</p>
+                        <p id="total-count" class="text-3xl font-bold">0</p>
                     </div>
-                    <div class="flex justify-between p-3 bg-emerald-900/20 rounded-xl text-emerald-400">
-                        <span>เข้างานแล้ว</span>
-                        <span id="count-in" class="font-bold">0 คน</span>
+                    <div class="p-5 bg-emerald-950/20 rounded-3xl border border-emerald-500/10 text-emerald-400">
+                        <p class="text-[10px] mb-1 uppercase font-semibold">มาทำงานแล้ว</p>
+                        <p id="in-count" class="text-3xl font-bold">0</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- รายงานตารางพนักงาน (ขวา) -->
-        <div class="lg:col-span-2 card-glass p-6 rounded-[2rem]">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-lg font-bold">รายงานการบันทึกเวลาล่าสุด</h3>
-                <div class="text-xs text-slate-400" id="last-update">อัปเดต: --:--</div>
+        <!-- ฝั่งขวา: รายชื่อพนักงานและประวัติ -->
+        <div class="lg:col-span-8 glass-card p-8 overflow-hidden">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h3 class="text-xl font-bold">ประวัติการบันทึกเวลา</h3>
+                    <p class="text-xs text-slate-500 mt-1" id="update-time">ข้อมูลล่าสุดเมื่อ: กำลังโหลด...</p>
+                </div>
+                <button onclick="fetchStaffData()" class="p-3 bg-slate-800 rounded-2xl hover:bg-slate-700 transition-colors">
+                    <i data-lucide="refresh-cw" id="sync-icon" class="w-5 h-5"></i>
+                </button>
             </div>
-            <div class="table-container">
-                <table>
-                    <thead class="text-slate-500 text-sm text-left">
-                        <tr>
-                            <th class="pb-4 pl-4 font-medium">รายชื่อพนักงาน</th>
-                            <th class="pb-4 font-medium">เวลา</th>
-                            <th class="pb-4 font-medium">ประเภท</th>
-                            <th class="pb-4 font-medium">พิกัด GPS</th>
+            
+            <div class="overflow-x-auto">
+                <table class="custom-table">
+                    <thead>
+                        <tr class="text-slate-500 text-[11px] text-left uppercase tracking-widest">
+                            <th class="pb-4 pl-6 font-bold">พนักงาน</th>
+                            <th class="pb-4 font-bold">เวลา</th>
+                            <th class="pb-4 font-bold">สถานะ</th>
+                            <th class="pb-4 text-center font-bold">แผนที่</th>
                         </tr>
                     </thead>
-                    <tbody id="attendance-list">
-                        <!-- ข้อมูลจะถูกโหลดที่นี่ -->
-                        <tr><td colspan="4" class="text-center py-10 text-slate-500">กำลังโหลดข้อมูล...</td></tr>
+                    <tbody id="table-body">
+                        <tr><td colspan="4" class="py-20 text-center text-slate-500 text-sm">กำลังเชื่อมต่อฐานข้อมูล...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </main>
 
-    <!-- Modal: ลงทะเบียนพนักงานใหม่ -->
-    <div id="registerModal" class="modal flex items-center justify-center p-4">
-        <div class="bg-white text-slate-900 w-full max-w-md rounded-[2.5rem] p-8 relative">
-            <button onclick="closeModal('registerModal')" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600">
-                <i data-lucide="x"></i>
-            </button>
-            <h2 class="text-2xl font-bold mb-2">ลงทะเบียนพนักงาน</h2>
-            <p class="text-slate-500 text-sm mb-6">บันทึกรหัสและโครงสร้างใบหน้าเข้าสู่ฐานข้อมูล</p>
+    <!-- Modal: ระบบสแกนใบหน้า -->
+    <div id="scanModal" class="modal">
+        <div class="glass-card w-[95%] max-w-md p-8 border-emerald-500/20 relative">
+            <button onclick="closeModal('scanModal')" class="absolute top-6 right-6 text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i data-lucide="scan" class="text-emerald-400"></i> ตรวจสอบใบหน้า
+            </h2>
             
-            <div class="space-y-4">
+            <div class="video-wrap mx-auto mb-6">
+                <video id="video-feed" autoplay muted playsinline></video>
+                <canvas id="overlay-canvas"></canvas>
+                <div id="scan-line" class="scan-line"></div>
+            </div>
+
+            <div id="ai-status" class="text-center py-4 px-6 bg-slate-800/80 rounded-2xl text-emerald-400 text-sm font-semibold mb-6 border border-emerald-500/10">
+                ⌛ กำลังเริ่มระบบ AI...
+            </div>
+
+            <div id="result-ui" class="hidden animate-in fade-in zoom-in-95 duration-300">
+                <div class="flex items-center gap-4 bg-emerald-500/10 p-5 rounded-[2rem] border border-emerald-500/20 mb-6">
+                    <img id="match-img" src="" class="w-20 h-20 rounded-2xl object-cover border-2 border-emerald-500 bg-slate-700">
+                    <div>
+                        <p id="match-name" class="text-xl font-bold text-white leading-tight">---</p>
+                        <p id="match-id" class="text-xs text-emerald-400 font-mono mt-1 tracking-widest uppercase">ID: ---</p>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-[10px] text-slate-500 mb-2 ml-2 uppercase font-bold tracking-widest">จุดเช็คอินพิกัด THAISIAM</label>
+                    <select id="gps-target" class="w-full p-4 bg-slate-800 rounded-2xl border border-slate-700 outline-none text-sm text-white">
+                        <option value="14.0416,100.6750">สำนักงานใหญ่ (คลองหลวง)</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="saveAttendance('IN')" class="py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-[1.5rem] font-bold flex flex-col items-center gap-1">
+                        <i data-lucide="log-in" class="w-5 h-5"></i> เข้างาน
+                    </button>
+                    <button onclick="saveAttendance('OUT')" class="py-5 bg-rose-600 hover:bg-rose-500 text-white rounded-[1.5rem] font-bold flex flex-col items-center gap-1">
+                        <i data-lucide="log-out" class="w-5 h-5"></i> ออกงาน
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: ลงทะเบียนหน้าใหม่ -->
+    <div id="regModal" class="modal">
+        <div class="bg-white text-slate-900 w-[95%] max-w-md p-10 rounded-[3rem] relative shadow-2xl">
+            <button onclick="closeModal('regModal')" class="absolute top-8 right-8 text-slate-300 hover:text-slate-900"><i data-lucide="x"></i></button>
+            <h2 class="text-3xl font-bold mb-2">ลงทะเบียนพนักงาน</h2>
+            <p class="text-slate-400 text-sm mb-8">บันทึกโครงสร้างใบหน้าลงฐานข้อมูล</p>
+            
+            <div class="space-y-6">
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 mb-1 ml-1 uppercase">รหัสพนักงาน (Student ID)</label>
-                    <input type="text" id="reg-id" placeholder="ตัวอย่าง: 650001" class="w-full p-4 bg-slate-100 rounded-2xl border-2 border-transparent focus:border-blue-500 outline-none transition-all font-bold">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">รหัสพนักงาน (ID)</label>
+                    <input type="text" id="reg-id" placeholder="ตัวอย่าง 650001" class="w-full p-5 bg-slate-100 rounded-2xl border-none outline-none font-bold text-2xl text-center focus:ring-2 ring-blue-500">
                 </div>
-                <div class="video-box mx-auto border-blue-500">
-                    <video id="reg-video" autoplay muted playsinline class="w-full h-full object-cover grayscale-[0.5]"></video>
+                <div class="video-wrap mx-auto !max-w-[280px] border-blue-500/20">
+                    <video id="reg-video" autoplay muted playsinline></video>
                 </div>
-                <button id="btn-save-face" onclick="handleRegistration()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200">
-                    <i data-lucide="scan-face"></i> บันทึกใบหน้าพนักงาน
+                <button id="btn-reg-save" onclick="registerFace()" class="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="scan-face"></i> บันทึกใบหน้า
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Modal: สแกนเข้างาน -->
-    <div id="scanModal" class="modal flex items-center justify-center p-4">
-        <div class="card-glass w-full max-w-md rounded-[2.5rem] p-8 border-emerald-500/30 overflow-hidden">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold">สแกนใบหน้าเข้างาน</h2>
-                <button onclick="closeModal('scanModal')" class="text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
-            </div>
-
-            <div class="video-box mx-auto mb-6">
-                <video id="scan-video" autoplay muted playsinline></video>
-                <canvas id="overlay-canvas"></canvas>
-                <div id="scan-line" class="scan-line"></div>
-            </div>
-
-            <div id="scan-status" class="text-center p-3 bg-slate-800 rounded-2xl mb-4 text-emerald-400 text-sm font-medium border border-emerald-500/20">
-                กำลังค้นหาใบหน้า...
-            </div>
-
-            <!-- ส่วนยืนยันเมื่อสแกนพบ -->
-            <div id="match-result" class="hidden animate-in fade-in slide-in-from-bottom-4">
-                <div class="flex items-center gap-4 bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-3xl mb-4">
-                    <img id="match-img" src="https://via.placeholder.com/60" class="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500">
-                    <div>
-                        <p id="match-name" class="font-bold text-lg text-white">ชื่อพนักงาน</p>
-                        <p id="match-id" class="text-xs text-emerald-400 font-mono">ID: 000000</p>
-                    </div>
-                </div>
-
-                <!-- เลือกตำแหน่ง GPS -->
-                <div class="mb-4">
-                    <label class="block text-xs text-slate-400 mb-2 ml-1">📍 เลือกจุดเช็คอิน (THAISIAM)</label>
-                    <select id="location-select" class="w-full p-3 bg-slate-800 rounded-xl border border-slate-700 outline-none text-sm">
-                        <option value="14.0416,100.6750">สำนักงานใหญ่ (คลองหลวง)</option>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="recordTime('IN')" class="py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-2">
-                        <i data-lucide="log-in"></i> เข้างาน
-                    </button>
-                    <button onclick="recordTime('OUT')" class="py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold flex items-center justify-center gap-2">
-                        <i data-lucide="log-out"></i> ออกงาน
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // ตั้งค่า API และพิกัดเป้าหมาย
+        // กำหนด URL ของ Google Apps Script ของคุณ
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbzeHotjOIF6_P5N82ByzrVIPamzMu_JnL27mc551WBdAfzKwCxD3akItWtcSd7cPO5a/exec';
         const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-        const TARGET_LOC = { lat: 14.0416, lng: 100.6750, radius: 0.5 }; // รัศมี 500 เมตร
+        const GEOFENCE_KM = 0.5; // รัศมีอนุญาตให้เช็คอินได้ (500 เมตร)
 
-        let staffData = [];
+        let employees = [];
         let faceMatcher = null;
-        let isScanning = false;
+        let isCameraActive = false;
 
-        // 1. เริ่มโหลดระบบและรายงาน
         window.onload = async () => {
             lucide.createIcons();
             initChart();
-            await loadModels();
-            await fetchReport();
+            await fetchStaffData();
+            await initFaceAI();
         };
 
-        async function loadModels() {
+        async function initFaceAI() {
             try {
+                // โหลดโมเดล AI สำหรับตรวจจับใบหน้า
                 await Promise.all([
                     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
                     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
                     faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
                 ]);
-                console.log("AI Models Loaded");
+                console.log("AI Ready");
             } catch (e) { console.error("Model Error:", e); }
         }
 
-        async function fetchReport() {
+        async function fetchStaffData() {
+            const syncIcon = document.getElementById('sync-icon');
+            syncIcon.classList.add('animate-spin');
             try {
-                const res = await fetch(`${GAS_URL}?action=getStudents`);
-                const result = await res.json();
+                const response = await fetch(`${GAS_URL}?action=getStudents`);
+                const result = await response.json();
                 if (result.success) {
-                    staffData = result.data;
-                    renderTable(staffData);
-                    updateStats(staffData);
-                    buildFaceMatcher(staffData);
-                    document.getElementById('last-update').innerText = `อัปเดต: ${new Date().toLocaleTimeString('th-TH')}`;
+                    employees = result.data;
+                    renderTable(employees);
+                    buildMatcher(employees);
+                    document.getElementById('update-time').innerText = `อัปเดต: ${new Date().toLocaleTimeString('th-TH')}`;
                 }
             } catch (e) { console.error("Fetch Error:", e); }
+            syncIcon.classList.remove('animate-spin');
         }
 
-        function buildFaceMatcher(data) {
-            const labeled = data
-                .filter(s => s.descriptor && s.descriptor.length > 50)
-                .map(s => {
-                    const desc = new Float32Array(JSON.parse(s.descriptor));
-                    return new faceapi.LabeledFaceDescriptors(String(s.studentid), [desc]);
+        function buildMatcher(data) {
+            const descriptors = data
+                .filter(e => e.descriptor && e.descriptor.length > 50)
+                .map(e => {
+                    const array = new Float32Array(JSON.parse(e.descriptor));
+                    return new faceapi.LabeledFaceDescriptors(String(e.studentid), [array]);
                 });
-            if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.5);
+            if (descriptors.length > 0) faceMatcher = new faceapi.FaceMatcher(descriptors, 0.5);
         }
 
         function renderTable(data) {
-            const container = document.getElementById('attendance-list');
-            container.innerHTML = data.slice(0, 10).map(s => `
+            const tbody = document.getElementById('table-body');
+            const inCount = data.filter(e => e.type === 'IN').length;
+            document.getElementById('total-count').innerText = data.length;
+            document.getElementById('in-count').innerText = inCount;
+            updateChart(inCount, data.length - inCount);
+
+            tbody.innerHTML = data.slice(0, 10).map(e => `
                 <tr class="table-row">
-                    <td class="pl-4">
-                        <div class="flex items-center gap-3">
-                            <img src="${s.imagedatabase64 || 'https://via.placeholder.com/40'}" class="w-10 h-10 rounded-lg object-cover bg-slate-700">
+                    <td class="py-5 pl-6 rounded-l-[1.5rem]">
+                        <div class="flex items-center gap-4">
+                            <img src="${e.imagedatabase64 || 'https://via.placeholder.com/48'}" class="w-12 h-12 rounded-2xl object-cover border-2 border-white/5 bg-slate-700">
                             <div>
-                                <p class="font-bold text-sm text-white">${s.name}</p>
-                                <p class="text-[10px] text-slate-400 font-mono">ID: ${s.studentid}</p>
+                                <p class="text-sm font-bold text-white">${e.name || 'Unknown'}</p>
+                                <p class="text-[10px] text-slate-500 font-mono">ID: ${e.studentid}</p>
                             </div>
                         </div>
                     </td>
-                    <td class="text-sm text-slate-300 font-mono">${s.timestamp || '--:--'}</td>
+                    <td class="text-xs font-mono text-slate-300">${e.timestamp || '--:--'}</td>
                     <td>
-                        <span class="px-2 py-1 rounded-md text-[10px] font-bold ${s.type === 'IN' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">
-                            ${s.type || 'N/A'}
+                        <span class="px-4 py-1.5 rounded-full text-[10px] font-bold ${e.type === 'IN' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}">
+                            ${e.type === 'IN' ? 'เข้างาน' : 'ออกงาน'}
                         </span>
                     </td>
-                    <td>
-                        <button onclick="window.open('https://www.google.com/maps?q=${s.lat},${s.lng}')" class="text-blue-400 hover:underline text-xs">
-                            <i data-lucide="map-pin" class="w-3 h-3 inline"></i> View
-                        </button>
+                    <td class="pr-6 rounded-r-[1.5rem] text-center">
+                        <button onclick="window.open('https://www.google.com/maps?q=${e.lat},${e.lng}')" class="text-blue-400"><i data-lucide="map-pin" class="w-4 h-4"></i></button>
                     </td>
                 </tr>
             `).join('');
             lucide.createIcons();
         }
 
-        function updateStats(data) {
-            document.getElementById('total-staff').innerText = `${data.length} คน`;
-            document.getElementById('count-in').innerText = `${data.filter(s => s.type === 'IN').length} คน`;
-        }
-
-        // 2. ระบบสแกนหน้า
         async function openScanModal() {
             document.getElementById('scanModal').style.display = 'flex';
-            const video = document.getElementById('scan-video');
+            document.getElementById('result-ui').classList.add('hidden');
+            const video = document.getElementById('video-feed');
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
                 video.srcObject = stream;
-                startDetection(video);
-            } catch (e) { alert("กรุณาเปิดสิทธิ์การใช้งานกล้อง"); }
+                runDetection(video);
+            } catch (e) { alert("กรุณาอนุญาตการเข้าถึงกล้อง"); }
         }
 
-        async function startDetection(video) {
+        async function runDetection(video) {
             const canvas = document.getElementById('overlay-canvas');
             const displaySize = { width: video.clientWidth, height: video.clientHeight };
             faceapi.matchDimensions(canvas, displaySize);
-            isScanning = true;
+            isCameraActive = true;
 
-            const interval = setInterval(async () => {
-                if (!isScanning) { clearInterval(interval); return; }
-
-                const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
-                    .withFaceLandmarks().withFaceDescriptors();
-                
+            const detect = async () => {
+                if (!isCameraActive) return;
+                const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
                 const resized = faceapi.resizeResults(detections, displaySize);
                 canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-                
+
                 if (detections.length > 0 && faceMatcher) {
-                    const result = faceMatcher.findBestMatch(detections[0].descriptor);
-                    if (result.label !== 'unknown') {
-                        isScanning = false;
-                        const staff = staffData.find(s => String(s.studentid) === result.label);
-                        showMatch(staff);
+                    const bestMatch = faceMatcher.findBestMatch(detections[0].descriptor);
+                    if (bestMatch.label !== 'unknown') {
+                        isCameraActive = false;
+                        const emp = employees.find(e => String(e.studentid) === bestMatch.label);
+                        onDetected(emp);
+                        return;
                     }
                 }
-            }, 500);
+                requestAnimationFrame(detect);
+            };
+            detect();
         }
 
-        function showMatch(staff) {
-            document.getElementById('scan-status').innerText = "พบข้อมูลพนักงาน!";
-            document.getElementById('match-name').innerText = staff.name;
-            document.getElementById('match-id').innerText = "ID: " + staff.studentid;
-            document.getElementById('match-img').src = staff.imagedatabase64 || 'https://via.placeholder.com/60';
-            document.getElementById('match-result').classList.remove('hidden');
-            document.getElementById('scan-line').classList.add('hidden');
+        function onDetected(emp) {
+            document.getElementById('ai-status').innerText = "✅ ยืนยันตัวตนสำเร็จ";
+            document.getElementById('match-name').innerText = emp.name;
+            document.getElementById('match-id').innerText = "ID: " + emp.studentid;
+            document.getElementById('match-img').src = emp.imagedatabase64 || '';
+            document.getElementById('result-ui').classList.remove('hidden');
         }
 
-        // 3. ระบบบันทึกเวลา + GPS
-        async function recordTime(type) {
-            const statusBox = document.getElementById('scan-status');
-            statusBox.innerText = "📍 กำลังตรวจสอบพิกัด GPS...";
+        async function saveAttendance(type) {
+            const statusBox = document.getElementById('ai-status');
+            statusBox.innerText = "📍 ตรวจสอบตำแหน่ง GPS...";
             
             navigator.geolocation.getCurrentPosition(async (pos) => {
-                const dist = calculateDistance(pos.coords.latitude, pos.coords.longitude, TARGET_LOC.lat, TARGET_LOC.lng);
-                
-                if (dist > TARGET_LOC.radius) {
-                    return alert(`คุณอยู่นอกพื้นที่! ระยะทางจากบริษัท: ${dist.toFixed(2)} กม. (อนุญาตไม่เกิน ${TARGET_LOC.radius} กม.)`);
+                const target = document.getElementById('gps-target').value.split(',');
+                const dist = calculateDistance(pos.coords.latitude, pos.coords.longitude, parseFloat(target[0]), parseFloat(target[1]));
+
+                if (dist > GEOFENCE_KM) {
+                    return alert(`นอกพื้นที่! ระยะห่างปัจจุบัน: ${dist.toFixed(2)} กม.`);
                 }
 
                 statusBox.innerText = "⏳ กำลังบันทึกข้อมูล...";
-                try {
-                    const staffId = document.getElementById('match-id').innerText.replace('ID: ', '');
-                    const staff = staffData.find(s => String(s.studentid) === staffId);
-                    
-                    await fetch(GAS_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            action: 'recordAttendanceUpdate',
-                            data: [{
-                                id: staff.studentid,
-                                name: staff.name,
-                                type: type,
-                                lat: pos.coords.latitude,
-                                lng: pos.coords.longitude
-                            }]
-                        })
-                    });
-                    alert(`บันทึกการ ${type === 'IN' ? 'เข้างาน' : 'ออกงาน'} สำเร็จ!`);
-                    location.reload();
-                } catch (e) { alert("บันทึกล้มเหลว"); }
-            }, () => alert("กรุณาเปิด GPS เพื่อเช็คอิน"));
+                const empId = document.getElementById('match-id').innerText.replace('ID: ', '');
+                const emp = employees.find(e => String(e.studentid) === empId);
+
+                await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'recordAttendanceUpdate',
+                        data: [{ id: emp.studentid, name: emp.name, type: type, lat: pos.coords.latitude, lng: pos.coords.longitude }]
+                    })
+                });
+                alert(`บันทึกสำเร็จ!`);
+                location.reload();
+            }, () => alert("กรุณาเปิด GPS"));
         }
 
-        // 4. ระบบลงทะเบียนพนักงานใหม่
-        async function openRegisterModal() {
-            document.getElementById('registerModal').style.display = 'flex';
-            const video = document.getElementById('reg-video');
-            video.srcObject = await navigator.mediaDevices.getUserMedia({ video: {} });
+        async function openRegModal() {
+            document.getElementById('regModal').style.display = 'flex';
+            const v = document.getElementById('reg-video');
+            v.srcObject = await navigator.mediaDevices.getUserMedia({ video: {} });
         }
 
-        async function handleRegistration() {
-            const id = document.getElementById('reg-id').value.trim();
+        async function registerFace() {
+            const id = document.getElementById('reg-id').value;
             const video = document.getElementById('reg-video');
-            const btn = document.getElementById('btn-save-face');
-
-            if (!id) return alert("กรุณาป้อนรหัสพนักงาน");
-
-            btn.disabled = true;
-            btn.innerText = "กำลังสแกนใบหน้า...";
+            if (!id) return alert("กรุณาใส่รหัสพนักงาน");
 
             const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceDescriptor();
-
             if (detection) {
                 const descriptor = JSON.stringify(Array.from(detection.descriptor));
-                try {
-                    const res = await fetch(GAS_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({ action: 'saveDescriptor', studentid: id, descriptor: descriptor })
-                    });
-                    const result = await res.json();
-                    if(result.success) {
-                        alert("ลงทะเบียนใบหน้าสำเร็จ!");
-                        location.reload();
-                    } else { alert("ไม่พบรหัสพนักงานนี้ในฐานข้อมูล Google Sheets"); }
-                } catch (e) { alert("บันทึกล้มเหลว"); }
-            } else { alert("ไม่พบใบหน้า โปรดมองที่กล้อง"); }
-            
-            btn.disabled = false;
-            btn.innerText = "บันทึกใบหน้าพนักงาน";
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'saveDescriptor', studentid: id, descriptor: descriptor })
+                });
+                const json = await res.json();
+                if(json.success) { alert("บันทึกใบหน้าสำเร็จ"); location.reload(); }
+                else { alert("ไม่พบรหัสพนักงานนี้ในระบบ"); }
+            } else { alert("ไม่พบใบหน้า"); }
         }
 
-        // Helper Functions
         function closeModal(id) {
             document.getElementById(id).style.display = 'none';
-            isScanning = false;
-            const video = id === 'scanModal' ? document.getElementById('scan-video') : document.getElementById('reg-video');
+            isCameraActive = false;
+            const video = id === 'scanModal' ? document.getElementById('video-feed') : document.getElementById('reg-video');
             if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
         }
 
-        function calculateDistance(lat1, lon1, lat2, lon2) {
+        function calculateDistance(la1, lo1, la2, lo2) {
             const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const dLa = (la2 - la1) * Math.PI / 180;
+            const dLo = (lo2 - lo1) * Math.PI / 180;
+            const a = Math.sin(dLa/2)**2 + Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
+        let chart;
         function initChart() {
-            const ctx = document.getElementById('attendanceChart').getContext('2d');
-            new Chart(ctx, {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            chart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['มาทำงาน', 'ยังไม่มา'],
-                    datasets: [{
-                        data: [65, 35],
-                        backgroundColor: ['#10b981', '#1e293b'],
-                        borderWidth: 0,
-                        hoverOffset: 10
-                    }]
+                    labels: ['มาแล้ว', 'ยังไม่มา'],
+                    datasets: [{ data: [0, 100], backgroundColor: ['#10b981', '#1e293b'], borderWidth: 0 }]
                 },
-                options: {
-                    plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Kanit' } } } },
-                    cutout: '70%'
-                }
+                options: { cutout: '82%', plugins: { legend: { display: false } } }
             });
+        }
+
+        function updateChart(ins, abs) {
+            chart.data.datasets[0].data = [ins, abs];
+            chart.update();
         }
     </script>
 </body>
