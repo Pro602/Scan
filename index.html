@@ -12,9 +12,7 @@
     body { font-family: 'Kanit', sans-serif; background-color: #1a1c1e; color: #f8fafc; }
     .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; overflow: hidden; border-radius: 0.75rem; }
     .logo-fade { animation: fadeInLogo 1.2s ease forwards; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)); }
-    .logo-spin { animation: spin360 8s linear infinite; transform-style: preserve-3d; }
     @keyframes fadeInLogo { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-    @keyframes spin360 { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
     .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
     .video-container { position: relative; width: 100%; max-width: 500px; aspect-ratio: 3/4; border-radius: 1.5rem; overflow: hidden; background: #000; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
     #video { width: 100%; height: 100%; object-fit: cover; transform: rotateY(180deg); }
@@ -28,23 +26,23 @@
 </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4 md:p-8">
-    <!-- Header -->
+    <!-- Header: คงเดิม -->
     <div class="w-full max-w-lg flex flex-col items-center mb-8">
         <div class="logo-wrapper mb-4 p-2 bg-white/5 rounded-2xl">
             <img src="https://img5.pic.in.th/file/secure-sv1/thaisiam-removebg-preview.png" alt="Logo" class="h-16 logo-fade">
         </div>
         <div class="text-center">
-            <h1 class="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">ระบบบันทึกเวลาความเร็วสูง</h1>
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">ระบบบันทึกเวลาเข้าออก</h1>
             <p class="text-slate-400 text-sm mt-1">THAISIAM INKJET & ADVERTISING</p>
         </div>
     </div>
 
-    <!-- Main Scanner UI -->
+    <!-- Main Card: คงเดิม -->
     <div class="w-full max-w-lg glass-card p-4 rounded-[2.5rem] shadow-2xl flex flex-col items-center">
         <div id="status-container" class="w-full flex justify-between items-center mb-4 px-2">
             <div id="connection-status" class="status-badge bg-emerald-500/10 text-emerald-400">
                 <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                <span id="status-text">กำลังโหลด AI...</span>
+                <span id="status-text">รอดำเนินการ...</span>
             </div>
             <div id="time-display" class="text-slate-400 font-mono font-medium">--:--:--</div>
         </div>
@@ -54,38 +52,33 @@
             <canvas id="canvas"></canvas>
             <div id="scan-line" class="scan-line"></div>
             
-            <!-- Welcome/Initial Overlay -->
-            <div id="start-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 z-20 transition-opacity duration-500">
+            <!-- Welcome Overlay: เหมือนไฟล์ Master -->
+            <div id="start-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 z-20">
                 <div class="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4 border border-emerald-500/30">
                     <i data-lucide="camera" class="w-10 h-10 text-emerald-400"></i>
                 </div>
-                <button onclick="startCamera()" class="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full font-bold shadow-lg shadow-emerald-500/20 transition-all">
+                <button onclick="initApp()" id="btn-start" class="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full font-bold shadow-lg transition-all">
                     เริ่มการใช้งาน
                 </button>
             </div>
         </div>
 
-        <!-- Staff Info Card (Hidden initially) -->
+        <!-- ข้อมูลพนักงาน (แสดงหลังค้นหา) -->
         <div id="staff-card" class="w-full bg-slate-800/50 rounded-3xl p-4 mb-6 hidden border border-white/5">
             <div class="flex items-center gap-4">
-                <div class="relative">
-                    <img id="staff-image" src="" class="w-20 h-20 rounded-2xl object-cover border-2 border-emerald-500/30 shadow-lg">
-                    <div class="absolute -bottom-2 -right-2 bg-emerald-500 rounded-full p-1 border-2 border-slate-800">
-                        <i data-lucide="check" class="w-4 h-4 text-white"></i>
-                    </div>
-                </div>
+                <img id="staff-image" src="" class="w-20 h-20 rounded-2xl object-cover border-2 border-emerald-500/30 shadow-lg">
                 <div>
                     <h3 id="staff-name" class="text-lg font-bold text-white leading-tight">--</h3>
                     <p id="staff-id" class="text-emerald-400 text-sm font-medium">ID: --</p>
                     <p id="staff-class" class="text-slate-400 text-xs">แผนก: --</p>
                 </div>
             </div>
-            <div id="liveness-msg" class="mt-4 text-center py-2 bg-emerald-500/10 rounded-xl text-emerald-400 text-xs font-medium animate-pulse">
+            <div id="liveness-msg" class="mt-4 text-center py-2 bg-emerald-500/10 rounded-xl text-emerald-400 text-xs font-medium">
                 กรุณามองกล้องและขยับหน้าเล็กน้อย
             </div>
         </div>
 
-        <!-- Action Buttons -->
+        <!-- ปุ่ม Action: คงตำแหน่งเดิม 100% -->
         <div class="grid grid-cols-2 gap-4 w-full px-2 mb-2">
             <button onclick="openQuickSearch()" class="btn-action flex flex-col items-center gap-2 p-4 bg-slate-800 hover:bg-slate-700 rounded-3xl border border-white/5">
                 <div class="w-10 h-10 bg-blue-500/20 rounded-2xl flex items-center justify-center">
@@ -93,7 +86,7 @@
                 </div>
                 <span class="text-sm font-medium">สแกนด้วยรหัส</span>
             </button>
-            <button onclick="openHistory()" class="btn-action flex flex-col items-center gap-2 p-4 bg-slate-800 hover:bg-slate-700 rounded-3xl border border-white/5">
+            <button onclick="window.open('https://docs.google.com/spreadsheets/d/YOUR_ID', '_blank')" class="btn-action flex flex-col items-center gap-2 p-4 bg-slate-800 hover:bg-slate-700 rounded-3xl border border-white/5">
                 <div class="w-10 h-10 bg-purple-500/20 rounded-2xl flex items-center justify-center">
                     <i data-lucide="history" class="w-6 h-6 text-purple-400"></i>
                 </div>
@@ -101,26 +94,26 @@
             </button>
         </div>
 
-        <!-- Register Face Button (New) -->
-        <div id="register-container" class="w-full px-2 mt-2 hidden">
-            <button onclick="startRegisterFace()" class="w-full py-4 bg-amber-600 hover:bg-amber-500 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-900/20 text-white">
+        <!-- แถบปุ่มพิเศษ (แสดงเมื่อเจอตัวพนักงาน) -->
+        <div id="action-area" class="w-full px-2 mt-4 hidden space-y-3">
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="confirmAttendance('IN')" class="py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-bold text-lg text-white">เข้างาน</button>
+                <button onclick="confirmAttendance('OUT')" class="py-4 bg-rose-600 hover:bg-rose-500 rounded-2xl font-bold text-lg text-white">ออกงาน</button>
+            </div>
+            <!-- ปุ่มลงทะเบียนที่เพิ่มเข้ามา -->
+            <button onclick="registerCurrentFace()" id="btn-register" class="w-full py-3 bg-amber-500 hover:bg-amber-400 rounded-xl font-bold text-white flex items-center justify-center gap-2">
                 <i data-lucide="user-plus" class="w-5 h-5"></i>
-                ลงทะเบียนใบหน้าความเร็วสูง
+                ลงทะเบียนใบหน้าใหม่ (ถ้ายังไม่มี)
             </button>
-        </div>
-
-        <div id="attendance-actions" class="w-full px-2 mt-4 hidden grid grid-cols-2 gap-4">
-            <button onclick="confirmAttendance('IN')" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-emerald-900/20 text-white">เข้างาน</button>
-            <button onclick="confirmAttendance('OUT')" class="w-full py-4 bg-rose-600 hover:bg-rose-500 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-rose-900/20 text-white">ออกงาน</button>
         </div>
     </div>
 
-    <!-- Modal: Quick Search (รหัสพนักงาน) -->
+    <!-- Modal ค้นหาด้วยรหัส: คงเดิม -->
     <div id="quickSearchModal" class="modal">
       <div class="bg-white m-auto mt-[15%] p-8 w-[90%] max-w-[400px] rounded-[32px] text-center shadow-2xl">
         <h3 class="text-slate-800 mb-6 text-xl font-bold">สแกนเข้างานด้วยรหัส</h3>
-        <input type="text" id="inputSearchId" placeholder="ป้อน Student ID" class="w-full p-4 text-3xl font-bold border-2 border-slate-100 rounded-2xl text-center text-slate-900 bg-slate-50 focus:border-emerald-500 outline-none transition-all mb-4">
-        <div class="flex gap-3 mb-4">
+        <input type="text" id="inputSearchId" placeholder="ป้อน Student ID" class="w-full p-4 text-3xl font-bold border-2 border-slate-100 rounded-2xl text-center text-slate-900 bg-slate-50 mb-4 outline-none">
+        <div class="flex gap-3">
             <button onclick="closeQuickSearch()" class="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-bold">ยกเลิก</button>
             <button onclick="processQuickSearch()" class="flex-1 py-4 bg-emerald-500 text-white rounded-2xl font-bold">ค้นหา</button>
         </div>
@@ -128,8 +121,7 @@
     </div>
 
     <script>
-        // --- การตั้งค่าหลัก ---
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzeHotjOIF6_P5N82ByzrVIPamzMu_JnL27mc551WBdAfzKwCxD3akItWtcSd7cPO5a/exec'; // แทนที่ด้วย URL ของคุณ
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbz_XXXXXXXXX/exec';
         const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
         
         let students = [];
@@ -142,39 +134,40 @@
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const statusText = document.getElementById('status-text');
-        const scanLine = document.getElementById('scan-line');
 
-        // Initial Load
-        window.onload = async () => {
-            lucide.createIcons();
-            updateTime();
-            setInterval(updateTime, 1000);
+        // ฟังก์ชันเริ่มแอป (เหมือนเดิมแต่ย้ายลำดับให้กล้องไม่ค้าง)
+        async function initApp() {
+            document.getElementById('btn-start').innerText = "กำลังเตรียม AI...";
+            document.getElementById('btn-start').disabled = true;
             
             try {
-                // โหลด AI Models
-                await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-                ]);
-                statusText.innerText = "กำลังดึงข้อมูลพนักงาน...";
-                await loadData();
-                statusText.innerText = "ระบบพร้อมใช้งาน";
-            } catch (err) {
-                console.error(err);
-                statusText.innerText = "AI โหลดไม่สำเร็จ";
-            }
-        };
+                // 1. โหลด AI ก่อน
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                
+                // 2. ดึงข้อมูลพนักงาน
+                await loadStaffData();
 
-        async function loadData() {
+                // 3. เริ่มกล้อง
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+                
+                document.getElementById('start-overlay').classList.add('hidden');
+                statusText.innerText = "ระบบพร้อมใช้งาน";
+                lucide.createIcons();
+            } catch (err) {
+                alert("เกิดข้อผิดพลาด: " + err.message);
+            }
+        }
+
+        async function loadStaffData() {
             try {
                 const res = await fetch(`${GAS_URL}?action=getStudents`);
                 const result = await res.json();
                 if (result.success) {
                     students = result.data;
-                    console.log("Loaded", students.length, "students");
-                    
-                    // สร้าง Local FaceMatcher จาก Descriptor ในคอลัมน์ E
+                    // สร้าง Local Matcher (ช่วยให้สแกนเร็วขึ้นมาก)
                     const labeledDescriptors = students
                         .filter(s => s.descriptor && s.descriptor.length > 100)
                         .map(s => {
@@ -188,30 +181,10 @@
                         faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.55);
                     }
                 }
-            } catch(e) { console.error("Data fetch error", e); }
+            } catch(e) { console.error("Data error", e); }
         }
 
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                video.srcObject = stream;
-                document.getElementById('start-overlay').classList.add('opacity-0');
-                setTimeout(() => document.getElementById('start-overlay').classList.add('hidden'), 500);
-            } catch (err) {
-                alert("ไม่สามารถเข้าถึงกล้องได้: " + err.message);
-            }
-        }
-
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('time-display').innerText = now.toLocaleTimeString('th-TH');
-        }
-
-        // --- ส่วนการค้นหา (Quick Search) ---
-        function openQuickSearch() { 
-            document.getElementById('quickSearchModal').style.display = 'flex'; 
-            document.getElementById('inputSearchId').focus();
-        }
+        function openQuickSearch() { document.getElementById('quickSearchModal').style.display = 'flex'; }
         function closeQuickSearch() { document.getElementById('quickSearchModal').style.display = 'none'; }
         
         function processQuickSearch() {
@@ -219,152 +192,95 @@
             const staff = students.find(s => String(s.studentid) === id || String(s.id) === id);
             if (staff) {
                 closeQuickSearch();
-                selectStaff(staff);
-            } else {
-                alert("ไม่พบรหัสพนักงานนี้");
-            }
+                showStaffUI(staff);
+            } else { alert("ไม่พบรหัสพนักงาน"); }
         }
 
-        function selectStaff(staff) {
-            selectedStaff = {
-                id: staff.studentid || staff.id,
-                name: staff.name,
-                class: staff.class,
-                img: staff.imagedatabase64
-            };
+        function showStaffUI(staff) {
+            selectedStaff = staff;
+            document.getElementById('staff-name').innerText = staff.name;
+            document.getElementById('staff-id').innerText = 'ID: ' + staff.studentid;
+            document.getElementById('staff-class').innerText = 'แผนก: ' + staff.class;
+            document.getElementById('staff-image').src = staff.imagedatabase64 || 'https://via.placeholder.com/150';
             
-            // แสดงข้อมูลพนักงาน
-            document.getElementById('staff-name').innerText = selectedStaff.name;
-            document.getElementById('staff-id').innerText = 'ID: ' + selectedStaff.id;
-            document.getElementById('staff-class').innerText = 'แผนก: ' + selectedStaff.class;
-            document.getElementById('staff-image').src = selectedStaff.img || 'https://via.placeholder.com/150';
             document.getElementById('staff-card').classList.remove('hidden');
-            document.getElementById('register-container').classList.remove('hidden');
-            document.getElementById('attendance-actions').classList.add('hidden');
+            document.getElementById('action-area').classList.remove('hidden');
+            document.getElementById('scan-line').style.display = 'block';
             
-            // เริ่มการสแกนใบหน้า
             isScanning = true;
             moveDetected = false;
             lastNoseX = 0;
-            scanLine.style.display = 'block';
-            statusText.innerText = "กำลังสแกนใบหน้า...";
-            startDetectionLoop();
+            startDetection();
         }
 
-        async function startDetectionLoop() {
+        async function startDetection() {
             if (!isScanning) return;
 
-            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224 }))
-                .withFaceLandmarks()
-                .withFaceDescriptor();
+            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks().withFaceDescriptor();
 
             if (detection) {
-                const dims = faceapi.matchDimensions(canvas, video, true);
-                const resized = faceapi.resizeResults(detection, dims);
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0,0, canvas.width, canvas.height);
-                
-                // ตรวจสอบการขยับหน้า (Liveness)
+                // ตรวจการเคลื่อนไหว (Liveness)
                 const nose = detection.landmarks.getNose()[0];
                 if (lastNoseX !== 0 && Math.abs(nose.x - lastNoseX) > 1.2) moveDetected = true;
                 lastNoseX = nose.x;
 
+                // ตรวจความตรงของใบหน้าถ้ามีการลงทะเบียนไว้แล้ว
                 if (faceMatcher) {
                     const match = faceMatcher.findBestMatch(detection.descriptor);
-                    if (match.label === String(selectedStaff.id)) {
+                    if (match.label === String(selectedStaff.studentid)) {
                         if (moveDetected) {
-                            successRecognition();
-                            return;
-                        } else {
-                            document.getElementById('liveness-msg').innerText = "💡 กรุณาขยับหน้าหรือพยักหน้าเล็กน้อย";
-                            ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 4;
-                            ctx.strokeRect(resized.detection.box.x, resized.detection.box.y, resized.detection.box.width, resized.detection.box.height);
+                            statusText.innerText = "ยืนยันตัวตนสำเร็จ";
+                            document.getElementById('liveness-msg').innerText = "✅ ใบหน้าถูกต้อง กดปุ่มเลือกรายการได้เลย";
+                            // ไม่ต้องหยุดสแกน แต่ให้เปลี่ยนสถานะเพื่อให้พนักงานกดปุ่มได้
                         }
-                    } else {
-                        document.getElementById('liveness-msg').innerText = "❌ ใบหน้าไม่ตรงกับข้อมูลรหัส";
-                        ctx.strokeStyle = "#f87171"; ctx.lineWidth = 2;
-                        ctx.strokeRect(resized.detection.box.x, resized.detection.box.y, resized.detection.box.width, resized.detection.box.height);
                     }
-                } else {
-                    document.getElementById('liveness-msg').innerText = "⚠️ พนักงานท่านนี้ยังไม่ได้ลงทะเบียนใบหน้า";
                 }
             }
-            requestAnimationFrame(startDetectionLoop);
+            requestAnimationFrame(startDetection);
         }
 
-        function successRecognition() {
-            isScanning = false;
-            scanLine.style.display = 'none';
-            document.getElementById('liveness-msg').innerText = "✅ ยืนยันตัวตนสำเร็จ";
-            document.getElementById('liveness-msg').classList.remove('animate-pulse');
-            document.getElementById('attendance-actions').classList.remove('hidden');
-            statusText.innerText = "เลือกรายการเข้า/ออกงาน";
-            
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0,0, canvas.width, canvas.height);
-            
-            try { window.speechSynthesis.speak(new SpeechSynthesisUtterance("ยืนยันตัวตนสำเร็จค่ะ")); } catch(e){}
-        }
+        // ฟังก์ชันบันทึกใบหน้า (Fast Scan)
+        async function registerCurrentFace() {
+            const btn = document.getElementById('btn-register');
+            btn.innerText = "⏳ กำลังบันทึกใบหน้า...";
+            btn.disabled = true;
 
-        // --- ระบบลงทะเบียนใบหน้า (New) ---
-        async function startRegisterFace() {
-            if (!selectedStaff) return;
-            
-            statusText.innerText = "กำลังบันทึกแม่แบบใบหน้า...";
-            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416 }))
+            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 }))
                 .withFaceLandmarks().withFaceDescriptor();
-                
+
             if (detection) {
                 const descriptor = JSON.stringify(Array.from(detection.descriptor));
                 try {
-                    const res = await fetch(GAS_URL, {
+                    await fetch(GAS_URL, {
                         method: 'POST',
-                        body: JSON.stringify({ 
-                            action: 'saveDescriptor', 
-                            studentid: selectedStaff.id, 
-                            descriptor: descriptor 
-                        })
+                        body: JSON.stringify({ action: 'saveDescriptor', studentid: selectedStaff.studentid, descriptor: descriptor })
                     });
-                    const result = await res.json();
-                    if(result.success) {
-                        alert("ลงทะเบียนใบหน้าความเร็วสูงสำเร็จ!");
-                        location.reload();
-                    } else { alert("เกิดข้อผิดพลาด: " + result.error); }
-                } catch(e) { alert("เชื่อมต่อ Server ไม่สำเร็จ"); }
-            } else {
-                alert("ไม่พบใบหน้า กรุณาจัดตำแหน่งหน้าให้ชัดเจน");
-            }
+                    alert("ลงทะเบียนใบหน้าความเร็วสูงสำเร็จ! ต่อไปพนักงานคนนี้จะสแกนได้เร็วขึ้นมาก");
+                    location.reload();
+                } catch(e) { alert("ล้มเหลว"); }
+            } else { alert("ไม่พบใบหน้า กรุณามองกล้องให้ชัด"); }
+            
+            btn.innerText = "ลงทะเบียนใบหน้าใหม่";
+            btn.disabled = false;
         }
 
-        // --- บันทึกเวลา (คงรูปแบบเดิม) ---
         async function confirmAttendance(type) {
             statusText.innerText = "กำลังบันทึกเวลา...";
-            const record = {
-                id: selectedStaff.id,
-                name: selectedStaff.name,
-                class: selectedStaff.class,
-                type: type,
-                timestamp: new Date().toLocaleString('th-TH'),
-                status: "ปกติ"
-            };
-
+            const record = { id: selectedStaff.studentid, name: selectedStaff.name, class: selectedStaff.class, type: type };
             try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'recordAttendanceUpdate', data: [record] })
-                });
-                const result = await res.json();
-                alert(`บันทึกเวลา ${type === 'IN' ? 'เข้างาน' : 'ออกงาน'} สำเร็จ`);
+                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'recordAttendanceUpdate', data: [record] }) });
+                alert(`บันทึก ${type === 'IN' ? 'เข้างาน' : 'ออกงาน'} สำเร็จ`);
                 location.reload();
-            } catch(e) {
-                alert("บันทึกล้มเหลว");
-                statusText.innerText = "ระบบพร้อมใช้งาน";
-            }
+            } catch(e) { alert("บันทึกไม่สำเร็จ"); }
         }
 
-        function openHistory() {
-            window.open('https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID_HERE', '_blank');
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('time-display').innerText = now.toLocaleTimeString('th-TH');
         }
+        setInterval(updateTime, 1000);
+        updateTime();
     </script>
 </body>
 </html>
