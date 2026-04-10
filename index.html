@@ -723,156 +723,103 @@ let isFacePassed = false;
 let lockFaceBox = null;
 
 async function startDetector() {
-
     const video = document.getElementById('video');
     const overlay = document.getElementById('overlay');
-
     if (!video) return;
 
     const ctx = overlay.getContext('2d');
-
-    const dim = {
-        width: video.clientWidth,
-        height: video.clientHeight
-    };
-
+    const dim = { width: video.clientWidth, height: video.clientHeight };
     faceapi.matchDimensions(overlay, dim);
 
-    if (window.detectorInterval)
-        clearInterval(window.detectorInterval);
+    if (window.detectorInterval) clearInterval(window.detectorInterval);
 
+    // รีเซ็ตค่าเริ่มต้น
     wrongFaceCount = 0;
     moveDetected = false;
     hasBlinked = false;
     isFacePassed = false;
-    lockFaceBox = null;
+    lastNoseX = 0;
 
     window.detectorInterval = setInterval(async () => {
-
         if (video.paused || video.ended || isFacePassed) return;
 
-        const detections = await faceapi
-            .detectAllFaces(
-                video,
-                new faceapi.TinyFaceDetectorOptions({
-                    inputSize: 320,
-                    scoreThreshold: 0.3
-                })
-            )
+        // 1. ปรับ TinyFaceDetector ให้เร็วขึ้น (inputSize: 224)
+        const detections = await faceapi.detectAllFaces(video, 
+            new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
             .withFaceLandmarks()
             .withFaceDescriptors();
 
-        ctx.clearRect(0,0,overlay.width,overlay.height);
-
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
         if (!detections || detections.length === 0) return;
 
-        // เลือกหน้าที่ใหญ่ที่สุด
+        // เลือกใบหน้าที่ชัดที่สุด
         let bestFace = detections[0];
-
         for (let d of detections) {
-            if (d.detection.box.width > bestFace.detection.box.width)
-                bestFace = d;
+            if (d.detection.box.width > bestFace.detection.box.width) bestFace = d;
         }
 
         const box = bestFace.detection.box;
-
-        ctx.strokeStyle = "#00ff88";
+        ctx.strokeStyle = "#00ff88"; 
         ctx.lineWidth = 2;
         ctx.strokeRect(box.x, box.y, box.width, box.height);
 
         const match = faceMatcher.findBestMatch(bestFace.descriptor);
         const targetId = window.targetStaff ? String(window.targetStaff.studentid) : null;
-
         const landmarks = bestFace.landmarks;
 
-        // ---------- Blink Detection ----------
-        const ear =
-            (getEAR(landmarks.getLeftEye()) +
-             getEAR(landmarks.getRightEye())) / 2;
-
-        if (ear < 0.23)
-            hasBlinked = true;
-
-        // ---------- Movement Detection ----------
+        // ---------- สแกนไว & กันภาพถ่าย (Liveness Check) ----------
+        // วัดระยะจมูกเพื่อเช็คการขยับเล็กน้อย (เร็วกว่ารอกะพริบตา)
         const noseX = landmarks.getNose()[0].x;
-
-        if (Math.abs(noseX - lastNoseX) > 1.2)
-            moveDetected = true;
-
+        if (lastNoseX !== 0 && Math.abs(noseX - lastNoseX) > 0.8) moveDetected = true;
         lastNoseX = noseX;
 
         const resNameEl = document.getElementById('res-name');
-        const btnIn = document.getElementById('btn-in');
-        const btnOut = document.getElementById('btn-out');
         const wrongAction = document.getElementById('wrong-face-actions');
 
+        // กรณี: ใบหน้าไม่ตรงกับที่เลือก
         if (targetId && match.label !== targetId) {
-
             wrongFaceCount++;
-
-            if (wrongFaceCount >= 3) {
-                resNameEl.innerText = "❌ ใบหน้าไม่ตรงกับพนักงานที่เลือก";
+            if (wrongFaceCount >= 5) { // ปรับให้โอกาส 5 รอบก่อนขึ้นแจ้งเตือน
+                resNameEl.innerText = "❌ ใบหน้าไม่ตรงกับข้อมูล";
                 resNameEl.style.color = "#f43f5e";
-                if (wrongAction)
-                    wrongAction.classList.remove('hidden');
+                if (wrongAction) wrongAction.classList.remove('hidden'); // แสดงปุ่มเลือกพนักงานใหม่
             }
-
-        }
-
-        else if (match.label === targetId && match.distance < 0.50) {
-
-            if (!hasBlinked && !moveDetected) {
-
-                resNameEl.innerHTML =
-                    `<span style="color:#fbbf24">
-                    กรุณากะพริบตาหรือขยับหน้าเล็กน้อย
-                    </span>`;
-
-            }
-
-            else {
-
+        } 
+        // กรณี: ใบหน้าตรง (Match)
+        else if (match.label === targetId && match.distance < 0.6) { // ปรับค่า 0.6 ให้สแกนง่ายขึ้น
+            
+            // ถ้าเป็นคนจริง ต้องมีการขยับจมูกเล็กน้อย หรือถ้ามั่นใจในค่า Match (ระยะ < 0.4) ให้ผ่านเลย
+            if (!moveDetected && match.distance > 0.45) {
+                resNameEl.innerHTML = `<span style="color:#fbbf24">กรุณาขยับหน้าเล็กน้อย</span>`;
+            } else {
+                // --- สแกนสำเร็จ ---
                 isFacePassed = true;
-
                 clearInterval(window.detectorInterval);
-
+                
+                // เสียงแจ้งเตือน
                 const snd = document.getElementById('snd-ok');
-
-                if (snd) {
-                    snd.pause();
-                    snd.currentTime = 0;
-                    snd.play();
-                }
-
+                if (snd) { snd.play(); }
                 speak("สแกนใบหน้าสำเร็จ");
 
-                btnIn.disabled = false;
-                btnOut.disabled = false;
-
-                btnIn.style.opacity = "1";
-                btnOut.style.opacity = "1";
+                // เปิดปุ่มบันทึกเวลา
+                const btnIn = document.getElementById('btn-in');
+                const btnOut = document.getElementById('btn-out');
+                btnIn.disabled = false; btnOut.disabled = false;
+                btnIn.style.opacity = "1"; btnOut.style.opacity = "1";
 
                 resNameEl.innerText = window.targetStaff.name;
                 resNameEl.style.color = "#10b981";
-
-                document.getElementById('res-id').innerText =
-                    `ID: ${match.label}`;
+                document.getElementById('res-id').innerText = `ID: ${match.label}`;
 
                 if (window.targetStaff.imagedatabase64) {
                     const img = document.getElementById('res-img');
                     img.src = window.targetStaff.imagedatabase64;
                     img.classList.remove('hidden');
                 }
-
-                if (wrongAction)
-                    wrongAction.classList.add('hidden');
-
+                if (wrongAction) wrongAction.classList.add('hidden');
             }
-
         }
-
-    }, 120);
-
+    }, 100); // วนลูปทุก 0.1 วินาที (เร็วพอดีสำหรับมือถือ)
 }
 
 // ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
