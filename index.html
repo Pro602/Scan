@@ -10,277 +10,241 @@
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
     body { font-family: 'Kanit', sans-serif; background-color: #1a1c1e; color: #f8fafc; }
-    .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; overflow: hidden; border-radius: 0.75rem; }
-    .logo-fade { animation: fadeInLogo 1.2s ease forwards; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)); }
-    @keyframes fadeInLogo { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
     .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
     .video-container { position: relative; width: 100%; max-width: 500px; aspect-ratio: 3/4; border-radius: 1.5rem; overflow: hidden; background: #000; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
     #video { width: 100%; height: 100%; object-fit: cover; transform: rotateY(180deg); }
     #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; transform: rotateY(180deg); }
     .scan-line { position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(to bottom, transparent, #10b981, transparent); box-shadow: 0 0 15px #10b981; animation: scan 2s linear infinite; z-index: 10; display: none; }
     @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
-    .btn-action { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-    .btn-action:active { transform: scale(0.95); }
-    .status-badge { padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; display: flex; items-center: center; gap: 0.5rem; }
-    .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
+    .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); justify-content: center; align-items: center; }
 </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4 md:p-8">
-    <!-- Header: คงเดิม -->
-    <div class="w-full max-w-lg flex flex-col items-center mb-8">
-        <div class="logo-wrapper mb-4 p-2 bg-white/5 rounded-2xl">
-            <img src="https://img5.pic.in.th/file/secure-sv1/thaisiam-removebg-preview.png" alt="Logo" class="h-16 logo-fade">
-        </div>
-        <div class="text-center">
-            <h1 class="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">ระบบบันทึกเวลาเข้าออก</h1>
-            <p class="text-slate-400 text-sm mt-1">THAISIAM INKJET & ADVERTISING</p>
-        </div>
+<body class="min-h-screen flex flex-col items-center p-4">
+    <!-- Header -->
+    <div class="w-full max-w-lg flex flex-col items-center mb-6">
+        <img src="https://img5.pic.in.th/file/secure-sv1/thaisiam-removebg-preview.png" alt="Logo" class="h-14 mb-4">
+        <h1 class="text-xl font-bold text-emerald-400">ระบบบันทึกเวลา THAISIAM</h1>
     </div>
 
-    <!-- Main Card: คงเดิม -->
-    <div class="w-full max-w-lg glass-card p-4 rounded-[2.5rem] shadow-2xl flex flex-col items-center">
-        <div id="status-container" class="w-full flex justify-between items-center mb-4 px-2">
-            <div id="connection-status" class="status-badge bg-emerald-500/10 text-emerald-400">
-                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                <span id="status-text">รอดำเนินการ...</span>
-            </div>
-            <div id="time-display" class="text-slate-400 font-mono font-medium">--:--:--</div>
+    <!-- Main Card -->
+    <div class="w-full max-w-lg glass-card p-5 rounded-[2.5rem] shadow-2xl">
+        <div class="flex justify-between items-center mb-4">
+            <span id="status-text" class="text-xs bg-slate-800 px-3 py-1 rounded-full text-slate-400">🔴 ปิดระบบ</span>
+            <span id="time-display" class="font-mono text-sm">--:--:--</span>
         </div>
 
-        <div class="video-container mb-6 border-4 border-slate-700/50">
+        <div class="video-container mb-4">
             <video id="video" autoplay muted playsinline></video>
             <canvas id="canvas"></canvas>
             <div id="scan-line" class="scan-line"></div>
             
-            <!-- Welcome Overlay: เหมือนไฟล์ Master -->
-            <div id="start-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 z-20">
-                <div class="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4 border border-emerald-500/30">
-                    <i data-lucide="camera" class="w-10 h-10 text-emerald-400"></i>
-                </div>
-                <button onclick="initApp()" id="btn-start" class="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full font-bold shadow-lg transition-all">
-                    เริ่มการใช้งาน
+            <div id="start-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 z-20">
+                <button onclick="initApp()" id="btn-start" class="px-10 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full font-bold shadow-xl transition-all flex items-center gap-2">
+                    <i data-lucide="play"></i> เปิดกล้องใช้งาน
                 </button>
             </div>
         </div>
 
-        <!-- ข้อมูลพนักงาน (แสดงหลังค้นหา) -->
-        <div id="staff-card" class="w-full bg-slate-800/50 rounded-3xl p-4 mb-6 hidden border border-white/5">
+        <!-- ข้อมูลพนักงาน -->
+        <div id="staff-card" class="hidden w-full bg-slate-800/80 rounded-2xl p-4 mb-4 border border-emerald-500/20">
             <div class="flex items-center gap-4">
-                <img id="staff-image" src="" class="w-20 h-20 rounded-2xl object-cover border-2 border-emerald-500/30 shadow-lg">
-                <div>
-                    <h3 id="staff-name" class="text-lg font-bold text-white leading-tight">--</h3>
-                    <p id="staff-id" class="text-emerald-400 text-sm font-medium">ID: --</p>
-                    <p id="staff-class" class="text-slate-400 text-xs">แผนก: --</p>
+                <img id="staff-image" src="" class="w-16 h-16 rounded-xl object-cover bg-slate-700">
+                <div class="flex-1">
+                    <h3 id="staff-name" class="font-bold text-white">--</h3>
+                    <p id="staff-id" class="text-emerald-400 text-xs font-mono">ID: --</p>
                 </div>
+                <button onclick="resetUI()" class="text-slate-500 p-2"><i data-lucide="x-circle"></i></button>
             </div>
-            <div id="liveness-msg" class="mt-4 text-center py-2 bg-emerald-500/10 rounded-xl text-emerald-400 text-xs font-medium">
-                กรุณามองกล้องและขยับหน้าเล็กน้อย
+            <div id="action-buttons" class="grid grid-cols-2 gap-3 mt-4">
+                <button onclick="confirmAttendance('IN')" class="py-3 bg-emerald-600 rounded-xl font-bold">เข้างาน</button>
+                <button onclick="confirmAttendance('OUT')" class="py-3 bg-rose-600 rounded-xl font-bold">ออกงาน</button>
+                <button onclick="registerFace()" id="btn-reg" class="col-span-2 py-2 bg-amber-500 rounded-xl font-bold text-sm">ลงทะเบียนใบหน้าพนักงานคนนี้</button>
             </div>
         </div>
 
-        <!-- ปุ่ม Action: คงตำแหน่งเดิม 100% -->
-        <div class="grid grid-cols-2 gap-4 w-full px-2 mb-2">
-            <button onclick="openQuickSearch()" class="btn-action flex flex-col items-center gap-2 p-4 bg-slate-800 hover:bg-slate-700 rounded-3xl border border-white/5">
-                <div class="w-10 h-10 bg-blue-500/20 rounded-2xl flex items-center justify-center">
-                    <i data-lucide="keypad" class="w-6 h-6 text-blue-400"></i>
-                </div>
-                <span class="text-sm font-medium">สแกนด้วยรหัส</span>
+        <!-- ปุ่มควบคุมหลัก -->
+        <div id="main-controls" class="grid grid-cols-2 gap-4">
+            <button onclick="openModal()" class="flex flex-col items-center gap-2 p-4 bg-slate-800 rounded-2xl border border-white/5">
+                <i data-lucide="keypad" class="text-blue-400"></i>
+                <span class="text-xs">ใส่รหัสพนักงาน</span>
             </button>
-            <button onclick="window.open('https://docs.google.com/spreadsheets/d/YOUR_ID', '_blank')" class="btn-action flex flex-col items-center gap-2 p-4 bg-slate-800 hover:bg-slate-700 rounded-3xl border border-white/5">
-                <div class="w-10 h-10 bg-purple-500/20 rounded-2xl flex items-center justify-center">
-                    <i data-lucide="history" class="w-6 h-6 text-purple-400"></i>
-                </div>
-                <span class="text-sm font-medium">ประวัติบันทึกเวลา</span>
-            </button>
-        </div>
-
-        <!-- แถบปุ่มพิเศษ (แสดงเมื่อเจอตัวพนักงาน) -->
-        <div id="action-area" class="w-full px-2 mt-4 hidden space-y-3">
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="confirmAttendance('IN')" class="py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-bold text-lg text-white">เข้างาน</button>
-                <button onclick="confirmAttendance('OUT')" class="py-4 bg-rose-600 hover:bg-rose-500 rounded-2xl font-bold text-lg text-white">ออกงาน</button>
-            </div>
-            <!-- ปุ่มลงทะเบียนที่เพิ่มเข้ามา -->
-            <button onclick="registerCurrentFace()" id="btn-register" class="w-full py-3 bg-amber-500 hover:bg-amber-400 rounded-xl font-bold text-white flex items-center justify-center gap-2">
-                <i data-lucide="user-plus" class="w-5 h-5"></i>
-                ลงทะเบียนใบหน้าใหม่ (ถ้ายังไม่มี)
+            <button onclick="syncData()" class="flex flex-col items-center gap-2 p-4 bg-slate-800 rounded-2xl border border-white/5">
+                <i data-lucide="refresh-cw" id="sync-icon" class="text-purple-400"></i>
+                <span class="text-xs">อัปเดตข้อมูล</span>
             </button>
         </div>
     </div>
 
-    <!-- Modal ค้นหาด้วยรหัส: คงเดิม -->
-    <div id="quickSearchModal" class="modal">
-      <div class="bg-white m-auto mt-[15%] p-8 w-[90%] max-w-[400px] rounded-[32px] text-center shadow-2xl">
-        <h3 class="text-slate-800 mb-6 text-xl font-bold">สแกนเข้างานด้วยรหัส</h3>
-        <input type="text" id="inputSearchId" placeholder="ป้อน Student ID" class="w-full p-4 text-3xl font-bold border-2 border-slate-100 rounded-2xl text-center text-slate-900 bg-slate-50 mb-4 outline-none">
-        <div class="flex gap-3">
-            <button onclick="closeQuickSearch()" class="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-bold">ยกเลิก</button>
-            <button onclick="processQuickSearch()" class="flex-1 py-4 bg-emerald-500 text-white rounded-2xl font-bold">ค้นหา</button>
+    <!-- Modal ค้นหา -->
+    <div id="searchModal" class="modal">
+        <div class="bg-white p-6 w-[90%] max-w-[350px] rounded-3xl shadow-2xl">
+            <h3 class="text-slate-900 font-bold mb-4 text-center">ค้นหารหัสพนักงาน</h3>
+            <input type="text" id="inputSearchId" inputmode="numeric" placeholder="ป้อนรหัส 6 หลัก" 
+                   class="w-full p-4 text-2xl font-bold border-2 border-slate-100 rounded-2xl text-center text-slate-900 bg-slate-50 mb-4 outline-none focus:border-emerald-500">
+            <div class="flex gap-2">
+                <button onclick="closeModal()" class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold text-sm">ปิด</button>
+                <button onclick="doSearch()" class="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-bold text-sm">ค้นหา</button>
+            </div>
         </div>
-      </div>
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbz_XXXXXXXXX/exec';
+        // *** แก้ไข URL ของคุณที่นี่ ***
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzeHotjOIF6_P5N82ByzrVIPamzMu_JnL27mc551WBdAfzKwCxD3akItWtcSd7cPO5a/exec';
         const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-        
-        let students = [];
-        let selectedStaff = null;
-        let faceMatcher = null;
-        let isScanning = false;
-        let lastNoseX = 0;
-        let moveDetected = false;
 
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const statusText = document.getElementById('status-text');
+        let staffList = [];
+        let activeStaff = null;
+        let isCamStarted = false;
 
-        // ฟังก์ชันเริ่มแอป (เหมือนเดิมแต่ย้ายลำดับให้กล้องไม่ค้าง)
         async function initApp() {
-            document.getElementById('btn-start').innerText = "กำลังเตรียม AI...";
-            document.getElementById('btn-start').disabled = true;
-            
+            const btn = document.getElementById('btn-start');
+            btn.innerHTML = "⌛ กำลังโหลด AI...";
+            btn.disabled = true;
+
             try {
-                // 1. โหลด AI ก่อน
-                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                // 1. โหลดข้อมูลพนักงานก่อนเลย
+                await syncData(false);
                 
-                // 2. ดึงข้อมูลพนักงาน
-                await loadStaffData();
+                // 2. โหลด AI
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+                ]);
 
                 // 3. เริ่มกล้อง
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                video.srcObject = stream;
+                document.getElementById('video').srcObject = stream;
                 
                 document.getElementById('start-overlay').classList.add('hidden');
-                statusText.innerText = "ระบบพร้อมใช้งาน";
+                document.getElementById('status-text').innerHTML = "🟢 ระบบพร้อมใช้งาน";
+                isCamStarted = true;
                 lucide.createIcons();
             } catch (err) {
-                alert("เกิดข้อผิดพลาด: " + err.message);
+                alert("เปิดระบบไม่สำเร็จ: " + err.message);
+                btn.innerHTML = "ลองใหม่อีกครั้ง";
+                btn.disabled = false;
             }
         }
 
-        async function loadStaffData() {
+        async function syncData(showAlert = true) {
+            const icon = document.getElementById('sync-icon');
+            if(icon) icon.classList.add('animate-spin');
+            
             try {
                 const res = await fetch(`${GAS_URL}?action=getStudents`);
                 const result = await res.json();
                 if (result.success) {
-                    students = result.data;
-                    // สร้าง Local Matcher (ช่วยให้สแกนเร็วขึ้นมาก)
-                    const labeledDescriptors = students
-                        .filter(s => s.descriptor && s.descriptor.length > 100)
-                        .map(s => {
-                            try {
-                                const desc = new Float32Array(JSON.parse(s.descriptor));
-                                return new faceapi.LabeledFaceDescriptors(String(s.studentid), [desc]);
-                            } catch(e) { return null; }
-                        }).filter(ld => ld !== null);
-
-                    if (labeledDescriptors.length > 0) {
-                        faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.55);
-                    }
+                    staffList = result.data;
+                    console.log("โหลดข้อมูลสำเร็จ:", staffList.length, "คน");
+                    if(showAlert) alert("อัปเดตข้อมูลพนักงาน " + staffList.length + " คนเรียบร้อย");
                 }
-            } catch(e) { console.error("Data error", e); }
+            } catch (e) {
+                console.error("Sync Error:", e);
+                if(showAlert) alert("ดึงข้อมูลไม่สำเร็จ โปรดเช็คเน็ตหรือ URL ของคุณ");
+            } finally {
+                if(icon) icon.classList.remove('animate-spin');
+            }
         }
 
-        function openQuickSearch() { document.getElementById('quickSearchModal').style.display = 'flex'; }
-        function closeQuickSearch() { document.getElementById('quickSearchModal').style.display = 'none'; }
-        
-        function processQuickSearch() {
-            const id = document.getElementById('inputSearchId').value.trim();
-            const staff = students.find(s => String(s.studentid) === id || String(s.id) === id);
-            if (staff) {
-                closeQuickSearch();
-                showStaffUI(staff);
-            } else { alert("ไม่พบรหัสพนักงาน"); }
+        function openModal() { document.getElementById('searchModal').style.display = 'flex'; setTimeout(()=> document.getElementById('inputSearchId').focus(), 100); }
+        function closeModal() { document.getElementById('searchModal').style.display = 'none'; }
+
+        function doSearch() {
+            const inputVal = document.getElementById('inputSearchId').value.trim();
+            if(!inputVal) return;
+
+            // ค้นหาแบบยืดหยุ่น (ลองทั้งเทียบตัวอักษรและเทียบตัวเลข)
+            const found = staffList.find(s => 
+                String(s.studentid).trim() === String(inputVal) || 
+                String(s.id).trim() === String(inputVal)
+            );
+
+            if (found) {
+                closeModal();
+                showStaffUI(found);
+            } else {
+                alert("ไม่พบพนักงานรหัส " + inputVal + "\nโปรดตรวจสอบว่ารหัสใน Google Sheets ช่อง Student ID ถูกต้องหรือไม่?");
+            }
         }
 
         function showStaffUI(staff) {
-            selectedStaff = staff;
+            activeStaff = staff;
             document.getElementById('staff-name').innerText = staff.name;
-            document.getElementById('staff-id').innerText = 'ID: ' + staff.studentid;
-            document.getElementById('staff-class').innerText = 'แผนก: ' + staff.class;
+            document.getElementById('staff-id').innerText = 'รหัสพนักงาน: ' + staff.studentid;
             document.getElementById('staff-image').src = staff.imagedatabase64 || 'https://via.placeholder.com/150';
             
             document.getElementById('staff-card').classList.remove('hidden');
-            document.getElementById('action-area').classList.remove('hidden');
+            document.getElementById('main-controls').classList.add('hidden');
             document.getElementById('scan-line').style.display = 'block';
-            
-            isScanning = true;
-            moveDetected = false;
-            lastNoseX = 0;
-            startDetection();
         }
 
-        async function startDetection() {
-            if (!isScanning) return;
-
-            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-                .withFaceLandmarks().withFaceDescriptor();
-
-            if (detection) {
-                // ตรวจการเคลื่อนไหว (Liveness)
-                const nose = detection.landmarks.getNose()[0];
-                if (lastNoseX !== 0 && Math.abs(nose.x - lastNoseX) > 1.2) moveDetected = true;
-                lastNoseX = nose.x;
-
-                // ตรวจความตรงของใบหน้าถ้ามีการลงทะเบียนไว้แล้ว
-                if (faceMatcher) {
-                    const match = faceMatcher.findBestMatch(detection.descriptor);
-                    if (match.label === String(selectedStaff.studentid)) {
-                        if (moveDetected) {
-                            statusText.innerText = "ยืนยันตัวตนสำเร็จ";
-                            document.getElementById('liveness-msg').innerText = "✅ ใบหน้าถูกต้อง กดปุ่มเลือกรายการได้เลย";
-                            // ไม่ต้องหยุดสแกน แต่ให้เปลี่ยนสถานะเพื่อให้พนักงานกดปุ่มได้
-                        }
-                    }
-                }
-            }
-            requestAnimationFrame(startDetection);
+        function resetUI() {
+            activeStaff = null;
+            document.getElementById('staff-card').classList.add('hidden');
+            document.getElementById('main-controls').classList.remove('hidden');
+            document.getElementById('scan-line').style.display = 'none';
+            document.getElementById('inputSearchId').value = "";
         }
 
-        // ฟังก์ชันบันทึกใบหน้า (Fast Scan)
-        async function registerCurrentFace() {
-            const btn = document.getElementById('btn-register');
-            btn.innerText = "⏳ กำลังบันทึกใบหน้า...";
+        async function registerFace() {
+            const btn = document.getElementById('btn-reg');
+            const video = document.getElementById('video');
+            btn.innerText = "⌛ กำลังแสกนใบหน้า...";
             btn.disabled = true;
 
-            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 }))
-                .withFaceLandmarks().withFaceDescriptor();
+            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceDescriptor();
 
             if (detection) {
-                const descriptor = JSON.stringify(Array.from(detection.descriptor));
+                const desc = JSON.stringify(Array.from(detection.descriptor));
                 try {
-                    await fetch(GAS_URL, {
+                    const res = await fetch(GAS_URL, {
                         method: 'POST',
-                        body: JSON.stringify({ action: 'saveDescriptor', studentid: selectedStaff.studentid, descriptor: descriptor })
+                        body: JSON.stringify({ action: 'saveDescriptor', studentid: activeStaff.studentid, descriptor: desc })
                     });
-                    alert("ลงทะเบียนใบหน้าความเร็วสูงสำเร็จ! ต่อไปพนักงานคนนี้จะสแกนได้เร็วขึ้นมาก");
-                    location.reload();
-                } catch(e) { alert("ล้มเหลว"); }
-            } else { alert("ไม่พบใบหน้า กรุณามองกล้องให้ชัด"); }
-            
-            btn.innerText = "ลงทะเบียนใบหน้าใหม่";
+                    const resJson = await res.json();
+                    if(resJson.success) {
+                        alert("ลงทะเบียนใบหน้าสำเร็จ!");
+                        location.reload();
+                    } else { throw new Error(); }
+                } catch(e) { alert("บันทึกลงฐานข้อมูลไม่สำเร็จ"); }
+            } else {
+                alert("ไม่พบใบหน้า กรุณามองตรงไปที่กล้อง");
+            }
             btn.disabled = false;
+            btn.innerText = "ลงทะเบียนใบหน้าพนักงานคนนี้";
         }
 
         async function confirmAttendance(type) {
-            statusText.innerText = "กำลังบันทึกเวลา...";
-            const record = { id: selectedStaff.studentid, name: selectedStaff.name, class: selectedStaff.class, type: type };
+            if(!activeStaff) return;
+            document.getElementById('status-text').innerText = "⏳ กำลังบันทึก...";
+            
             try {
-                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'recordAttendanceUpdate', data: [record] }) });
-                alert(`บันทึก ${type === 'IN' ? 'เข้างาน' : 'ออกงาน'} สำเร็จ`);
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'recordAttendanceUpdate',
+                        data: [{
+                            id: activeStaff.studentid,
+                            name: activeStaff.name,
+                            class: activeStaff.class || 'ทั่วไป',
+                            type: type
+                        }]
+                    })
+                });
+                alert("บันทึก " + (type === 'IN' ? 'เข้างาน' : 'ออกงาน') + " เรียบร้อย");
                 location.reload();
-            } catch(e) { alert("บันทึกไม่สำเร็จ"); }
+            } catch(e) {
+                alert("บันทึกไม่สำเร็จ โปรดลองอีกครั้ง");
+                document.getElementById('status-text').innerText = "🟢 พร้อมใช้งาน";
+            }
         }
 
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('time-display').innerText = now.toLocaleTimeString('th-TH');
-        }
-        setInterval(updateTime, 1000);
-        updateTime();
+        setInterval(() => {
+            document.getElementById('time-display').innerText = new Date().toLocaleTimeString('th-TH');
+        }, 1000);
+        lucide.createIcons();
     </script>
 </body>
 </html>
