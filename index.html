@@ -1,328 +1,1577 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>THAISIAM INKJET - Attendance System</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- ใช้ face-api.js จาก CDN ตามชุดไฟล์ที่แนบมา -->
-  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Kanit', sans-serif; background-color: #0f172a; color: #f1f5f9; height: 100vh; overflow: hidden; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบสแกนหน้าเข้าออกพนักงาน - THAISIAM INKJET</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+    body { font-family: 'Kanit', sans-serif; background-color: #1a1c1e; color: #f8fafc; }
+    .logo-wrapper { position: relative; display: inline-block; perspective: 1000px; overflow: hidden; border-radius: 0.75rem; }
+    .logo-fade { animation: fadeInLogo 1.2s ease forwards; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)); }
+    .logo-spin { animation: spin360 8s linear infinite; transform-style: preserve-3d; }
+    @keyframes fadeInLogo { from { opacity: 0; transform: translateY(-10px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes spin360 { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
     
-    /* สไตล์ Dashboard 5 คอลัมน์ */
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-      height: calc(100vh - 180px);
-      padding: 0 20px;
+    @keyframes pulse-orange {
+        0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); background-color: rgba(30, 41, 59, 1); }
+        50% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); background-color: rgba(245, 158, 11, 1); color: white; }
+        100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); background-color: rgba(30, 41, 59, 1); }
     }
-    .status-col {
-      background: rgba(30, 41, 59, 0.5);
-      border-radius: 12px;
-      display: flex;
-      flex-direction: column;
-      border: 1px solid rgba(255,255,255,0.05);
-    }
-    .col-title {
-      padding: 12px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      text-align: center;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px 12px 0 0;
-    }
-    .scroll-v {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px;
-    }
-    /* ซ่อน scrollbar */
-    .scroll-v::-webkit-scrollbar { width: 0; }
+    .btn-pending-pulse { animation: pulse-orange 2s infinite; border: 1px solid #f59e0b !important; }
 
-    .emp-card {
-      background: #1e293b;
-      padding: 8px;
-      margin-bottom: 8px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      border-left: 4px solid transparent;
+    /* ปรับแต่งการแสดงผลชื่อพนักงานไม่ให้ตกบรรทัด */
+    .employee-name-container {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        display: block;
     }
 
-    /* กล้องสแกนหน้า */
-    #video-container {
-      position: relative;
-      width: 280px;
-      height: 210px;
-      background: #000;
-      border-radius: 15px;
-      overflow: hidden;
-      border: 3px solid #3b82f6;
-    }
-    video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-    canvas { position: absolute; top: 0; left: 0; }
+    /* ระบบ Auto Scroll สำหรับรายงานที่ 5 และรายชื่อพนักงาน */
+    .list-window-scroll { height: 580px; overflow: hidden; position: relative; }
+    .scroll-content { display: flex; flex-direction: column; gap: 8px; animation: smoothScroll 30s linear infinite; }
+    .scroll-content:hover { animation-play-state: paused; }
+    @keyframes smoothScroll { 0% { transform: translateY(0); } 100% { transform: translateY(-50%); } }
 
-    /* Modal */
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; }
-  </style>
-</head>
-<body>
+    nav { background-color: #25282c !important; border-bottom: 1px solid #334155; }
+    .tab-inactive { color: #94a3b8 !important; }
+    #total-staff-count { font-size: 1.5rem !important; font-weight: 900 !important; color: #34d399 !important; text-shadow: 0 0 10px rgba(52, 211, 153, 0.3); }
 
-  <!-- Header -->
-  <header class="flex justify-between items-center p-4 bg-slate-900 shadow-xl">
-    <div class="flex items-center gap-4">
-      <img src="https://lh3.googleusercontent.com/d/1rlAx7j8TDQBCnqrBts_mzs75U1U1aYy3" class="w-12 h-12 rounded-lg">
-      <div>
-        <h1 class="text-xl font-bold text-white uppercase">Thaisiam Inkjet</h1>
-        <p class="text-xs text-blue-400">ระบบสแกนใบหน้าและสรุปผล Real-time</p>
-      </div>
-    </div>
+    /* ปรับหัวรายงานให้สวยงามตามแบบเดิม */
+    .p-3.border-b.font-bold { border-bottom: 2px solid rgba(0,0,0,0.05) !important; padding: 12px 16px !important; font-size: 0.85rem !important; text-transform: uppercase; letter-spacing: 0.5px; }
+    #stat-present, #stat-late, #stat-out, #stat-absent, #stat-upcoming { min-width: 35px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 8px !important; font-size: 1rem !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
 
-    <!-- ส่วนของกล้องสแกนหน้า (วางไว้ด้านบนเพื่อให้เห็นตลอด) -->
-    <div class="flex items-center gap-4 bg-slate-800 p-2 rounded-2xl border border-slate-700">
-      <div id="video-container">
-        <video id="video" autoplay muted></video>
-        <div id="scan-feedback" class="absolute bottom-2 left-0 right-0 text-center text-[10px] bg-black/50 py-1">กำลังรอ AI...</div>
-      </div>
-      <div class="pr-4">
-        <div id="clock" class="text-2xl font-bold text-white">00:00:00</div>
-        <div id="date" class="text-[10px] text-slate-400">-- --- ----</div>
-        <button onclick="startCamera()" id="btn-camera" class="mt-2 bg-blue-600 hover:bg-blue-500 text-white text-xs px-4 py-2 rounded-lg transition-all">เปิดกล้องสแกน</button>
-      </div>
-    </div>
-  </header>
+    /* ตกแต่ง Card ในช่องลาล่วงหน้า */
+#upcoming-leave-list .bg-slate-800 {
+    transition: transform 0.2s;
+}
+#upcoming-leave-list .bg-slate-800:hover {
+    transform: scale(1.02);
+    border-color: #3b82f6;
+}
 
-  <!-- สถิติย่อ -->
-  <div class="flex gap-4 p-4 text-xs">
-    <div class="bg-slate-800 px-4 py-2 rounded-full">มาแล้ว: <span id="stat-present" class="text-emerald-400 font-bold">0</span></div>
-    <div class="bg-slate-800 px-4 py-2 rounded-full">ยังไม่มา: <span id="stat-missing" class="text-rose-400 font-bold">0</span></div>
-    <div class="bg-slate-800 px-4 py-2 rounded-full">สาย: <span id="stat-late" class="text-amber-400 font-bold">0</span></div>
-  </div>
+/* บังคับชื่อพนักงานในทุกช่องไม่ให้ตกบรรทัด */
+.truncate-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+    .list-item-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* ถ้าชื่อยาวเกินจะขึ้น ... แทนการตกบรรทัด */
+}
 
-  <!-- Dashboard 5 คอลัมน์ -->
-  <main class="dashboard-grid">
-    <!-- 1. มาปกติ -->
-    <div class="status-col">
-      <div class="col-title bg-emerald-500/20 text-emerald-400">มาปกติ (IN)</div>
-      <div id="col-normal" class="scroll-v"></div>
-    </div>
-    <!-- 2. มาสาย -->
-    <div class="status-col">
-      <div class="col-title bg-amber-500/20 text-amber-400">มาสาย (IN)</div>
-      <div id="col-late" class="scroll-v"></div>
-    </div>
-    <!-- 3. ออกงาน -->
-    <div class="status-col">
-      <div class="col-title bg-blue-500/20 text-blue-400">ออกงาน (OUT)</div>
-      <div id="col-out" class="scroll-v"></div>
-    </div>
-    <!-- 4. ยังไม่มา -->
-    <div class="status-col">
-      <div class="col-title bg-rose-500/20 text-rose-400">ยังไม่มา</div>
-      <div id="col-absent" class="scroll-v"></div>
-    </div>
-    <!-- 5. ลา / แจ้งล่วงหน้า -->
-    <div class="status-col">
-      <div class="col-title bg-purple-500/20 text-purple-400">ลา / ล่วงหน้า</div>
-      <div id="col-leave" class="scroll-v"></div>
-    </div>
-  </main>
+/* ปรับความกว้างของรูปในช่อง 1-4 ให้เล็กลงนิดนึงเพื่อให้ชื่อมีที่ว่าง */
+.avatar-small {
+    width: 28px;
+    height: 28px;
+}
+  /* คุมไม่ให้ชื่อพนักงานตกบรรทัดในรายงาน 1-4 */
+#normal-list p, #late-list-display p, #out-list p, #absent-list p {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
 
-  <script>
-    // ตั้งค่า API (ต้องตรงกับ Web App URL ของคุณ)
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzeHotjOIF6_P5N82ByzrVIPamzMu_JnL27mc551WBdAfzKwCxD3akItWtcSd7cPO5a/exec';
+/* ปรับแต่ง Scrollbar ให้ดูทันสมัยและไม่เกะกะ */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.3);
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.5);
+}
+
+/* ปรับความสูงของรูปในรายงานให้เล็กลงเพื่อประหยัดพื้นที่ */
+.report-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+}  
+</style>
+
+<nav class="shadow-lg sticky top-0 z-50 p-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center space-x-4">
+            <div class="logo-wrapper">
+                <img src="https://lh3.googleusercontent.com/d/1rlAx7j8TDQBCnqrBts_mzs75U1U1aYy3" alt="Logo" class="logo-fade logo-spin w-14 h-14 object-contain rounded-xl">
+            </div>
+            <div class="flex flex-col">
+                <span class="text-blue-400 font-bold text-2xl tracking-tight">THAISIAM INKJET</span>
+                <span class="text-slate-500 text-[10px] uppercase tracking-[0.2em] font-medium">Professional Attendance Recording Systems</span>
+            </div>
+        </div>
+        <div class="flex bg-slate-800 p-1 rounded-2xl border border-slate-700 shadow-inner overflow-x-auto">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-md transition-all whitespace-nowrap">Dashboard</button>
+            <button onclick="openQuickSearch()" id="tab-scan" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">สแกนบันทึกเวลา</button>
+            <button onclick="switchTab('leave')" id="tab-leave" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">ลงชื่อการลา</button>
+<button onclick="checkAccess('approve')" id="tab-approve" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">จัดการการอนุมัติ</button>
+
+<button onclick="checkAccess('manage')" id="tab-manage" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">พนักงาน</button>
+        </div>
+    </div>
+</nav>
+
+<main class="max-w-[1600px] mx-auto p-2 md:p-4">
+    <div id="content-dashboard" class="space-y-4">
+        <div class="flex flex-col border-b border-slate-700 pb-2 gap-1">
+            <div class="flex flex-wrap items-center gap-3">
+                <h2 class="text-md font-bold text-slate-200 uppercase tracking-widest whitespace-nowrap">สรุปการเข้างานประจำวันที่</h2>
+                <div class="flex items-center gap-2 bg-slate-800/50 p-1 px-3 rounded-xl border border-slate-600 shadow-sm">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">วันที่:</span>
+                    <input type="date" id="dashboard-date" onchange="renderDashboard()" class="bg-transparent text-sm font-bold text-emerald-400 outline-none cursor-pointer [color-scheme:dark]">
+                </div>
+            </div>
+        </div>
+
+<div class="grid grid-cols-1 md:grid-cols-6 gap-3 p-2">
     
-    let employees = [];
-    let faceMatcher = null;
-    let isCameraOn = false;
+    <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
+        <div class="p-2 bg-emerald-500/10 text-emerald-400 font-bold text-[11px] flex justify-between border-b border-emerald-500/20">
+            <span class="tracking-wider">มาปกติ (IN)</span>
+            <span id="stat-present" class="bg-emerald-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
+        </div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="normal-list"></div>
+    </div>
 
-    // 1. เริ่มต้นระบบและโหลดโมเดล (ตามระบบที่คุณแนบมา)
-    window.onload = async () => {
-      updateTime();
-      setInterval(updateTime, 1000);
-      await loadModels();
-      await fetchData();
-      // อัปเดตข้อมูลทุก 1 นาที
-      setInterval(fetchData, 60000);
+    <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
+        <div class="p-2 bg-amber-500/10 text-amber-400 font-bold text-[11px] flex justify-between border-b border-amber-500/20">
+            <span class="tracking-wider">มาสาย (IN)</span>
+            <span id="stat-late" class="bg-amber-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
+        </div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="late-list-display"></div>
+    </div>
+
+    <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
+        <div class="p-2 bg-blue-500/10 text-blue-400 font-bold text-[11px] flex justify-between border-b border-blue-500/20">
+            <span class="tracking-wider">สแกนออก (OUT)</span>
+            <span id="stat-out" class="bg-blue-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
+        </div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="out-list"></div>
+    </div>
+
+    <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
+        <div class="p-2 bg-rose-500/10 text-rose-400 font-bold text-[11px] flex justify-between border-b border-rose-500/20">
+            <span class="tracking-wider">ยังไม่สแกน/ลางาน</span>
+            <span id="stat-absent" class="bg-rose-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
+        </div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="absent-list"></div>
+    </div>
+
+    <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
+        <div class="p-2 bg-slate-800 text-indigo-400 font-bold text-[11px] flex justify-between border-b border-slate-700">
+            <span class="tracking-wider">พนักงานลาล่วงหน้าที่ผ่านการอนุมัติแล้ว (LEAVE)</span>
+            <span id="stat-upcoming" class="bg-indigo-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
+        </div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="upcoming-leave-list"></div>
+    </div>
+
+    <div class="bg-slate-800/40 rounded-2xl border border-slate-600 overflow-hidden flex flex-col h-[650px]">
+        <div class="p-2 border-b border-slate-600 flex justify-between items-center">
+            <h3 class="text-[11px] font-bold text-emerald-400 uppercase">รายชื่อพนักงานทั้งหมด</h3>
+            <span id="total-staff-count" class="bg-slate-700 text-white text-[10px] px-2 py-0.5 rounded-full">0</span>
+        </div>
+        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section" id="all-staff-scan-list"></div>
+    </div>
+</div>
+</div>
+    <div id="content-scan" class="hidden">
+        <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200 text-slate-800">
+            <div class="mb-4">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">📍 เลือกสถานที่ปฏิบัติงาน</label>
+                <select id="location-select" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold outline-none ring-blue-500 focus:ring-2 transition-all"></select>
+            </div>
+            <div class="relative aspect-video bg-slate-900 rounded-2xl overflow-hidden mb-4 border-4 border-slate-50 shadow-inner">
+                <video id="video" class="w-full h-full object-cover" autoplay muted playsinline></video>
+                <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="w-44 h-56 border-2 border-dashed border-emerald-400 rounded-[3.5rem] opacity-60 shadow-[0_0_0_999px_rgba(0,0,0,0.5)]"></div>
+                    <div class="absolute top-1/4 text-emerald-400 text-[10px] font-bold uppercase tracking-widest bg-slate-900/80 px-2 py-1 rounded">วางใบหน้าในกรอบ</div>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <img id="res-img" class="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-sm hidden">
+                <div id="res-img-placeholder" class="w-16 h-16 bg-slate-200 rounded-xl flex items-center justify-center text-slate-400"><i data-lucide="user"></i></div>
+                <div class="overflow-hidden">
+                    <h3 id="res-name" class="text-lg font-bold italic text-slate-800 truncate leading-tight">พร้อมสแกน...</h3>
+                    <p id="res-id" class="text-blue-500 text-xs font-mono tracking-wider">STANDING BY</p>
+                </div>
+            </div>
+            <div id="wrong-face-actions" class="hidden my-4 text-center animate-bounce">
+                <button onclick="resetAndGoBack()" class="w-full bg-rose-50 text-rose-600 py-3 rounded-xl font-bold text-sm border border-rose-200 shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="x-circle" class="w-4 h-4"></i> ไม่ใช่ฉัน.. กลับไปเลือกชื่อใหม่
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mt-4">
+                <button id="btn-in" onclick="finishAttendance('IN')" class="bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all hover:bg-emerald-700">บันทึกเข้างาน (IN)</button>
+                <button id="btn-out" onclick="finishAttendance('OUT')" class="bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all hover:bg-blue-700">บันทึกออกงาน (OUT)</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="content-approve" class="hidden space-y-4">
+        <div class="text-center pb-2">
+            <h3 class="text-xl font-bold italic text-slate-200">Pending Approvals</h3>
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest">รายการรออนุมัติการลา</p>
+        </div>
+        <div id="pending-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </div>
+
+    <div id="content-leave" class="hidden">
+        <div class="max-w-md mx-auto bg-white p-8 rounded-[2.5rem] shadow-2xl space-y-4 text-slate-800">
+            <div class="text-center pb-2">
+                <h3 class="text-xl font-bold italic text-slate-700">Leave Management</h3>
+                <p class="text-[10px] text-slate-400 uppercase tracking-widest">บันทึกข้อมูลการลา (Pending)</p>
+            </div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase">เลือกพนักงาน</label><select id="leave-student-select" class="w-full p-3 rounded-xl border bg-slate-50 text-sm font-bold"></select></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase">วันที่ลา</label><input type="date" id="leave-date" class="w-full p-3 rounded-xl border bg-slate-50 text-sm font-bold"></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase">ประเภทการลา</label><select id="leave-type" class="w-full p-3 rounded-xl border bg-slate-50 text-sm font-bold"><option value="ลากิจ">ลากิจ (Personal Leave)</option><option value="ลาป่วย">ลาป่วย (Sick Leave)</option><option value="พักร้อน">พักร้อน (Annual Leave)</option><option value="พักร้อนครึ่งวันเช้า">พักร้อนครึ่งวันเช้า (Annual Leave 0.5d )</option><option value="พักร้อนครึ่งวันบ่าย">พักร้อนครึ่งวันบ่าย (Annual Leave 0.5d)</option><option value="วันหยุด">วันหยุด (Day Off)</option></select></div>
+            <button onclick="saveLeave()" class="w-full bg-slate-800 text-white py-4 rounded-xl font-bold shadow-md">ส่งคำขอการลา</button>
+        </div>
+    </div>
+
+    <div id="content-manage" class="hidden space-y-4">
+        <div class="flex justify-between items-center text-slate-200">
+            <h2 class="text-xl font-bold uppercase tracking-tighter">Employee List</h2>
+            <button onclick="openAddModal()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-md">+ เพิ่มพนักงาน</button>
+        </div>
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-800 min-w-[600px]">
+                <thead class="bg-slate-50 text-slate-400 font-bold">
+                    <tr><th class="p-4">รูป</th><th class="p-4">รหัส</th><th class="p-4">ชื่อ</th><th class="p-4">แผนก</th><th class="p-4 text-center">จัดการ</th></tr>
+                </thead>
+                <tbody id="student-table-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+        </div>
+    </div>
+</main>
+   <div id="student-modal" class="fixed inset-0 bg-black/80 hidden z-[100] flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl">
+        <div class="p-6 space-y-4">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                <i data-lucide="user-plus" class="text-emerald-400"></i> เพิ่มพนักงานใหม่
+            </h3>
+            
+            <div class="relative aspect-video bg-black rounded-2xl overflow-hidden border-2 border-slate-700 shadow-inner">
+                <video id="modal-video" autoplay muted playsinline class="w-full h-full object-cover"></video>
+                <img id="preview-img" class="w-full h-full object-cover hidden">
+                <div id="face-guide" class="absolute inset-0 border-[3px] border-dashed border-emerald-400/50 rounded-[50%] m-8 pointer-events-none flex items-center justify-center">
+                    <span class="text-[10px] text-emerald-400 font-bold bg-slate-900/80 px-2 py-1 rounded">วางใบหน้าในกรอบ</span>
+                </div>
+            </div>
+
+            <div id="crop-preview-container" class="hidden space-y-2">
+                <div class="flex items-center gap-4 bg-slate-800/50 p-3 rounded-2xl border border-slate-700">
+                    <canvas id="crop-canvas" class="w-20 h-20 rounded-xl border-2 border-emerald-500 object-cover bg-slate-700"></canvas>
+                    <div class="flex-1">
+                        <p id="crop-status" class="text-xs font-bold text-emerald-400">ตรวจสอบใบหน้า...</p>
+                        <p class="text-[9px] text-slate-500">ระบบจะใช้ภาพที่ตัดแล้วนี้เป็นฐานข้อมูล</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <input type="text" id="modal-id" placeholder="รหัสพนักงาน" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white outline-none">
+                <input type="text" id="modal-name" placeholder="ชื่อ-นามสกุล" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white outline-none">
+                <input type="text" id="modal-class" placeholder="แผนก/ตำแหน่ง" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button onclick="snapPhoto()" id="btn-snap" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+                    ถ่ายรูป
+                </button>
+                <label class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer text-center">
+                    เลือกรูปภาพ
+                    <input type="file" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
+                </label>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="saveStudent()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl">บันทึกข้อมูล</button>
+                <button onclick="closeStudentModal()" class="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+</div>
+    <canvas id="capture-canvas" class="hidden"></canvas>
+    <audio id="snd-ok" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+
+<script>
+    const gasUrl = "https://script.google.com/macros/s/AKfycbzeHotjOIF6_P5N82ByzrVIPamzMu_JnL27mc551WBdAfzKwCxD3akItWtcSd7cPO5a/exec";
+    let students = [], attendance = [], locationList = [], leaves = [], faceMatcher = null, scanned = new Map(), capturedImg = null;
+    let isLoggedIn = false, pendingAction = null, pendingDeleteIndex = null;
+    let currentUser = ""; // <--- เพิ่มบรรทัดนี้เพื่อเก็บชื่อคน Login
+    let currentUserRole = null; // เก็บสิทธิ์: 'admin', 'hr', 'supervisor'
+    let targetMenu = null; // เก็บไว้ว่าเขากำลังจะเข้าเมนูไหน
+    let supervisors = [];
+    const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
+
+// แก้ไข window.onload เพื่อแยกโหลด Face API ออกไปข้างหลัง
+window.onload = async () => {
+    lucide.createIcons();
+    const dateInput = document.getElementById('dashboard-date');
+    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+
+    // --- STEP 1: โหลดข้อมูลจาก Sheets มาแสดงผลก่อน (รวดเร็ว) ---
+    await loadAllData(); 
+    
+    // --- STEP 2: สั่งวาดตารางพนักงานทันทีหลังจากได้ข้อมูล ---
+    if (typeof renderStudentTable === 'function') {
+        renderStudentTable();
+    }
+
+    // --- STEP 3: ค่อยๆ โหลด AI Face API ไว้เบื้องหลัง (ไม่ขวางการแสดงผล) ---
+    console.log("Loading Face API in background...");
+    initFaceAPI().then(() => {
+        console.log("Face API Ready!");
+        // ถ้าหน้าสแกนต้องการข้อมูลค่อยสั่ง Render เพิ่มตรงนี้
+        if (typeof renderAllStaffForScan === 'function') renderAllStaffForScan();
+    });
+
+    // อัปเดตข้อมูลทุก 30 วินาที
+    setInterval(async () => {
+        const [aRes, vRes] = await Promise.all([
+            apiCall({action:'getAttendance'}), 
+            apiCall({action:'getLeaves'})
+        ]);
+        if(aRes.success) attendance = aRes.data;
+        if(vRes.success) leaves = vRes.data;
+        renderDashboard();
+    }, 30000);
+};
+    async function apiCall(p) {
+        try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
+        catch(e) { return {success:false}; }
+    }
+
+// ปรับปรุง loadAllData ให้ดึงข้อมูล Supervisor มาด้วย
+async function loadAllData() {
+    const [sRes, aRes, lRes, vRes, supRes] = await Promise.all([
+        apiCall({action:'getStudents'}), 
+        apiCall({action:'getAttendance'}), 
+        apiCall({action:'getLocations'}), 
+        apiCall({action:'getLeaves'}),
+        apiCall({action:'getSupervisors'})
+    ]);
+    
+    // โหลดข้อมูลเข้าตัวแปรหลัก
+    if(sRes.success) students = sRes.data;
+    if(aRes.success) attendance = aRes.data;
+    if(lRes.success) {
+        locationList = lRes.data;
+        renderLocationDropdown(); // วาด Dropdown สถานที่
+    }
+    if(vRes.success) leaves = vRes.data;
+    if(supRes && supRes.success) supervisors = supRes.data;
+
+    // ส่วนที่ทำให้ช้า ให้แยกออกมาทำงานทีหลังเล็กน้อย (Non-blocking)
+    renderDashboard();
+    renderUpcomingLeaves(leaves, students); 
+    
+    // ทยอยวาดส่วนที่กินทรัพยากรสูง
+    setTimeout(() => {
+        renderStudentTable(); // วาดตารางพนักงาน
+        renderLeaveDropdown(); // วาด Dropdown การลา
+    }, 100);
+}
+    // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
+function renderDashboard() {
+    const dateInput = document.getElementById('dashboard-date').value;
+    const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
+    const checkedInIds = new Set(daily.filter(a => a.type === 'IN').map(a => String(a.id)));
+    const counts = { in: 0, late: 0, out: 0 };
+    const lists = { 
+        norm: document.getElementById('normal-list'), 
+        late: document.getElementById('late-list-display'), 
+        out: document.getElementById('out-list'), 
+        abs: document.getElementById('absent-list') 
     };
 
-    function updateTime() {
-      const now = new Date();
-      document.getElementById('clock').innerText = now.toLocaleTimeString('th-TH');
-      document.getElementById('date').innerText = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+    // ล้างข้อมูลเก่าและเอา Class เลื่อนออกก่อน Render ใหม่ทุกครั้ง
+    Object.values(lists).forEach(l => { 
+        if(l){ 
+            l.innerHTML = ''; 
+            l.classList.remove('auto-scroll-active'); 
+        } 
+    });
+
+    // ตรวจสอบรายการรออนุมัติ (ปุ่มกระพริบ)
+    const hasPending = leaves.some(l => l.status === 'Pending' || l.status === 'รออนุมัติ');
+    const approveBtn = document.getElementById('tab-approve');
+    if(hasPending) approveBtn.classList.add('btn-pending-pulse');
+    else approveBtn.classList.remove('btn-pending-pulse');
+
+    // ฟังก์ชันสร้าง Template รายการพนักงาน
+// 1. ฟังก์ชันสร้าง Template รายการพนักงาน (รายงาน 1-3: ปกติ, สาย, ออก)
+const createItem = (a, s) => {
+    const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
+    const locValue = (a.location || "").toString().trim();
+    
+    // --- จุดที่ 1: กำหนดสีตามเงื่อนไขหัวรายงาน ---
+    let borderColor = "border-emerald-500/50"; // สีเขียว (ปกติ)
+    let textColor = "text-emerald-400";
+    let statusLabel = "ปกติ";
+
+    if (a.type === 'OUT') {
+        borderColor = "border-blue-500/50";   // สีน้ำเงิน (ออก)
+        textColor = "text-blue-400";
+        statusLabel = "ออก";
+    } else if (String(a.status).includes('สาย')) {
+        borderColor = "border-amber-500/50";  // สีส้ม/เหลือง (สาย)
+        textColor = "text-amber-400";
+        statusLabel = "สาย";
     }
 
-    async function loadModels() {
-      const feedback = document.getElementById('scan-feedback');
-      feedback.innerText = "กำลังโหลดโมเดล AI...";
-      const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-      await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceLandmarks68Net.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-      feedback.innerText = "AI พร้อมแล้ว";
-    }
+    let mapBtn = (locValue && locValue.includes(',') && a.location_name !== "THAISIAM Office") ? 
+        `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locValue)}" target="_blank" class="flex items-center hover:scale-110 transition-transform mr-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a8 8 0 0 0-8 8c0 5.4 6 11.4 7.3 12.6a1 1 0 0 0 1.4 0C14 21.4 20 15.4 20 10a8 8 0 0 0-8-8z"></path>
+                <circle cx="12" cy="10" r="3" fill="#ffffff"></circle>
+            </svg>
+        </a>` : '';
 
-    // 2. ดึงข้อมูลจาก Google Sheets มาแสดงผล Dashboard
-    async function fetchData() {
-      try {
-        const response = await fetch(`${API_URL}?action=getStudents&t=${Date.now()}`);
-        const result = await response.json();
-        if (result.success) {
-          employees = result.data;
-          renderDashboard();
-          prepareFaceMatcher();
-        }
-      } catch (e) { console.error("Data fetch error", e); }
-    }
-
-    function renderDashboard() {
-      const cols = {
-        normal: document.getElementById('col-normal'),
-        late: document.getElementById('col-late'),
-        out: document.getElementById('col-out'),
-        absent: document.getElementById('col-absent'),
-        leave: document.getElementById('col-leave')
-      };
-
-      // ล้างข้อมูลเก่า
-      Object.values(cols).forEach(c => c.innerHTML = '');
-
-      let countNormal = 0, countLate = 0, countOut = 0, countAbsent = 0, countLeave = 0;
-
-      employees.forEach(emp => {
-        const card = `
-          <div class="emp-card">
-            <img src="${emp.imagedatabase64 || 'https://www.w3schools.com/howto/img_avatar.png'}" class="w-8 h-8 rounded-full border border-slate-600">
-            <div class="flex-1 overflow-hidden">
-              <div class="text-[10px] font-bold truncate">${emp.name}</div>
-              <div class="text-[8px] text-slate-400">${emp.timestamp || 'ยังไม่มีข้อมูล'}</div>
+    return `
+    <div class="flex items-center justify-between bg-slate-800/60 p-2 rounded-xl border ${borderColor} mb-1.5 shadow-sm transition-all hover:bg-slate-700/50 min-h-[45px]">
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+            <img src="${s?.imagedatabase64 || ''}" class="w-9 h-9 rounded-full object-cover border-2 border-slate-700 shadow-md">
+            <div class="overflow-hidden leading-tight flex-1">
+                <p class="font-bold text-white text-[10px] truncate uppercase tracking-tight">${a.name}</p>
+                <p class="text-[9px] text-slate-400 truncate mt-0.5">${a.location_name || '-'}</p>
             </div>
-          </div>
-        `;
+        </div>
+        <div class="flex flex-col items-end gap-1 ml-2 min-w-[70px]">
+            <div class="flex items-center gap-1.5">
+                ${mapBtn}
+                <span class="text-[9px] font-black italic uppercase ${textColor}">${statusLabel}</span>
+            </div>
+            <p class="text-[10px] font-bold text-slate-200 font-mono leading-none">${time} น.</p>
+        </div>
+    </div>`;
+};
 
-        if (emp.status === 'LEAVE') {
-          cols.leave.innerHTML += card;
-          countLeave++;
-        } else if (emp.type === 'OUT') {
-          cols.out.innerHTML += card;
-          countOut++;
-        } else if (emp.type === 'IN') {
-          if (emp.isLate) {
-            cols.late.innerHTML += card;
-            countLate++;
-          } else {
-            cols.normal.innerHTML += card;
-            countNormal++;
-          }
-        } else {
-          cols.absent.innerHTML += card;
-          countAbsent++;
+ // 1. ล้างข้อมูลเก่าออกให้หมดก่อนเติมใหม่ (ป้องกันข้อมูลซ้อนและพื้นหลังกะพริบ)
+    lists.norm.innerHTML = '';
+    lists.late.innerHTML = '';
+    lists.out.innerHTML = '';
+    lists.abs.innerHTML = ''; 
+
+    // 2. แยกพนักงานที่ "มาทำงานแล้ว" ลงตามคอลัมน์ (ปกติ, สาย, ออกงาน)
+    daily.forEach(a => {
+        const s = students.find(x => String(x.studentid) === String(a.id));
+        const statusVal = String(a.status || "");
+        if (a.type === 'OUT') { lists.out.innerHTML += createItem(a, s); counts.out++; }
+        else if (statusVal.includes('สาย')) { lists.late.innerHTML += createItem(a, s); counts.late++; }
+        else { lists.norm.innerHTML += createItem(a, s); counts.in++; }
+    });
+
+    // 3. จัดการรายชื่อพนักงานที่ "ยังไม่สแกน" หรือ "แจ้งลา" (ทำรอบเดียว)
+    students.forEach(s => {
+        if(!checkedInIds.has(String(s.studentid))) {
+            const leaveToday = leaves.find(l => String(l.id) === String(s.studentid) && l.date === dateInput);
+            let statusText = "WAITING";
+            let bgClass = "bg-orange-500/20 text-orange-400 border border-orange-500/30"; 
+            
+            // กำหนดสีกรอบรายงานที่ 4 (สีชมพู/แดง ตามหัวรายงาน)
+            const borderColor = "border-pink-500/40"; 
+
+            if (leaveToday) {
+                if (leaveToday.status === 'Pending' || leaveToday.status === 'รออนุมัติ') {
+                    statusText = "รออนุมัติ";
+                    bgClass = "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"; 
+                } else {
+                    statusText = leaveToday.type;
+                    bgClass = "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"; 
+                }
+            }
+
+            lists.abs.innerHTML += `
+            <div class="flex items-center justify-between bg-slate-800/40 p-2 rounded-xl border ${borderColor} mb-1.5 shadow-sm transition-all min-h-[45px]">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <img src="${s.imagedatabase64}" class="w-9 h-9 rounded-full object-cover border-2 border-slate-700 shadow-md">
+                    <div class="overflow-hidden leading-tight">
+                        <p class="font-bold text-white text-[10px] truncate uppercase tracking-tight">${s.name}</p>
+                        <p class="text-[9px] text-slate-400 truncate mt-0.5">${s.class || '-'}</p>
+                    </div>
+                </div>
+                <div class="text-right min-w-[75px] ml-1">
+                    <span class="px-2 py-0.5 text-[8px] rounded-full font-black tracking-wider uppercase ${bgClass}">${statusText}</span>
+                </div>
+            </div>`;
         }
-      });
+    });
 
-      document.getElementById('stat-present').innerText = countNormal + countLate;
-      document.getElementById('stat-missing').innerText = countAbsent;
-      document.getElementById('stat-late').innerText = countLate;
-    }
+    // --- ส่วนเช็คเงื่อนไขการเลื่อนอัตโนมัติ (ปรับปรุงใหม่) ---
+    Object.keys(lists).forEach(k => {
+        const el = lists[k];
+        if (!el) return;
 
-    // 3. ระบบสแกนหน้า (Logic เดียวกับ scan.html ที่คุณแนบมา)
-    async function startCamera() {
-      const video = document.getElementById('video');
-      const btn = document.getElementById('btn-camera');
-      if (isCameraOn) return;
+        // คอลัมน์ abs (แจ้งลา) ใช้ 13 คน, คอลัมน์อื่น (norm, late, out) ใช้ 12 คน
+        const limit = (k === 'abs') ? 12 : 11;
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
-        video.srcObject = stream;
-        isCameraOn = true;
-        btn.innerText = "กล้องทำงานอยู่...";
-        btn.classList.replace('bg-blue-600', 'bg-emerald-600');
-        detectFace();
-      } catch (err) {
-        alert("ไม่สามารถเปิดกล้องได้: " + err);
-      }
-    }
-
-    function prepareFaceMatcher() {
-      const labeledDescriptors = employees
-        .filter(e => e.faceDescriptor)
-        .map(e => {
-          try {
-            const desc = new Float32Array(JSON.parse(e.faceDescriptor));
-            return new faceapi.LabeledFaceDescriptors(e.studentid, [desc]);
-          } catch(err) { return null; }
-        })
-        .filter(ld => ld !== null);
-
-      if (labeledDescriptors.length > 0) {
-        faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5); // Threshold 0.5 ตามมาตรฐาน
-      }
-    }
-
-    async function detectFace() {
-      const video = document.getElementById('video');
-      const feedback = document.getElementById('scan-feedback');
-      
-      if (!isCameraOn) return;
-
-      const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-
-      if (detection && faceMatcher) {
-        const match = faceMatcher.findBestMatch(detection.descriptor);
-        if (match.label !== 'unknown') {
-          feedback.innerText = `ยินดีต้อนรับ: ${match.label}`;
-          feedback.classList.add('text-emerald-400');
-          
-          // บันทึกลงชีท (เรียก API เดิมของคุณ)
-          await submitAttendance(match.label);
-          
-          // หยุดสแกนชั่วคราวเพื่อป้องกันการสแกนซ้ำ
-          isCameraOn = false;
-          setTimeout(() => { 
-            isCameraOn = true; 
-            feedback.classList.remove('text-emerald-400');
-            detectFace(); 
-          }, 5000); 
-          return;
+        if (el.children.length > limit) {
+            el.innerHTML += el.innerHTML; // Clone ข้อมูลเพื่อให้เลื่อนต่อเนื่อง
+            el.classList.add('auto-scroll-active');
         } else {
-          feedback.innerText = "ไม่พบข้อมูลในระบบ";
+            el.classList.remove('auto-scroll-active');
         }
-      } else {
-        feedback.innerText = "กรุณาขยับใบหน้ามาที่กล้อง";
-      }
+    });
+    // อัปเดตตัวเลขสรุปบนหน้าจอ
+    document.getElementById('stat-present').innerText = counts.in;
+    document.getElementById('stat-late').innerText = counts.late;
+    document.getElementById('stat-out').innerText = counts.out;
+    document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedInIds.size);
+    // --- วางบรรทัดนี้ลงไปครับ ---
+    renderUpcomingLeaves(leaves, students); 
+    // -------------------------
 
-      requestAnimationFrame(detectFace);
+    if (typeof lucide !== 'undefined') {
+        setTimeout(() => { lucide.createIcons(); }, 150);
+    }
+}
+    
+    // --- ส่วนงานจัดการการอนุมัติ ---
+    function renderApprovalList() {
+        const container = document.getElementById('pending-list');
+        container.innerHTML = '';
+        const pending = leaves.filter(l => l.status === 'Pending' || l.status === 'รออนุมัติ');
+        if(pending.length === 0) {
+            container.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500 italic">ไม่มีรายการรออนุมัติ</div>';
+            return;
+        }
+        pending.forEach(l => {
+            const card = document.createElement('div');
+            card.className = "bg-white p-5 rounded-3xl shadow-lg border-l-8 border-amber-500 flex justify-between items-center";
+            card.innerHTML = `<div><h4 class="font-bold text-slate-800">${l.name}</h4><p class="text-xs text-slate-500">${l.type} | ${l.date}</p></div>
+                <button onclick="approveAction('${l.id}', '${l.date}')" class="bg-emerald-600 text-white px-6 py-2 rounded-2xl font-bold shadow-md">อนุมัติ</button>`;
+            container.appendChild(card);
+        });
     }
 
-    async function submitAttendance(studentId) {
-      // ค้นหาพนักงานเพื่อดูว่าล่าสุด IN หรือ OUT
-      const emp = employees.find(e => e.studentid === studentId);
-      const nextType = (emp && emp.type === 'IN') ? 'OUT' : 'IN';
-      
-      const payload = {
-        action: 'logAttendance', // ใช้ชื่อ action ตาม code.gs ที่คุณแนบมา
-        name: studentId,
-        lat: 0,
-        lng: 0
-      };
+// วางทับของเดิมที่เป็นชื่อนี้ได้เลย
+async function approveAction(id, date) {
+    // ดึงชื่อผู้อนุมัติจากตัวแปร currentUser ที่ได้จากการ Login
+    const approverName = currentUser || "Admin"; 
+    
+    if(!confirm(`ยืนยันการอนุมัติรายการนี้ โดยคุณ ${approverName}?`)) return;
 
-      try {
-        // ส่งแบบ POST ตามรูปแบบระบบเดิม
-        await fetch(API_URL, {
-          method: 'POST',
-          mode: 'no-cors', // ตามข้อจำกัดของ GAS
-          body: JSON.stringify(payload)
+    const res = await apiCall({ 
+        action: 'approveLeave', 
+        data: { 
+            id: id, 
+            date: date, 
+            approvedBy: approverName // ส่งชื่อนี้ไปบันทึกใน Sheet
+        } 
+    });
+
+    if(res.success) { 
+        alert("✅ อนุมัติสำเร็จ"); 
+        await loadAllData(); 
+        renderApprovalList(); 
+    } else {
+        alert("❌ ผิดพลาด: " + (res.message || "ติดต่อแอดมิน"));
+    }
+}
+
+    // --- ส่วน Logic พื้นฐาน (คงเดิม) ---
+function switchTab(tab) {
+    // 1. ตรวจสอบการสแกน (คงเดิมไว้)
+    if (tab === 'scan' && !window.targetStaff) {
+        alert("⚠️ กรุณากดเลือกรายชื่อพนักงานที่ 'รายชื่อพนักงาน' ก่อนเข้าหน้าสแกนค่ะ");
+        return; 
+    }
+
+    // ❌ 2. ลบส่วนนี้ออก หรือเปลี่ยน isLoggedIn เป็น true ❌
+    // เดิม: if ((tab === 'approve' || tab === 'manage') && !isLoggedIn) { ... }
+    // ให้เปลี่ยนเป็นแบบนี้ครับ เพื่อให้ข้ามการเช็คตัวแปรเก่าไปเลย
+    if ((tab === 'approve' || tab === 'manage')) {
+        // ปล่อยว่างไว้ หรือลบทิ้ง เพราะเราใช้ checkAccess() คุมไว้แล้วที่ปุ่ม
+    }
+
+    // 3. สลับการแสดงผล (คงเดิมไว้)
+    document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
+    const targetContent = document.getElementById(`content-${tab}`);
+    if (targetContent) targetContent.classList.remove('hidden');
+
+    // 4. ปรับสีปุ่มเมนูให้ Active
+    document.querySelectorAll('nav button').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
+        btn.classList.add('tab-inactive');
+    });
+    const activeTab = document.getElementById(`tab-${tab}`);
+    if (activeTab) {
+        activeTab.classList.add('bg-blue-600', 'text-white', 'font-bold', 'shadow-md');
+        activeTab.classList.remove('tab-inactive');
+    }
+
+    // 5. จัดการระบบกล้องและ "ล็อกปุ่มบันทึก" ทันทีที่เข้าหน้าสแกน
+    if (tab === 'scan') { 
+        // --- ส่วนที่เพิ่มเข้าไปใหม่ ---
+        document.getElementById('btn-in').disabled = true;
+        document.getElementById('btn-out').disabled = true;
+        document.getElementById('btn-in').style.opacity = "0.5";
+        document.getElementById('btn-out').style.opacity = "0.5";
+        
+        const wrongAction = document.getElementById('wrong-face-actions');
+        if(wrongAction) wrongAction.classList.add('hidden');
+        // ------------------------
+
+        startCamera('video'); 
+        setTimeout(startDetector, 1000); 
+    } else {
+        stopCamera('video');
+        if(window.detectorInterval) clearInterval(window.detectorInterval);
+    }
+
+    if (tab === 'approve') renderApprovalList();
+}
+// 2. ฟังก์ชันที่ปุ่ม 'จัดการการอนุมัติ' และ 'พนักงาน' เรียกใช้
+function checkAccess(menuType) {
+    targetMenu = menuType; // จำไว้ว่าผู้ใช้จะไปหน้าไหน
+    
+    // แสดง Modal ล็อกอิน (id ต้องตรงกับที่คุณวางใน HTML)
+    const authModal = document.getElementById('auth-modal');
+    if (authModal) {
+        authModal.classList.remove('hidden');
+        document.getElementById('auth-user').value = '';
+        document.getElementById('auth-pass').value = '';
+        document.getElementById('auth-user').focus();
+    } else {
+        alert("❌ หาหน้าต่าง Login (auth-modal) ไม่เจอในไฟล์ Index");
+    }
+}
+// 3. ฟังก์ชันที่ปุ่ม "ยืนยัน" ใน Modal เรียกใช้
+function processAuth() {
+    const userIn = document.getElementById('auth-user').value.trim();
+    const passIn = document.getElementById('auth-pass').value.trim();
+
+    // ค้นหาคนที่มีชื่อผู้ใช้และรหัสผ่านตรงกับใน Sheet Supervisors
+    const found = supervisors.find(s => s.username === userIn && s.password === passIn);
+
+    if (found) {
+        currentUser = found.name; // เก็บชื่อจริง (Name) ไว้ใช้บันทึกการอนุมัติ
+        currentUserRole = found.role; // เก็บสิทธิ์ (Role)
+        
+        // เมื่อผ่านแล้วให้ไปหน้าต่อไป
+        executeNavigation();
+    } else {
+        alert("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง\n(กรุณาเช็คข้อมูลในหน้าชีท Supervisors)");
+    }
+}
+function executeNavigation() {
+    if (targetMenu === 'manage') {
+        if (currentUserRole === 'admin' || currentUserRole === 'hr') {
+            switchTab('manage');
+            document.getElementById('auth-modal').classList.add('hidden');
+        } else {
+            alert("⚠️ สิทธิ์ของคุณ (Supervisor) ไม่สามารถจัดการพนักงานได้");
+        }
+    } 
+    else if (targetMenu === 'approve') {
+        if (currentUserRole === 'admin' || currentUserRole === 'supervisor') {
+            switchTab('approve');
+            document.getElementById('auth-modal').classList.add('hidden');
+        } else {
+            alert("⚠️ สิทธิ์ของคุณ (HR) ไม่สามารถอนุมัติการลาได้");
+        }
+    }
+}
+    async function saveLeave() {
+        const id = document.getElementById('leave-student-select').value;
+        const student = students.find(x => String(x.studentid) === String(id));
+        const date = document.getElementById('leave-date').value;
+        const type = document.getElementById('leave-type').value;
+        if(!id || !date) return alert("กรุณากรอกข้อมูลให้ครบ");
+        const res = await apiCall({ action: 'addLeave', data: {id, name: student.name, date, type, status: 'Pending'} });
+        if(res.success) { alert("ส่งคำขอสำเร็จ"); location.reload(); }
+        else alert("ล้มเหลว");
+    }
+
+    async function initFaceAPI() {
+        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+        try {
+            await Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL), faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)]);
+            const labeled = [];
+            for (const s of students) {
+                if (s.imagedatabase64) {
+                    try {
+                        const img = await faceapi.fetchImage(s.imagedatabase64);
+                        const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                        if (det) labeled.push(new faceapi.LabeledFaceDescriptors(String(s.studentid), [det.descriptor]));
+                    } catch(e) {}
+                }
+            }
+            if (labeled.length > 0) faceMatcher = new faceapi.FaceMatcher(labeled, 0.45);
+        } catch(e) {}
+    }
+
+let lastNoseX = 0;
+let moveDetected = false;
+let hasBlinked = false;
+let isFacePassed = false;
+let lockFaceBox = null;
+
+async function startDetector() {
+
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+
+    if (!video) return;
+
+    const ctx = overlay.getContext('2d');
+
+    const dim = {
+        width: video.clientWidth,
+        height: video.clientHeight
+    };
+
+    faceapi.matchDimensions(overlay, dim);
+
+    if (window.detectorInterval)
+        clearInterval(window.detectorInterval);
+
+    wrongFaceCount = 0;
+    moveDetected = false;
+    hasBlinked = false;
+    isFacePassed = false;
+    lockFaceBox = null;
+
+    window.detectorInterval = setInterval(async () => {
+
+        if (video.paused || video.ended || isFacePassed) return;
+
+        const detections = await faceapi
+            .detectAllFaces(
+                video,
+                new faceapi.TinyFaceDetectorOptions({
+                    inputSize: 320,
+                    scoreThreshold: 0.3
+                })
+            )
+            .withFaceLandmarks()
+            .withFaceDescriptors();
+
+        ctx.clearRect(0,0,overlay.width,overlay.height);
+
+        if (!detections || detections.length === 0) return;
+
+        // เลือกหน้าที่ใหญ่ที่สุด
+        let bestFace = detections[0];
+
+        for (let d of detections) {
+            if (d.detection.box.width > bestFace.detection.box.width)
+                bestFace = d;
+        }
+
+        const box = bestFace.detection.box;
+
+        ctx.strokeStyle = "#00ff88";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+        const match = faceMatcher.findBestMatch(bestFace.descriptor);
+        const targetId = window.targetStaff ? String(window.targetStaff.studentid) : null;
+
+        const landmarks = bestFace.landmarks;
+
+        // ---------- Blink Detection ----------
+        const ear =
+            (getEAR(landmarks.getLeftEye()) +
+             getEAR(landmarks.getRightEye())) / 2;
+
+        if (ear < 0.23)
+            hasBlinked = true;
+
+        // ---------- Movement Detection ----------
+        const noseX = landmarks.getNose()[0].x;
+
+        if (Math.abs(noseX - lastNoseX) > 1.2)
+            moveDetected = true;
+
+        lastNoseX = noseX;
+
+        const resNameEl = document.getElementById('res-name');
+        const btnIn = document.getElementById('btn-in');
+        const btnOut = document.getElementById('btn-out');
+        const wrongAction = document.getElementById('wrong-face-actions');
+
+        if (targetId && match.label !== targetId) {
+
+            wrongFaceCount++;
+
+            if (wrongFaceCount >= 3) {
+                resNameEl.innerText = "❌ ใบหน้าไม่ตรงกับพนักงานที่เลือก";
+                resNameEl.style.color = "#f43f5e";
+                if (wrongAction)
+                    wrongAction.classList.remove('hidden');
+            }
+
+        }
+
+        else if (match.label === targetId && match.distance < 0.50) {
+
+            if (!hasBlinked && !moveDetected) {
+
+                resNameEl.innerHTML =
+                    `<span style="color:#fbbf24">
+                    กรุณากะพริบตาหรือขยับหน้าเล็กน้อย
+                    </span>`;
+
+            }
+
+            else {
+
+                isFacePassed = true;
+
+                clearInterval(window.detectorInterval);
+
+                const snd = document.getElementById('snd-ok');
+
+                if (snd) {
+                    snd.pause();
+                    snd.currentTime = 0;
+                    snd.play();
+                }
+
+                speak("สแกนใบหน้าสำเร็จ");
+
+                btnIn.disabled = false;
+                btnOut.disabled = false;
+
+                btnIn.style.opacity = "1";
+                btnOut.style.opacity = "1";
+
+                resNameEl.innerText = window.targetStaff.name;
+                resNameEl.style.color = "#10b981";
+
+                document.getElementById('res-id').innerText =
+                    `ID: ${match.label}`;
+
+                if (window.targetStaff.imagedatabase64) {
+                    const img = document.getElementById('res-img');
+                    img.src = window.targetStaff.imagedatabase64;
+                    img.classList.remove('hidden');
+                }
+
+                if (wrongAction)
+                    wrongAction.classList.add('hidden');
+
+            }
+
+        }
+
+    }, 120);
+
+}
+
+// ฟังก์ชันช่วยคำนวณ EAR (ดึงออกมาไว้ข้างนอกเพื่อให้ Code สะอาดขึ้น)
+function getEAR(eye) {
+    const v1 = Math.abs(eye[1].y - eye[5].y);
+    const v2 = Math.abs(eye[2].y - eye[4].y);
+    const h = Math.abs(eye[0].x - eye[3].x);
+    return (v1 + v2) / (2 * h);
+}
+
+async function finishAttendance(type) {
+    const btnIn = document.getElementById('btn-in');
+    const btnOut = document.getElementById('btn-out');
+    const select = document.getElementById('location-select');
+
+    // --- ตรวจสอบความพร้อมก่อนบันทึก ---
+    // ถ้าปุ่มยังโดน Disabled อยู่ (สแกนไม่ผ่าน/ไม่ขยับหน้า) จะกดไม่ได้
+    if (btnIn.disabled && btnOut.disabled) {
+        return alert("⚠️ ระบบยังสแกนใบหน้าไม่สำเร็จ หรือยังไม่ได้ยืนยันตัวตนด้วยการขยับหน้า/กะพริบตาค่ะ");
+    }
+
+    if (!window.targetStaff || !select.value) {
+        return alert("กรุณาเลือกสถานที่ปฏิบัติงานให้ถูกต้อง");
+    }
+
+    const cleanId = String(window.targetStaff.studentid || window.targetStaff.id).trim();
+    const cleanClass = window.targetStaff.class || window.targetStaff.dept || "-";
+    const displayName = window.targetStaff.name;
+
+    const selectedLocName = select.options[select.selectedIndex].text.trim();
+    const selectedLoc = locationList[select.value]; // ใช้ index จาก value ตรงๆ
+
+    btnIn.disabled = true; btnOut.disabled = true;
+
+    try {
+        const pos = await new Promise((res, rej) => {
+            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000 });
         });
         
-        // รอแป๊บนึงแล้วดึงข้อมูลใหม่มาแสดงบน Dashboard
-        setTimeout(fetchData, 2000);
-      } catch (e) { console.error("Submit Error", e); }
+        const currentLat = pos.coords.latitude;
+        const currentLng = pos.coords.longitude;
+
+        if (selectedLocName !== "ทำงานนอกสถานที่" && selectedLoc) {
+            const targetLat = parseFloat(selectedLoc.lat || selectedLoc.Latitude);
+            const targetLng = parseFloat(selectedLoc.lng || selectedLoc.Longitude);
+            const radius = parseFloat(selectedLoc.radius || selectedLoc['Radius (Meters)'] || 100);
+            const distance = getDistance(currentLat, currentLng, targetLat, targetLng);
+            
+            if (distance > radius) {
+                alert(`❌ อยู่นอกพื้นที่!\nคุณห่างจากจุดตั้งแจ้ง ${Math.round(distance)} เมตร (รัศมีที่อนุญาต ${radius} ม.)`);
+                btnIn.disabled = false; btnOut.disabled = false;
+                return; 
+            }
+        }
+
+ const now = new Date();
+        const timestamp = now.toISOString().slice(0, 10) + " " + now.toTimeString().split(' ')[0];
+        
+        let statusText = "";
+        if (type === 'IN') {
+            // คำนวณเวลาเป็นนาทีเพื่อให้เช็คง่ายขึ้น
+            const currentMinutes = (now.getHours() * 60) + now.getMinutes();
+            
+            // เงื่อนไข 1: ช่วงเช้า ไม่เกิน 08:30 (8*60 + 30 = 510 นาที)
+            const isMorningNormal = currentMinutes <= 510;
+            
+            // เงื่อนไข 2: ช่วงบ่าย 12:00 - 13:00 (720 - 780 นาที)
+            const isAfternoonNormal = currentMinutes >= 720 && currentMinutes <= 780;
+
+            // ถ้าอยู่ในช่วงใดช่วงหนึ่งให้ถือว่า "ปกติ" นอกนั้นคือ "สาย"
+            if (isMorningNormal || isAfternoonNormal) {
+                statusText = 'ปกติ';
+            } else {
+                statusText = 'สาย';
+            }
+        } else {
+            statusText = 'ออกงาน';
+        }
+
+        // ส่วนการเรียก apiCall และ alert ด้านล่างใช้ของเดิมได้เลยครับ
+        const res = await apiCall({
+            action: 'recordAttendanceUpdate', 
+            data: [{
+                id: cleanId,
+                name: displayName, 
+                class: cleanClass, 
+                timestamp: timestamp, 
+                location: `${currentLat},${currentLng}`,
+                location_name: selectedLocName, 
+                status: statusText, // ส่งค่าที่คำนวณใหม่ไป
+                type: type
+            }]
+        });
+
+        if (res.success) {
+            if(document.getElementById('snd-ok')) document.getElementById('snd-ok').play();
+            // หน้าจอจะแสดง statusText ตามที่เราคำนวณใหม่ (ปกติ/สาย)
+            alert(`✅ บันทึก ${type} สำเร็จ!\nพนักงาน: ${displayName}\nสถานะ: ${statusText}`);
+            location.reload();
+        } else {
+            alert("บันทึกผิดพลาด: " + res.message);
+        }
+
+    } catch (err) {
+        alert("⚠️ บันทึกไม่ได้: กรุณาเปิด GPS และอนุญาตให้เข้าถึงตำแหน่งที่ตั้ง");
+    } finally {
+        btnIn.disabled = false; btnOut.disabled = false;
     }
-  </script>
+}
+    
+// ฟังก์ชันคำนวณระยะทาง (ต้องมีใน Code ของคุณ)
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3; // รัศมีโลกในหน่วยเมตร
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // ระยะห่างเป็นเมตร
+}
+
+    function renderLocationDropdown() {
+        const select = document.getElementById('location-select');
+        select.innerHTML = '<option value="">-- เลือกสถานที่ --</option>';
+        locationList.forEach((loc, i) => { select.innerHTML += `<option value="${i}">${loc.name}</option>`; });
+    }
+
+    function renderLeaveDropdown() {
+        document.getElementById('leave-student-select').innerHTML = students.map(s => `<option value="${s.studentid}">${s.name}</option>`).join('');
+        document.getElementById('leave-date').value = new Date().toISOString().split('T')[0];
+    }
+
+function renderStudentTable() {
+    const tbody = document.getElementById('student-table-body');
+    if (!tbody || !students.length) return;
+
+    // สร้าง DocumentFragment เพื่อประสิทธิภาพที่สูงกว่าการต่อ String
+    const fragment = document.createDocumentFragment();
+    
+    students.forEach((s, i) => {
+        const tr = document.createElement('tr');
+        tr.className = "border-b border-slate-700 hover:bg-slate-800/50 transition-colors";
+        tr.innerHTML = `
+            <td class="p-4">
+                <img src="${s.imagedatabase64 || ''}" class="w-10 h-10 rounded-full object-cover border border-slate-600 shadow-sm" loading="lazy">
+            </td>
+            <td class="p-4 font-mono text-xs text-slate-400">${s.studentid || '-'}</td>
+            <td class="p-4 font-bold text-slate-200 text-sm">${s.name || '-'}</td>
+            <td class="p-4 text-xs text-blue-400 font-bold">${s.class || '-'}</td>
+            <td class="p-4 text-center">
+                <button onclick="deleteStudent(${i + 2}, \`${s.name}\`)" class="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </td>
+        `;
+        fragment.appendChild(tr);
+    });
+
+    tbody.innerHTML = '';
+    tbody.appendChild(fragment);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+    // --- วางตัวแปรไว้ด้านบนสุดของกลุ่มฟังก์ชัน ---
+    let croppedImg = null; 
+    async function startCamera(id) { try { document.getElementById(id).srcObject = await navigator.mediaDevices.getUserMedia({video:true}); } catch(e){} }
+    function stopCamera(id) { const v = document.getElementById(id); if(v?.srcObject) v.srcObject.getTracks().forEach(t => t.stop()); }
+    function speak(t) { const m = new SpeechSynthesisUtterance(t); m.lang = 'th-TH'; window.speechSynthesis.speak(m); }
+    function checkLogin() { const u = document.getElementById('login-user').value, p = document.getElementById('login-pass').value; if (AUTHORIZED_USERS[u] === p) { isLoggedIn = true; currentUserName = u; document.getElementById('login-modal').classList.add('hidden'); if(pendingAction) switchTab(pendingAction); } else alert("Error"); }
+    function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
+    
+    function startModalCamera() { 
+        startCamera('modal-video'); 
+        document.getElementById('modal-video').classList.remove('hidden'); 
+        document.getElementById('preview-img').classList.add('hidden'); 
+        document.getElementById('btn-snap').classList.remove('hidden'); 
+        document.getElementById('face-guide').classList.remove('hidden'); // แสดงเส้นไกด์
+    }
+
+    // ฟังก์ชันถ่ายรูปพร้อมระบบ Auto-Crop ใบหน้า
+async function snapPhoto() {
+    const v = document.getElementById('modal-video');
+    const previewImg = document.getElementById('preview-img');
+    const cropCanvas = document.getElementById('crop-canvas');
+    const cropStatus = document.getElementById('crop-status');
+    
+    const detections = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.5 }));
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = v.videoWidth;
+    tempCanvas.height = v.videoHeight;
+    tempCanvas.getContext('2d').drawImage(v, 0, 0);
+    
+    // --- จุดที่ 1: บีบอัดรูปเต็ม (Preview) ให้เหลือ 0.6 ---
+    capturedImg = tempCanvas.toDataURL('image/jpeg', 0.6); 
+    previewImg.src = capturedImg;
+    previewImg.classList.remove('hidden');
+    v.classList.add('hidden');
+    document.getElementById('face-guide').classList.add('hidden');
+    document.getElementById('btn-snap').classList.add('hidden');
+
+    stopCamera('modal-video');
+
+    document.getElementById('crop-preview-container').classList.remove('hidden');
+    cropCanvas.width = 200; // ปรับขนาด Canvas ลงเล็กน้อย (200x200 ก็เพียงพอแล้ว)
+    cropCanvas.height = 200;
+    const ctx = cropCanvas.getContext('2d');
+
+    if (detections) {
+        const { x, y, width, height } = detections.box;
+        const margin = width * 0.3;
+        // วาดรูปลงบน Canvas ขนาด 200x200
+        ctx.drawImage(tempCanvas, x - margin, y - margin, width + (margin * 2), height + (margin * 2), 0, 0, 200, 200);
+        
+        // --- จุดที่ 2: บีบอัดรูปที่ Crop แล้ว (รูปที่จะลง Database) ให้เหลือ 0.5 ---
+        // ใช้คุณภาพ 0.5 จะได้ไฟล์ขนาดประมาณ 15-30 KB เท่านั้น
+        croppedImg = cropCanvas.toDataURL('image/jpeg', 0.5); 
+        
+        cropStatus.innerText = "✅ ตรวจพบใบหน้าชัดเจน (บีบอัดไฟล์เพื่อความรวดเร็ว)";
+        cropStatus.className = "text-xs font-bold text-emerald-400";
+    } else {
+        ctx.drawImage(tempCanvas, (tempCanvas.width/2)-150, (tempCanvas.height/2)-150, 300, 300, 0, 0, 200, 200);
+        
+        // --- จุดที่ 3: บีบอัดกรณีไม่พบใบหน้า ---
+        croppedImg = cropCanvas.toDataURL('image/jpeg', 0.5); 
+        
+        cropStatus.innerText = "⚠️ ไม่พบใบหน้าในตำแหน่งที่ถูกต้อง";
+        cropStatus.className = "text-xs font-bold text-amber-400";
+    }
+}
+
+    // ฟังก์ชันบันทึกข้อมูล (ใช้รูปที่ Crop แล้ว)
+    async function saveStudent() { 
+        const sId = document.getElementById('modal-id').value;
+        const sName = document.getElementById('modal-name').value;
+        const sClass = document.getElementById('modal-class').value;
+        const finalImage = croppedImg || capturedImg;
+
+        if(!finalImage || !sId || !sName) return alert("กรุณาถ่ายรูปและกรอกข้อมูลให้ครบ"); 
+        
+        const res = await apiCall({ 
+            action: 'addStudent', 
+            data: {studentid: sId, name: sName, class: sClass, imagedatabase64: finalImage} 
+        }); 
+        
+        if(res.success) location.reload(); 
+        else alert("Error"); 
+    }
+
+    // ฟังก์ชันปิดหน้าต่างและรีเซ็ตค่า
+    function closeStudentModal() { 
+        document.getElementById('student-modal').classList.add('hidden'); 
+        stopCamera('modal-video'); 
+        document.getElementById('modal-video').classList.remove('hidden');
+        document.getElementById('preview-img').classList.add('hidden');
+        document.getElementById('btn-snap').classList.remove('hidden');
+        document.getElementById('crop-preview-container').classList.add('hidden');
+        croppedImg = null;
+    }
+
+   // แก้ไขฟังก์ชันเปิด Modal ให้กล้องทำงานทันที
+    function openAddModal() {
+        document.getElementById('student-modal').classList.remove('hidden');
+        startCamera('modal-video'); // สั่งเปิดกล้องทันที
+        document.getElementById('modal-video').classList.remove('hidden');
+        document.getElementById('preview-img').classList.add('hidden');
+        document.getElementById('face-guide').classList.remove('hidden');
+        document.getElementById('btn-snap').classList.remove('hidden');
+        document.getElementById('crop-preview-container').classList.add('hidden');
+        croppedImg = null;
+    }
+
+    // ฟังก์ชันจัดการเมื่อเลือกไฟล์จากเครื่อง
+    async function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const img = new Image();
+            img.onload = async function() {
+                // แสดงภาพที่เลือกในกรอบ Preview หลัก
+                const previewImg = document.getElementById('preview-img');
+                previewImg.src = e.target.result;
+                previewImg.classList.remove('hidden');
+                document.getElementById('modal-video').classList.add('hidden');
+                document.getElementById('face-guide').classList.add('hidden');
+                document.getElementById('btn-snap').classList.add('hidden');
+                stopCamera('modal-video');
+
+                // พยายาม Crop จากรูปที่อัปโหลด
+                const cropCanvas = document.getElementById('crop-canvas');
+                const cropStatus = document.getElementById('crop-status');
+                document.getElementById('crop-preview-container').classList.remove('hidden');
+
+                const detections = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions());
+                
+                cropCanvas.width = 200;
+                cropCanvas.height = 200;
+                const ctx = cropCanvas.getContext('2d');
+
+                if (detections) {
+                    const { x, y, width, height } = detections.box;
+                    const margin = width * 0.25;
+                    ctx.drawImage(img, x - margin, y - margin, width + (margin * 2), height + (margin * 2), 0, 0, 200, 200);
+                    croppedImg = cropCanvas.toDataURL('image/jpeg', 0.9);
+                    cropStatus.innerText = "ตรวจพบใบหน้าจากรูปภาพ";
+                    cropStatus.className = "text-xs font-bold text-emerald-400";
+                } else {
+                    ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 200, 200);
+                    croppedImg = e.target.result;
+                    cropStatus.innerText = "ไม่พบใบหน้าในรูป (ใช้ภาพเต็ม)";
+                    cropStatus.className = "text-xs font-bold text-red-400";
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+function renderAllStaffForScan() {
+    const container = document.getElementById('all-staff-scan-list');
+    const badge = document.getElementById('total-staff-count');
+    if(!container) return;
+    
+    // ล้างค่าเดิมและสร้าง Wrapper สำหรับการเลื่อนแบบลื่นไหล
+    container.innerHTML = '<div id="staff-scroll-wrapper" class="scroll-content-staff"></div>';
+    const wrapper = document.getElementById('staff-scroll-wrapper');
+    
+    if (typeof students !== 'undefined' && students.length > 0) {
+        if(badge) badge.innerText = `${students.length} คน`;
+
+        let staffHtml = '';
+        students.forEach(s => {
+            const staffImg = s.imagedatabase64 || s.image || 'https://via.placeholder.com/150';
+            const staffId = s.studentid || s.id || 'N/A';
+            const staffDept = s.class || s.dept || '-'; // ดึงข้อมูล Class/แผนก
+
+            // สร้าง HTML สำหรับพนักงานแต่ละคน (ใช้ฟังก์ชัน selectStaffForScan เมื่อคลิก)
+            staffHtml += `
+                <div onclick="selectStaffForScan('${encodeURIComponent(JSON.stringify(s))}')" 
+                     class="flex items-center gap-3 bg-white p-2 h-[60px] rounded-xl border border-slate-200 hover:border-emerald-500 cursor-pointer transition-all active:scale-95 shadow-sm mb-2 group">
+                    <div class="relative flex-shrink-0">
+                        <img src="${staffImg}" class="w-11 h-11 rounded-lg object-cover border border-slate-100 shadow-sm">
+                        <div class="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center">
+                            <i data-lucide="camera" class="w-2 h-2 text-white"></i>
+                        </div>
+                    </div>
+                    <div class="flex flex-col overflow-hidden leading-tight">
+                        <p class="text-[9px] text-blue-600 font-black font-mono tracking-tighter">${staffId}</p>
+                        <p class="text-[13px] font-bold text-slate-800 truncate" style="line-height: 1.2;">${s.name}</p>
+                        <p class="text-[10px] text-slate-500 font-medium italic">แผนก: ${staffDept}</p>
+                    </div>
+                </div>`;
+        });
+
+        // ถ้ามีพนักงานมากกว่า 8 คน ให้ทำการเบิ้ลรายการเพื่อให้เลื่อนแบบ Infinite Loop ได้เนียนๆ
+        if (students.length > 8) {
+            wrapper.innerHTML = staffHtml + staffHtml;
+            wrapper.classList.add('animate-scroll-staff'); // ใส่ class เพื่อสั่งวิ่ง
+        } else {
+            wrapper.innerHTML = staffHtml;
+            wrapper.classList.remove('animate-scroll-staff');
+        }
+
+    } else {
+        container.innerHTML = '<p class="text-center text-slate-500 text-xs py-10">ไม่พบข้อมูลรายชื่อพนักงาน</p>';
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ฟังก์ชันสำหรับจัดการเมื่อคลิกเลือกพนักงานจากรายการ
+function selectStaffForScan(staffData) {
+    const s = JSON.parse(decodeURIComponent(staffData));
+    window.targetStaff = s; // ล็อกเป้าหมายพนักงาน
+
+    // ส่งข้อมูลไปหน้าสแกน
+    document.getElementById('res-name').innerText = s.name;
+    document.getElementById('res-id').innerText = `ID: ${s.studentid || s.id}`;
+    const resImg = document.getElementById('res-img');
+    resImg.src = s.imagedatabase64 || s.image;
+    resImg.classList.remove('hidden');
+    document.getElementById('res-img-placeholder').classList.add('hidden');
+    
+    // ซ่อนปุ่มแจ้งเตือนใบหน้าไม่ตรง (ถ้ามีค้างอยู่)
+    const wrongAction = document.getElementById('wrong-face-actions');
+    if(wrongAction) wrongAction.classList.add('hidden');
+
+    // เปลี่ยนหน้าไปหน้าสแกน
+    switchTab('scan');
+}
+function resetAndGoBack() {
+    window.targetStaff = null; 
+    stopCamera('video'); 
+    if (window.detectorInterval) clearInterval(window.detectorInterval); 
+    
+    // รีเซ็ตปุ่มบันทึกให้กลับไปล็อกเสมอ
+    const btnIn = document.getElementById('btn-in');
+    const btnOut = document.getElementById('btn-out');
+    if(btnIn) { btnIn.disabled = true; btnIn.style.opacity = "0.5"; }
+    if(btnOut) { btnOut.disabled = true; btnOut.style.opacity = "0.5"; }
+    
+    switchTab('dashboard'); 
+}
+    // ฟังก์ชันทำให้รายชื่อพนักงานเลื่อนอัตโนมัติ (แก้ไขจุดที่ 1)
+function initStaffScroll() {
+    const container = document.getElementById('all-staff-scan-list');
+    if (!container || students.length <= 8) return;
+
+    // ล้าง Interval เก่าก่อนเริ่มใหม่
+    if (window.staffScrollInterval) clearInterval(window.staffScrollInterval);
+
+    window.staffScrollInterval = setInterval(() => {
+        const firstChild = container.firstElementChild;
+        if (!firstChild) return;
+
+        // ค่อยๆ เลื่อนขึ้น
+        container.style.transition = "margin-top 0.8s ease-in-out";
+        container.style.marginTop = `-${firstChild.offsetHeight + 8}px`;
+
+        setTimeout(() => {
+            container.style.transition = "none";
+            container.style.marginTop = "0px";
+            container.appendChild(firstChild); // ย้ายตัวบนสุดไปต่อท้าย
+        }, 800);
+    }, 3000); // ทุกๆ 3 วินาที
+}
+
+// ฟังก์ชันปุ่มกดยกเลิก กลับไปเลือกใหม่ (แก้ไขจุดที่ 3)
+function resetAndGoBack() {
+    window.targetStaff = null; // ล้างพนักงานที่เลือก
+    stopCamera('video'); // ปิดกล้อง
+    if (window.detectorInterval) clearInterval(window.detectorInterval); // หยุดตัวตรวจจับหน้า
+    switchTab('dashboard'); // กลับหน้าหลัก
+}
+
+// ฟังก์ชันสำหรับ Render รายการลาล่วงหน้า
+function renderUpcomingLeaves(allLeaves, allStaff) {
+    const upcomingContainer = document.getElementById('upcoming-leave-list');
+    const statUpcoming = document.getElementById('stat-upcoming');
+    if(!upcomingContainer || !statUpcoming) return;
+
+    const dateInput = document.getElementById('dashboard-date').value;
+    const today = new Date(dateInput);
+    today.setHours(0, 0, 0, 0);
+
+    upcomingContainer.innerHTML = '';
+    let count = 0;
+
+    const filteredLeaves = allLeaves.filter(row => {
+        const lDate = new Date(row.Date || row.date);
+        lDate.setHours(0, 0, 0, 0);
+        const lStatus = (row.Status || row.status || "").toString().toLowerCase();
+        return lStatus === 'approved' && lDate > today;
+    });
+
+    filteredLeaves.forEach(leave => {
+        const s = allStaff.find(x => String(x.studentid) === String(leave.id || leave.StudentID));
+        if (s) {
+            count++;
+            const d = new Date(leave.Date || leave.date);
+            const dStr = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+            // ดึงชื่อ Approved By มาแสดงผล
+            const approvedBy = leave.ApprovedBy || leave.approvedby || '-';
+
+            upcomingContainer.innerHTML += `
+                <div class="flex items-center justify-between bg-slate-800/40 p-2 rounded-xl border border-white/5 mb-2 shadow-sm transition-all hover:bg-slate-700/50">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <img src="${s.imagedatabase64}" class="w-9 h-9 rounded-full object-cover border-2 border-indigo-500/30">
+                        <div class="overflow-hidden leading-tight">
+                            <p class="font-bold text-white text-[11px] truncate uppercase">${s.name}</p>
+                            <p class="text-[9px] text-slate-400 italic">Approved By: <span class="text-emerald-400 font-semibold">${approvedBy}</span></p>
+                        </div>
+                    </div>
+                    <div class="text-right min-w-[65px] ml-1">
+                        <p class="text-[9px] font-bold text-amber-400 leading-none mb-1">${leave.Type || leave.type}</p>
+                        <p class="text-[10px] font-black text-white/90 tracking-tighter italic leading-none">${dStr}</p>
+                    </div>
+                </div>`;
+        }
+    });
+    statUpcoming.innerText = count;
+}
+// 1. แก้ไขรูปแบบการ์ดลาล่วงหน้า (ดึง Approved By และเปลี่ยนเป็น ค.ศ.)
+function renderLeaveCard(item) {
+  const d = new Date(item.Date);
+  // บังคับรูปแบบวันที่เป็น ค.ศ. (วัน/เดือน/ปี)
+  const formattedDate = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+
+  return `
+    <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-2 flex items-center gap-3 mb-2 shadow-sm">
+      <img src="${getStaffPhoto(item.Name)}" class="w-10 h-10 rounded-full border-2 border-slate-600 object-cover shadow-md">
+      
+      <div class="flex-grow min-w-0">
+        <div class="text-[12px] font-bold text-slate-100 truncate">${item.Name}</div>
+        
+        <div class="flex justify-between items-end mt-1">
+          <div class="flex flex-col">
+            <span class="text-[9px] text-amber-400 font-semibold">${item.Type}</span>
+            <span class="text-[8px] text-slate-400">Approved By: ${item.ApprovedBy || '-'}</span>
+          </div>
+          <span class="text-[10px] font-black text-slate-300">${formattedDate}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// 3. ระบบเลื่อนอัตโนมัติ (ใส่ไว้ท้ายสุดของ Script)
+function startContinuousScroll() {
+    const scrollSections = document.querySelectorAll('.auto-scroll-section');
+    
+    scrollSections.forEach(section => {
+        // เคลียร์ Interval เดิมเพื่อป้องกันการซ้อนทับ
+        if(section.dataset.scrollInterval) clearInterval(section.dataset.scrollInterval);
+        
+        const interval = setInterval(() => {
+            // เลื่อนลงทีละ 1px
+            section.scrollTop += 1;
+            
+            // ถ้าเลื่อนจนสุด (เหลือระยะห่างไม่เกิน 1px จากขอบล่าง) ให้กลับไปเริ่มที่ 0 ทันที
+            if (section.scrollTop + section.clientHeight >= section.scrollHeight - 1) {
+                section.scrollTop = 0;
+            }
+        }, 40); // ความเร็ว 40ms (ปรับให้ช้าลงเพื่อความสมูท)
+        
+        section.dataset.scrollInterval = interval;
+    });
+}
+
+// เรียกใช้งานหลังจาก Render ข้อมูลเสร็จ 1 วินาที
+setTimeout(startContinuousScroll, 1000);
+// ปรับปรุงฟังก์ชันกรองข้อมูลลาล่วงหน้า
+function updateLeaveDisplay(allLeaves, selectedDate) {
+  const container = document.getElementById('upcoming-leave-list');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  const targetDate = new Date(selectedDate);
+  targetDate.setHours(0, 0, 0, 0); // ตั้งค่าเวลาเป็นศูนย์เพื่อการเปรียบเทียบที่แม่นยำ
+
+  // กรองข้อมูล: ต้องเป็น Approved และวันที่ต้องเท่ากับหรือมากกว่าวันที่เลือก
+  const upcoming = allLeaves.filter(row => {
+    const leaveDate = new Date(row.Date);
+    leaveDate.setHours(0, 0, 0, 0);
+    return row.Status === 'Approved' && leaveDate >= targetDate;
+  });
+
+  // อัปเดตตัวเลขจำนวนคนลา
+  const statElement = document.getElementById('stat-upcoming');
+  if (statElement) statElement.textContent = upcoming.length;
+
+  // นำข้อมูลไปแสดงผลด้วยรูปแบบการ์ดที่สวยงาม
+  upcoming.forEach(item => {
+    container.innerHTML += renderLeaveCard(item);
+  });
+}
+
+async function deleteStudent(rowNum, name) {
+    if (!confirm(`⚠️ ยืนยันการลบรายชื่อพนักงาน: ${name} ?`)) return;
+
+    try {
+        // เปลี่ยนจาก scriptURL เป็น gasUrl ให้ตรงกับที่คุณประกาศไว้
+        const response = await fetch(gasUrl, { 
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'deleteStudent',
+                data: { rowIndex: rowNum } 
+            })
+        });
+
+        // สำหรับ Apps Script การใช้ fetch POST บางครั้ง browser จะมองว่า error แม้คำสั่งจะไปถึง
+        // เราจะตรวจสอบจากผลลัพธ์ที่ส่งกลับมา
+        const res = await response.json();
+        
+        if (res.success) {
+            alert('✅ ลบข้อมูลพนักงานเรียบร้อยแล้ว');
+            // เรียกฟังก์ชันโหลดข้อมูลใหม่ (ในไฟล์คุณคือ handleGetStudents)
+            if (typeof handleGetStudents === "function") {
+                handleGetStudents();
+            } else {
+                location.reload(); // ถ้าหาฟังก์ชันไม่เจอให้รีโหลดหน้าจอ
+            }
+        } else {
+            alert('❌ ลบไม่สำเร็จ: ' + res.error);
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        // ถ้าขึ้นว่าเชื่อมต่อไม่ได้ แต่ข้อมูลใน Google Sheets หายไปแล้ว แสดงว่าลบสำเร็จ
+        alert("✅ ดำเนินการลบเรียบร้อยแล้ว (ระบบกำลังอัปเดตตาราง)");
+        location.reload(); 
+    }
+}
+    // ฟังก์ชันเปิดกล่องค้นหา
+function openQuickSearch() {
+  document.getElementById('quickSearchModal').style.display = 'block';
+  const input = document.getElementById('inputSearchId');
+  input.value = '';
+  input.focus(); // ให้เคอร์เซอร์กระพริบรอทันที
+  
+  // รองรับการกด Enter
+  input.onkeypress = function(e) {
+    if (e.keyCode == 13) processQuickSearch();
+  };
+}
+
+function closeQuickSearch() {
+  document.getElementById('quickSearchModal').style.display = 'none';
+}
+
+// ฟังก์ชันประมวลผลการค้นหา
+function processQuickSearch() {
+  console.log("🔍 เริ่มค้นหา...");
+
+  const idField = document.getElementById('inputSearchId');
+  const inputId = idField.value.trim();
+
+  if (!inputId) {
+    alert("กรุณาระบุ Student ID");
+    idField.focus();
+    return;
+  }
+
+  // 🔎 ค้นหาพนักงาน
+  const emp = students.find(s => {
+    const sID = String(s.studentid || s.StudentID || s.id || "").trim();
+    return sID === inputId;
+  });
+
+  if (emp) {
+    console.log("✅ พบพนักงาน:", emp.name);
+
+    // 1. ปิด popup
+    closeQuickSearch();
+
+    // 2. ตั้งค่าพนักงานเป้าหมาย (สำคัญมาก!)
+    window.targetStaff = emp;
+
+    // 3. ใส่ข้อมูลลงหน้าสแกนทันที
+    document.getElementById('res-name').innerText = emp.name;
+    document.getElementById('res-id').innerText = `ID: ${emp.studentid || emp.id}`;
+
+    const resImg = document.getElementById('res-img');
+    if (emp.imagedatabase64 || emp.image) {
+      resImg.src = emp.imagedatabase64 || emp.image;
+      resImg.classList.remove('hidden');
+      document.getElementById('res-img-placeholder').classList.add('hidden');
+    }
+
+    // 4. ไปหน้าสแกน
+    switchTab('scan');
+
+  } else {
+    alert("❌ ไม่พบ Student ID: " + inputId);
+    idField.value = '';
+    idField.focus();
+  }
+}
+// ปรับปรุงฟังก์ชันเดิมของคุณให้รับค่าตรงๆ
+function showScanSection(id, name, img) {
+    // โค้ดส่วนที่สั่งเปิดหน้าสแกน (ตามภาพที่ 2 ของคุณ)
+    // โดยนำ id, name, img ไปแสดงผลที่ Card พนักงานทันที
+    document.getElementById('displayEmpName').innerText = name;
+    document.getElementById('displayEmpId').innerText = 'ID: ' + id;
+    document.getElementById('displayEmpImg').src = img;
+    
+    // เปลี่ยนหน้าไปยังส่วนสแกน (ใช้คำสั่งเดิมในโปรแกรมคุณ)
+    switchPage('scan-page'); 
+}
+</script>
+    <div id="auth-modal" class="fixed inset-0 bg-slate-900/90 z-[9999] flex items-center justify-center hidden backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-3xl max-w-sm w-full shadow-2xl space-y-4 text-slate-800">
+            <h3 class="text-xl font-bold text-center text-blue-600">ยืนยันสิทธิ์เข้าใช้งาน</h3>
+            <p id="auth-desc" class="text-sm text-center text-slate-500">กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ</p>
+            
+            <input type="text" id="auth-user" placeholder="ชื่อผู้ใช้" class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+            <input type="password" id="auth-pass" placeholder="รหัสผ่าน" class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+            
+            <button onclick="processAuth()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all">ยืนยัน</button>
+            <button onclick="document.getElementById('auth-modal').classList.add('hidden')" class="w-full text-slate-400 text-xs text-center">ยกเลิก</button>
+        </div>
+    </div>
+<div id="quickSearchModal" class="modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-blur: 5px;">
+  <div style="background:#ffffff; margin:15% auto; padding:30px; width:90%; max-width:400px; border-radius:24px; text-align:center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+    <h3 style="color:#1e293b; margin-bottom:20px; font-size:1.25rem; font-weight:600;">สแกนเข้างานด้วยรหัส</h3>
+    
+    <input type="text" id="inputSearchId" placeholder="ป้อน Student ID" 
+           style="width:100%; padding:15px; font-size:24px; border-radius:12px; border:2px solid #e2e8f0; text-align:center; color:#000000; background:#f8fafc; font-weight:bold; margin-bottom:10px;">
+    
+    <p style="color:#64748b; font-size:0.875rem; margin-bottom:20px;">ใช้เครื่องสแกนบาร์โค้ดได้ทันที</p>
+    
+    <div style="display: flex; gap: 10px;">
+      <button onclick="closeQuickSearch()" style="flex:1; padding:12px; background:#f1f5f9; color:#475569; border:none; border-radius:12px; font-weight:600; cursor:pointer;">ยกเลิก</button>
+      <button onclick="processQuickSearch()" style="flex:2; padding:12px; background:#2563eb; color:white; border:none; border-radius:12px; font-weight:600; cursor:pointer;">ตกลง</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
