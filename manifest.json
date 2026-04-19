@@ -1,0 +1,15 @@
+{
+  "short_name": "TS-Dashboard",
+  "name": "THAISIAM Dashboard",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e293b",
+  "icons": [
+    {
+      "src": "https://lh3.googleusercontent.com/d/1rlAx7j8TDQBCnqrBts_mzs75U1U1aYy3",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
