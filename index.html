@@ -115,10 +115,18 @@
             </div>
         </div>
         <div class="flex bg-slate-800 p-1 rounded-2xl border border-slate-700 shadow-inner overflow-x-auto">
-            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-md transition-all whitespace-nowrap">Dashboard</button>
-            <button onclick="openQuickSearch()" id="tab-scan" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">สแกนบันทึกเวลา</button>
-            <button onclick="switchTab('leave')" id="tab-leave" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">ลงชื่อการลา</button>
-<button onclick="checkAccess('approve')" id="tab-approve" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">จัดการการอนุมัติ</button>
+    <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-md transition-all whitespace-nowrap">Dashboard</button>
+    
+    <a href="https://pro602.github.io/face-scan-system/" 
+       target="_blank"
+       class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap flex items-center justify-center" 
+       id="tab-scan">
+       สแกนบันทึกเวลา
+    </a>
+
+    <button onclick="switchTab('leave')" id="tab-leave" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">ลงชื่อการลา</button>
+    <button onclick="checkAccess('approve')" id="tab-approve" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">จัดการการอนุมัติ</button>
+</div>
 
 <button onclick="checkAccess('manage')" id="tab-manage" class="px-4 py-2 rounded-xl text-sm font-medium tab-inactive transition-all whitespace-nowrap">พนักงาน</button>
         </div>
