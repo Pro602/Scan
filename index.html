@@ -151,9 +151,18 @@
     <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
         <div class="p-2 bg-emerald-500/10 text-emerald-400 font-bold text-[11px] flex justify-between border-b border-emerald-500/20">
             <span class="tracking-wider">มาปกติ (IN)</span>
-           <div class="flex gap-1">
-  <span onclick="setDashboardFilter('normal','มาปกติ')" id="stat-present-morning" class="cursor-pointer bg-red-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
-  <span onclick="setDashboardFilter('normal','มาปกติ1')" id="stat-present" class="cursor-pointer bg-emerald-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
+<div class="flex gap-2">
+  <span onclick="setDashboardFilter('normal','มาปกติ')"
+    id="stat-present-morning"
+    class="cursor-pointer w-8 h-6 flex items-center justify-center rounded-md text-xs font-bold bg-emerald-400 text-black shadow">
+    0
+  </span>
+
+  <span onclick="setDashboardFilter('normal','มาปกติ1')"
+    id="stat-present"
+    class="cursor-pointer w-8 h-6 flex items-center justify-center rounded-md text-xs font-bold bg-emerald-600 text-white shadow">
+    0
+  </span>
 </div>
  </div>
         <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="normal-list"></div>
@@ -170,9 +179,18 @@
     <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
         <div class="p-2 bg-blue-500/10 text-blue-400 font-bold text-[11px] flex justify-between border-b border-blue-500/20">
             <span class="tracking-wider">สแกนออก (OUT)</span>
-           <div class="flex gap-1">
-  <span onclick="setDashboardFilter('out','ออกงาน')" id="stat-out-noon" class="cursor-pointer bg-red-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
-  <span onclick="setDashboardFilter('out','ออกงาน1')" id="stat-out" class="cursor-pointer bg-blue-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
+<div class="flex gap-2">
+  <span onclick="setDashboardFilter('out','ออกงาน')"
+    id="stat-out-noon"
+    class="cursor-pointer w-8 h-6 flex items-center justify-center rounded-md text-xs font-bold bg-sky-400 text-black shadow">
+    0
+  </span>
+
+  <span onclick="setDashboardFilter('out','ออกงาน1')"
+    id="stat-out"
+    class="cursor-pointer w-8 h-6 flex items-center justify-center rounded-md text-xs font-bold bg-blue-600 text-white shadow">
+    0
+  </span>
 </div>
 </div>
             
