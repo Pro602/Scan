@@ -151,8 +151,11 @@
     <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
         <div class="p-2 bg-emerald-500/10 text-emerald-400 font-bold text-[11px] flex justify-between border-b border-emerald-500/20">
             <span class="tracking-wider">มาปกติ (IN)</span>
-            <span id="stat-present" class="bg-emerald-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
-        </div>
+           <div class="flex gap-1">
+  <span onclick="setDashboardFilter('normal','มาปกติ')" id="stat-present-morning" class="cursor-pointer bg-red-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
+  <span onclick="setDashboardFilter('normal','มาปกติ1')" id="stat-present" class="cursor-pointer bg-emerald-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
+</div>
+ 
         <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="normal-list"></div>
     </div>
 
@@ -167,8 +170,11 @@
     <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
         <div class="p-2 bg-blue-500/10 text-blue-400 font-bold text-[11px] flex justify-between border-b border-blue-500/20">
             <span class="tracking-wider">สแกนออก (OUT)</span>
-            <span id="stat-out" class="bg-blue-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
-        </div>
+           <div class="flex gap-1">
+  <span onclick="setDashboardFilter('out','ออกงาน')" id="stat-out-noon" class="cursor-pointer bg-red-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
+  <span onclick="setDashboardFilter('out','ออกงาน1')" id="stat-out" class="cursor-pointer bg-blue-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
+</div>
+      
         <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="out-list"></div>
     </div>
 
@@ -326,6 +332,15 @@
     let targetMenu = null; // เก็บไว้ว่าเขากำลังจะเข้าเมนูไหน
     let supervisors = [];
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
+    let dashboardFilter = {
+  normal: "มาปกติ1",
+  out: "ออกงาน1"
+};
+
+function setDashboardFilter(group, status) {
+  dashboardFilter[group] = status;
+  renderDashboard();
+}
 
 // แก้ไข window.onload เพื่อแยกโหลด Face API ออกไปข้างหลัง
 window.onload = async () => {
@@ -400,7 +415,13 @@ function renderDashboard() {
     const dateInput = document.getElementById('dashboard-date').value;
     const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
     const checkedInIds = new Set(daily.filter(a => a.type === 'IN').map(a => String(a.id)));
-    const counts = { in: 0, late: 0, out: 0 };
+  const counts = {
+  normalMorning: 0,
+  normalNoon: 0,
+  late: 0,
+  outNoon: 0,
+  outEvening: 0
+};
     const lists = { 
         norm: document.getElementById('normal-list'), 
         late: document.getElementById('late-list-display'), 
@@ -477,13 +498,58 @@ const createItem = (a, s) => {
     lists.abs.innerHTML = ''; 
 
     // 2. แยกพนักงานที่ "มาทำงานแล้ว" ลงตามคอลัมน์ (ปกติ, สาย, ออกงาน)
-    daily.forEach(a => {
-        const s = students.find(x => String(x.studentid) === String(a.id));
-        const statusVal = String(a.status || "");
-        if (a.type === 'OUT') { lists.out.innerHTML += createItem(a, s); counts.out++; }
-        else if (statusVal.includes('สาย')) { lists.late.innerHTML += createItem(a, s); counts.late++; }
-        else { lists.norm.innerHTML += createItem(a, s); counts.in++; }
-    });
+daily.forEach(a => {
+    const s = students.find(x => String(x.studentid) === String(a.id));
+    const statusVal = String(a.status || "");
+
+    if (a.type === 'OUT') {
+
+        if (statusVal === "ออกงาน") {
+            counts.outNoon++;
+            if (dashboardFilter.out === "ออกงาน") {
+                lists.out.innerHTML += createItem(a, s);
+            }
+        }
+        else if (statusVal === "ออกงาน1") {
+            counts.outEvening++;
+            if (dashboardFilter.out === "ออกงาน1") {
+                lists.out.innerHTML += createItem(a, s);
+            }
+        }
+        else {
+            counts.outEvening++;
+            if (dashboardFilter.out === "ออกงาน1") {
+                lists.out.innerHTML += createItem(a, s);
+            }
+        }
+
+    } else if (statusVal.includes('สาย')) {
+
+        lists.late.innerHTML += createItem(a, s);
+        counts.late++;
+
+    } else {
+
+        if (statusVal === "มาปกติ") {
+            counts.normalMorning++;
+            if (dashboardFilter.normal === "มาปกติ") {
+                lists.norm.innerHTML += createItem(a, s);
+            }
+        }
+        else if (statusVal === "มาปกติ1") {
+            counts.normalNoon++;
+            if (dashboardFilter.normal === "มาปกติ1") {
+                lists.norm.innerHTML += createItem(a, s);
+            }
+        }
+        else {
+            counts.normalNoon++;
+            if (dashboardFilter.normal === "มาปกติ1") {
+                lists.norm.innerHTML += createItem(a, s);
+            }
+        }
+    }
+});
 
     // 3. จัดการรายชื่อพนักงานที่ "ยังไม่สแกน" หรือ "แจ้งลา" (ทำรอบเดียว)
     students.forEach(s => {
@@ -537,9 +603,13 @@ const createItem = (a, s) => {
         }
     });
     // อัปเดตตัวเลขสรุปบนหน้าจอ
-    document.getElementById('stat-present').innerText = counts.in;
-    document.getElementById('stat-late').innerText = counts.late;
-    document.getElementById('stat-out').innerText = counts.out;
+document.getElementById('stat-present-morning').innerText = counts.normalMorning;
+document.getElementById('stat-present').innerText = counts.normalNoon;
+
+document.getElementById('stat-late').innerText = counts.late;
+
+document.getElementById('stat-out-noon').innerText = counts.outNoon;
+document.getElementById('stat-out').innerText = counts.outEvening;
     document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedInIds.size);
     // --- วางบรรทัดนี้ลงไปครับ ---
     renderUpcomingLeaves(leaves, students); 
