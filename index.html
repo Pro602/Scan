@@ -445,7 +445,15 @@ async function loadAllData() {
 function renderDashboard() {
     const dateInput = document.getElementById('dashboard-date').value;
     const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
-    const checkedInIds = new Set(daily.filter(a => a.type === 'IN').map(a => String(a.id)));
+    const checkedInIds = new Set(
+  daily
+    .filter(a => String(a.type).toUpperCase() === 'IN')
+    .map(a => String(a.id))
+);
+
+const absentPeople = students.filter(s =>
+  !checkedInIds.has(String(s.studentid))
+);
   const counts = {
   normalMorning: 0,
   normalNoon: 0,
@@ -583,9 +591,8 @@ daily.forEach(a => {
 });
 
     // 3. จัดการรายชื่อพนักงานที่ "ยังไม่สแกน" หรือ "แจ้งลา" (ทำรอบเดียว)
-    students.forEach(s => {
-        if(!checkedInIds.has(String(s.studentid))) {
-            const leaveToday = leaves.find(l => String(l.id) === String(s.studentid) && l.date === dateInput);
+absentPeople.forEach(s => {
+    const leaveToday = leaves.find(l => String(l.id) === String(s.studentid) && l.date === dateInput);
             let statusText = "WAITING";
             let bgClass = "bg-orange-500/20 text-orange-400 border border-orange-500/30"; 
             
@@ -599,7 +606,6 @@ daily.forEach(a => {
                 } else {
                     statusText = leaveToday.type;
                     bgClass = "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"; 
-                }
             }
 
             lists.abs.innerHTML += `
@@ -641,7 +647,7 @@ document.getElementById('stat-late').innerText = counts.late;
 
 document.getElementById('stat-out-noon').innerText = counts.outNoon;
 document.getElementById('stat-out').innerText = counts.outEvening;
-    document.getElementById('stat-absent').innerText = Math.max(0, students.length - checkedInIds.size);
+document.getElementById('stat-absent').innerText = absentPeople.length;
     // --- วางบรรทัดนี้ลงไปครับ ---
     renderUpcomingLeaves(leaves, students); 
     // -------------------------
