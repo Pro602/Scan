@@ -373,29 +373,46 @@ function setDashboardFilter(group, status) {
   renderDashboard();
 }
 
+function getTodayLocalDate() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function checkNewDayAndRefreshDashboard() {
+    const dateInput = document.getElementById('dashboard-date');
+    if (!dateInput) return;
+
+    const today = getTodayLocalDate();
+
+    if (dateInput.value !== today) {
+        console.log("🔄 เปลี่ยนวันใหม่ → รีเฟรช Dashboard");
+        dateInput.value = today;
+        loadAllData();
+    }
+}
+    
 // แก้ไข window.onload เพื่อแยกโหลด Face API ออกไปข้างหลัง
 window.onload = async () => {
     lucide.createIcons();
     const dateInput = document.getElementById('dashboard-date');
-    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+    if (dateInput) dateInput.value = getTodayLocalDate();
 
-    // --- STEP 1: โหลดข้อมูลจาก Sheets มาแสดงผลก่อน (รวดเร็ว) ---
     await loadAllData(); 
     
-    // --- STEP 2: สั่งวาดตารางพนักงานทันทีหลังจากได้ข้อมูล ---
     if (typeof renderStudentTable === 'function') {
         renderStudentTable();
     }
 
-    // --- STEP 3: ค่อยๆ โหลด AI Face API ไว้เบื้องหลัง (ไม่ขวางการแสดงผล) ---
     console.log("Loading Face API in background...");
     initFaceAPI().then(() => {
         console.log("Face API Ready!");
-        // ถ้าหน้าสแกนต้องการข้อมูลค่อยสั่ง Render เพิ่มตรงนี้
         if (typeof renderAllStaffForScan === 'function') renderAllStaffForScan();
     });
 
-    // อัปเดตข้อมูลทุก 30 วินาที
+    // ✅ ตัวนี้: อัปเดตข้อมูลทุก 30 วิ
     setInterval(async () => {
         const [aRes, vRes] = await Promise.all([
             apiCall({action:'getAttendance'}), 
@@ -405,7 +422,11 @@ window.onload = async () => {
         if(vRes.success) leaves = vRes.data;
         renderDashboard();
     }, 30000);
+
+    // ✅ ตัวนี้: เช็ควันใหม่ (ต้องแยกออกมา)
+    setInterval(checkNewDayAndRefreshDashboard, 60000);
 };
+    
     async function apiCall(p) {
         try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
         catch(e) { return {success:false}; }
