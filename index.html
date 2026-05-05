@@ -126,9 +126,15 @@
 .leave-marquee-content {
     display: flex;
     gap: 20px;
-    position: absolute;
     white-space: nowrap;
-    animation: leaveScroll 40s linear infinite;
+}
+
+.leave-scroll-active {
+    animation: leaveScroll 55s linear infinite;
+}
+
+.leave-gap {
+    min-width: 250px;
 }
 
 @keyframes leaveScroll {
@@ -1579,11 +1585,14 @@ function renderUpcomingLeaves(allLeaves, allStaff) {
     }).join('');
 
     // ถ้ามีหลายรายการ ให้ clone เพื่อให้วิ่งต่อเนื่อง
-    if (count > 0) {
-        upcomingContainer.innerHTML += upcomingContainer.innerHTML;
-    }
+upcomingContainer.classList.remove("leave-scroll-active");
 
-    statUpcoming.innerText = count;
+if (count > 5) {
+    upcomingContainer.innerHTML += `<div class="leave-gap"></div>` + upcomingContainer.innerHTML;
+    upcomingContainer.classList.add("leave-scroll-active");
+}
+
+statUpcoming.innerText = count;
 }
 // 1. แก้ไขรูปแบบการ์ดลาล่วงหน้า (ดึง Approved By และเปลี่ยนเป็น ค.ศ.)
 function renderLeaveCard(item) {
