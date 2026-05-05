@@ -116,6 +116,26 @@
     0% { transform: translateY(0); }
     100% { transform: translateY(-50%); }
 }
+
+    .leave-marquee-wrap {
+    overflow: hidden;
+    position: relative;
+    height: 70px;
+}
+
+.leave-marquee-content {
+    display: flex;
+    gap: 20px;
+    position: absolute;
+    white-space: nowrap;
+    animation: leaveScroll 40s linear infinite;
+}
+
+@keyframes leaveScroll {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+}
+    
 </style>
 
 <nav class="shadow-lg sticky top-0 z-50 p-3">
@@ -231,13 +251,25 @@
         <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="absent-list"></div>
     </div>
 
-    <div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
-        <div class="p-2 bg-slate-800 text-indigo-400 font-bold text-[11px] flex justify-between border-b border-slate-700">
-            <span class="tracking-wider">พนักงานลาล่วงหน้าที่ผ่านการอนุมัติแล้ว (LEAVE)</span>
-            <span id="stat-upcoming" class="bg-indigo-600 text-white px-2 py-0.5 rounded-lg text-[10px] shadow-lg">0</span>
+<div class="bg-slate-900 rounded-2xl border border-slate-700/50 overflow-hidden flex flex-col h-[650px] shadow-2xl">
+    <div class="p-2 bg-cyan-500/10 text-cyan-400 font-bold text-[11px] flex justify-between border-b border-cyan-500/20">
+        <span class="tracking-wider">สแกนนอกสถานที่</span>
+
+        <div class="flex gap-2">
+            <span id="stat-outside-in"
+                class="min-w-[34px] h-7 flex items-center justify-center rounded-lg text-sm font-semibold bg-emerald-500 text-white shadow-md">
+                0
+            </span>
+
+            <span id="stat-outside-out"
+                class="min-w-[34px] h-7 flex items-center justify-center rounded-lg text-sm font-semibold bg-blue-500 text-white shadow-md">
+                0
+            </span>
         </div>
-        <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="upcoming-leave-list"></div>
     </div>
+
+    <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section custom-scrollbar" id="outside-list"></div>
+</div>
 
     <div class="bg-slate-800/40 rounded-2xl border border-slate-600 overflow-hidden flex flex-col h-[650px]">
         <div class="p-2 border-b border-slate-600 flex justify-between items-center">
@@ -247,6 +279,23 @@
         <div class="flex-grow overflow-y-auto p-2 space-y-2 auto-scroll-section" id="all-staff-scan-list"></div>
     </div>
 </div>
+
+  <!-- ✅ วางแถบล่าง Leave ตรงนี้ -->
+<div class="mt-3 bg-slate-900/80 rounded-2xl border border-indigo-500/30 overflow-hidden shadow-xl">
+    <div class="flex items-center justify-between px-4 py-2 bg-indigo-500/10 border-b border-indigo-500/20">
+        <span class="text-indigo-300 font-bold text-[12px] tracking-wider">
+            พนักงานลาล่วงหน้าที่ผ่านการอนุมัติแล้ว (LEAVE)
+        </span>
+        <span id="stat-upcoming" class="bg-indigo-600 text-white px-3 py-1 rounded-lg text-xs font-bold shadow">
+            0
+        </span>
+    </div>
+
+    <div class="leave-marquee-wrap">
+        <div id="upcoming-leave-list" class="leave-marquee-content"></div>
+    </div>
+</div>
+    
 </div>
     <div id="content-scan" class="hidden">
         <div class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-200 text-slate-800">
@@ -485,228 +534,223 @@ async function loadAllData() {
     // --- ส่วนงาน Dashboard และ Logic ปรับสี (วงแดง 2 & 3) ---
 function renderDashboard() {
     const dateInput = document.getElementById('dashboard-date').value;
-    const daily = attendance.filter(a => a.timestamp && String(a.timestamp).includes(dateInput));
-    const checkedInIds = new Set(
-  daily
-    .filter(a => String(a.type).toUpperCase() === 'IN')
-    .map(a => String(a.id))
-);
 
-const absentPeople = students.filter(s =>
-  !checkedInIds.has(String(s.studentid))
-);
-  const counts = {
-  normalMorning: 0,
-  normalNoon: 0,
-  late: 0,
-  outNoon: 0,
-  outEvening: 0
-};
-    const lists = { 
-        norm: document.getElementById('normal-list'), 
-        late: document.getElementById('late-list-display'), 
-        out: document.getElementById('out-list'), 
-        abs: document.getElementById('absent-list') 
-    };
-
-    // ล้างข้อมูลเก่าและเอา Class เลื่อนออกก่อน Render ใหม่ทุกครั้ง
-    Object.values(lists).forEach(l => { 
-        if(l){ 
-            l.innerHTML = ''; 
-            l.classList.remove('auto-scroll-active'); 
-        } 
-    });
-
-    // ตรวจสอบรายการรออนุมัติ (ปุ่มกระพริบ)
-    const hasPending = leaves.some(l => l.status === 'Pending' || l.status === 'รออนุมัติ');
-    const approveBtn = document.getElementById('tab-approve');
-    if(hasPending) approveBtn.classList.add('btn-pending-pulse');
-    else approveBtn.classList.remove('btn-pending-pulse');
-
-    // ฟังก์ชันสร้าง Template รายการพนักงาน
-// 1. ฟังก์ชันสร้าง Template รายการพนักงาน (รายงาน 1-3: ปกติ, สาย, ออก)
-const createItem = (a, s) => {
-    const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
-    const locValue = (a.location || "").toString().trim();
-    
-    // --- จุดที่ 1: กำหนดสีตามเงื่อนไขหัวรายงาน ---
-    let borderColor = "border-emerald-500/50"; // สีเขียว (ปกติ)
-    let textColor = "text-emerald-400";
-    let statusLabel = "ปกติ";
-
-    if (a.type === 'OUT') {
-        borderColor = "border-blue-500/50";   // สีน้ำเงิน (ออก)
-        textColor = "text-blue-400";
-        statusLabel = "ออก";
-    } else if (String(a.status).includes('สาย')) {
-        borderColor = "border-amber-500/50";  // สีส้ม/เหลือง (สาย)
-        textColor = "text-amber-400";
-        statusLabel = "สาย";
-    }
-
-    let mapBtn = (locValue && locValue.includes(',') && a.location_name !== "THAISIAM Office") ? 
-        `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locValue)}" target="_blank" class="flex items-center hover:scale-110 transition-transform mr-1">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 2a8 8 0 0 0-8 8c0 5.4 6 11.4 7.3 12.6a1 1 0 0 0 1.4 0C14 21.4 20 15.4 20 10a8 8 0 0 0-8-8z"></path>
-                <circle cx="12" cy="10" r="3" fill="#ffffff"></circle>
-            </svg>
-        </a>` : '';
-
-    return `
-    <div class="flex items-center justify-between bg-slate-800/60 p-2 rounded-xl border ${borderColor} mb-1.5 shadow-sm transition-all hover:bg-slate-700/50 min-h-[45px]">
-        <div class="flex items-center gap-3 min-w-0 flex-1">
-            <img src="${s?.imagedatabase64 || ''}" class="w-9 h-9 rounded-full object-cover border-2 border-slate-700 shadow-md">
-            <div class="overflow-hidden leading-tight flex-1">
-                <p class="font-bold text-white text-[10px] truncate uppercase tracking-tight">${a.name}</p>
-                <p class="text-[9px] text-slate-400 truncate mt-0.5">${a.location_name || '-'}</p>
-            </div>
-        </div>
-        <div class="flex flex-col items-end gap-1 ml-2 min-w-[70px]">
-            <div class="flex items-center gap-1.5">
-                ${mapBtn}
-                <span class="text-[9px] font-black italic uppercase ${textColor}">${statusLabel}</span>
-            </div>
-            <p class="text-[10px] font-bold text-slate-200 font-mono leading-none">${time} น.</p>
-        </div>
-    </div>`;
-};
-
- // 1. ล้างข้อมูลเก่าออกให้หมดก่อนเติมใหม่ (ป้องกันข้อมูลซ้อนและพื้นหลังกะพริบ)
-    lists.norm.innerHTML = '';
-    lists.late.innerHTML = '';
-    lists.out.innerHTML = '';
-    lists.abs.innerHTML = ''; 
-
-    // 2. แยกพนักงานที่ "มาทำงานแล้ว" ลงตามคอลัมน์ (ปกติ, สาย, ออกงาน)
-daily.forEach(a => {
-    const s = students.find(x => String(x.studentid) === String(a.id));
-    const statusVal = String(a.status || "");
-
-    if (a.type === 'OUT') {
-
-        if (statusVal === "ออกงาน") {
-            counts.outNoon++;
-            if (dashboardFilter.out === "ออกงาน") {
-                lists.out.innerHTML += createItem(a, s);
-            }
-        }
-        else if (statusVal === "ออกงาน1") {
-            counts.outEvening++;
-            if (dashboardFilter.out === "ออกงาน1") {
-                lists.out.innerHTML += createItem(a, s);
-            }
-        }
-        else {
-            counts.outEvening++;
-            if (dashboardFilter.out === "ออกงาน1") {
-                lists.out.innerHTML += createItem(a, s);
-            }
-        }
-
-    } else if (statusVal.includes('สาย')) {
-
-        lists.late.innerHTML += createItem(a, s);
-        counts.late++;
-
-    } else {
-
-        if (statusVal === "มาปกติ") {
-            counts.normalMorning++;
-            if (dashboardFilter.normal === "มาปกติ") {
-                lists.norm.innerHTML += createItem(a, s);
-            }
-        }
-        else if (statusVal === "มาปกติ1") {
-            counts.normalNoon++;
-            if (dashboardFilter.normal === "มาปกติ1") {
-                lists.norm.innerHTML += createItem(a, s);
-            }
-        }
-        else {
-            counts.normalNoon++;
-            if (dashboardFilter.normal === "มาปกติ1") {
-                lists.norm.innerHTML += createItem(a, s);
-            }
-        }
-    }
-});
-
-    // 3. จัดการรายชื่อพนักงานที่ "ยังไม่สแกน" หรือ "แจ้งลา" (ทำรอบเดียว)
-// 3. จัดการรายชื่อพนักงานที่ "ยังไม่สแกน" หรือ "แจ้งลา" (ทำรอบเดียว)
-absentPeople.forEach(s => {
-
-    const leaveToday = leaves.find(l =>
-        String(l.id) === String(s.studentid) &&
-        l.date === dateInput
+    // ข้อมูลทั้งหมดของวันที่เลือก
+    const dailyAll = attendance.filter(a =>
+        a.timestamp && String(a.timestamp).includes(dateInput)
     );
 
-    let statusText = "WAITING";
-    let bgClass = "bg-orange-500/20 text-orange-400 border border-orange-500/30";
+    // แยก "ทำงานนอกสถานที่" ออกจากรายงานหลัก
+    const outsideDaily = dailyAll.filter(a =>
+        String(a.location_name || '').trim() === "ทำงานนอกสถานที่"
+    );
 
-    const borderColor = "border-pink-500/40";
+    const daily = dailyAll.filter(a =>
+        String(a.location_name || '').trim() !== "ทำงานนอกสถานที่"
+    );
 
-    if (leaveToday) {
-        if (leaveToday.status === 'Pending' || leaveToday.status === 'รออนุมัติ') {
-            statusText = "รออนุมัติ";
-            bgClass = "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30";
-        } else {
-            statusText = leaveToday.type;
-            bgClass = "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+    const checkedInIds = new Set(
+        daily
+            .filter(a => String(a.type).toUpperCase() === 'IN')
+            .map(a => String(a.id))
+    );
+
+    const absentPeople = students.filter(s =>
+        !checkedInIds.has(String(s.studentid))
+    );
+
+    const counts = {
+        normalMorning: 0,
+        normalNoon: 0,
+        late: 0,
+        outNoon: 0,
+        outEvening: 0,
+        outsideIn: 0,
+        outsideOut: 0
+    };
+
+    const lists = {
+        norm: document.getElementById('normal-list'),
+        late: document.getElementById('late-list-display'),
+        out: document.getElementById('out-list'),
+        abs: document.getElementById('absent-list'),
+        outside: document.getElementById('outside-list')
+    };
+
+    Object.values(lists).forEach(l => {
+        if (l) {
+            l.innerHTML = '';
+            l.classList.remove('auto-scroll-active');
         }
+    });
+
+    const hasPending = leaves.some(l => l.status === 'Pending' || l.status === 'รออนุมัติ');
+    const approveBtn = document.getElementById('tab-approve');
+    if (approveBtn) {
+        if (hasPending) approveBtn.classList.add('btn-pending-pulse');
+        else approveBtn.classList.remove('btn-pending-pulse');
     }
 
-    lists.abs.innerHTML += `
-    <div class="flex items-center justify-between bg-slate-800/40 p-2 rounded-xl border ${borderColor} mb-1.5 shadow-sm transition-all min-h-[45px]">
-        <div class="flex items-center gap-3 min-w-0 flex-1">
-            <img src="${s.imagedatabase64 || ''}" class="w-9 h-9 rounded-full object-cover border-2 border-slate-700 shadow-md">
-            <div class="overflow-hidden leading-tight">
-                <p class="font-bold text-white text-[10px] truncate uppercase tracking-tight">${s.name}</p>
-                <p class="text-[9px] text-slate-400 truncate mt-0.5">${s.class || '-'}</p>
-            </div>
-        </div>
-        <div class="text-right min-w-[75px] ml-1">
-            <span class="px-2 py-0.5 text-[8px] rounded-full font-black tracking-wider uppercase ${bgClass}">${statusText}</span>
-        </div>
-    </div>`;
-});
+    const createItem = (a, s) => {
+        const time = (a.timestamp && a.timestamp.includes(' ')) ? a.timestamp.split(' ')[1] : '--:--';
+        const locValue = (a.location || "").toString().trim();
 
-    // --- ส่วนเช็คเงื่อนไขการเลื่อนอัตโนมัติ (ปรับปรุงใหม่) ---
+        let borderColor = "border-emerald-500/50";
+        let textColor = "text-emerald-400";
+        let statusLabel = "ปกติ";
+
+        if (a.type === 'OUT') {
+            borderColor = "border-blue-500/50";
+            textColor = "text-blue-400";
+            statusLabel = "ออก";
+        } else if (String(a.status).includes('สาย')) {
+            borderColor = "border-amber-500/50";
+            textColor = "text-amber-400";
+            statusLabel = "สาย";
+        }
+
+        let mapBtn = (locValue && locValue.includes(',') && a.location_name !== "THAISIAM Office") ?
+            `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locValue)}" target="_blank" class="flex items-center hover:scale-110 transition-transform mr-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a8 8 0 0 0-8 8c0 5.4 6 11.4 7.3 12.6a1 1 0 0 0 1.4 0C14 21.4 20 15.4 20 10a8 8 0 0 0-8-8z"></path>
+                    <circle cx="12" cy="10" r="3" fill="#ffffff"></circle>
+                </svg>
+            </a>` : '';
+
+        return `
+        <div class="flex items-center justify-between bg-slate-800/60 p-2 rounded-xl border ${borderColor} mb-1.5 shadow-sm transition-all hover:bg-slate-700/50 min-h-[45px]">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+                <img src="${s?.imagedatabase64 || ''}" class="w-9 h-9 rounded-full object-cover border-2 border-slate-700 shadow-md">
+                <div class="overflow-hidden leading-tight flex-1">
+                    <p class="font-bold text-white text-[10px] truncate uppercase tracking-tight">${a.name}</p>
+                    <p class="text-[9px] text-slate-400 truncate mt-0.5">${a.location_name || '-'}</p>
+                </div>
+            </div>
+            <div class="flex flex-col items-end gap-1 ml-2 min-w-[70px]">
+                <div class="flex items-center gap-1.5">
+                    ${mapBtn}
+                    <span class="text-[9px] font-black italic uppercase ${textColor}">${statusLabel}</span>
+                </div>
+                <p class="text-[10px] font-bold text-slate-200 font-mono leading-none">${time} น.</p>
+            </div>
+        </div>`;
+    };
+
+    // รายงานหลัก ไม่รวม "ทำงานนอกสถานที่"
+    daily.forEach(a => {
+        const s = students.find(x => String(x.studentid) === String(a.id));
+        const statusVal = String(a.status || "");
+
+        if (a.type === 'OUT') {
+            if (statusVal === "ออกงาน") {
+                counts.outNoon++;
+                if (dashboardFilter.out === "ออกงาน") lists.out.innerHTML += createItem(a, s);
+            } else {
+                counts.outEvening++;
+                if (dashboardFilter.out === "ออกงาน1") lists.out.innerHTML += createItem(a, s);
+            }
+
+        } else if (statusVal.includes('สาย')) {
+            lists.late.innerHTML += createItem(a, s);
+            counts.late++;
+
+        } else {
+            if (statusVal === "มาปกติ") {
+                counts.normalMorning++;
+                if (dashboardFilter.normal === "มาปกติ") lists.norm.innerHTML += createItem(a, s);
+            } else {
+                counts.normalNoon++;
+                if (dashboardFilter.normal === "มาปกติ1") lists.norm.innerHTML += createItem(a, s);
+            }
+        }
+    });
+
+    // รายงานนอกสถานที่
+    outsideDaily.forEach(a => {
+        const s = students.find(x => String(x.studentid) === String(a.id));
+        const typeVal = String(a.type || '').toUpperCase();
+
+        if (typeVal === "IN") counts.outsideIn++;
+        if (typeVal === "OUT") counts.outsideOut++;
+
+        lists.outside.innerHTML += createItem(a, s);
+    });
+
+    // ยังไม่สแกน
+    absentPeople.forEach(s => {
+        const leaveToday = leaves.find(l =>
+            String(l.id) === String(s.studentid) &&
+            l.date === dateInput
+        );
+
+        let statusText = "WAITING";
+        let bgClass = "bg-orange-500/20 text-orange-400 border border-orange-500/30";
+        const borderColor = "border-pink-500/40";
+
+        if (leaveToday) {
+            if (leaveToday.status === 'Pending' || leaveToday.status === 'รออนุมัติ') {
+                statusText = "รออนุมัติ";
+                bgClass = "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30";
+            } else {
+                statusText = leaveToday.type;
+                bgClass = "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+            }
+        }
+
+        lists.abs.innerHTML += `
+        <div class="flex items-center justify-between bg-slate-800/40 p-2 rounded-xl border ${borderColor} mb-1.5 shadow-sm transition-all min-h-[45px]">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+                <img src="${s.imagedatabase64 || ''}" class="w-9 h-9 rounded-full object-cover border-2 border-slate-700 shadow-md">
+                <div class="overflow-hidden leading-tight">
+                    <p class="font-bold text-white text-[10px] truncate uppercase tracking-tight">${s.name}</p>
+                    <p class="text-[9px] text-slate-400 truncate mt-0.5">${s.class || '-'}</p>
+                </div>
+            </div>
+            <div class="text-right min-w-[75px] ml-1">
+                <span class="px-2 py-0.5 text-[8px] rounded-full font-black tracking-wider uppercase ${bgClass}">${statusText}</span>
+            </div>
+        </div>`;
+    });
+
+    // Auto scroll รายงานแนวตั้ง
     Object.keys(lists).forEach(k => {
         const el = lists[k];
         if (!el) return;
 
-        // คอลัมน์ abs (แจ้งลา) ใช้ 13 คน, คอลัมน์อื่น (norm, late, out) ใช้ 12 คน
         const limit = (k === 'abs') ? 12 : 11;
 
         if (el.children.length > limit) {
-          el.innerHTML = `
-    <div class="scroll-wrapper">
-        ${el.innerHTML}
-        ${el.innerHTML}
-    </div>
-    `;// Clone ข้อมูลเพื่อให้เลื่อนต่อเนื่อง
+            el.innerHTML = `
+                <div class="scroll-wrapper">
+                    ${el.innerHTML}
+                    ${el.innerHTML}
+                </div>
+            `;
             el.classList.add('auto-scroll-active');
         } else {
             el.classList.remove('auto-scroll-active');
         }
     });
-    // อัปเดตตัวเลขสรุปบนหน้าจอ
-document.getElementById('stat-present-morning').innerText = counts.normalMorning;
-document.getElementById('stat-present').innerText = counts.normalNoon;
 
-document.getElementById('stat-late').innerText = counts.late;
+    // ตัวเลขรายงานหลัก
+    document.getElementById('stat-present-morning').innerText = counts.normalMorning;
+    document.getElementById('stat-present').innerText = counts.normalNoon;
+    document.getElementById('stat-late').innerText = counts.late;
+    document.getElementById('stat-out-noon').innerText = counts.outNoon;
+    document.getElementById('stat-out').innerText = counts.outEvening;
+    document.getElementById('stat-absent').innerText = absentPeople.length;
 
-document.getElementById('stat-out-noon').innerText = counts.outNoon;
-document.getElementById('stat-out').innerText = counts.outEvening;
-document.getElementById('stat-absent').innerText = absentPeople.length;
-    // --- วางบรรทัดนี้ลงไปครับ ---
-    renderUpcomingLeaves(leaves, students); 
-    // -------------------------
+    // ตัวเลขรายงานนอกสถานที่
+    document.getElementById('stat-outside-in').innerText = counts.outsideIn;
+    document.getElementById('stat-outside-out').innerText = counts.outsideOut;
 
-if (typeof lucide !== 'undefined') {
-    setTimeout(() => { lucide.createIcons(); }, 150);
-}
-   setTimeout(updateScrollSpeed, 300); 
+    renderUpcomingLeaves(leaves, students);
+
+    if (typeof lucide !== 'undefined') {
+        setTimeout(() => { lucide.createIcons(); }, 150);
+    }
+
+    setTimeout(updateScrollSpeed, 300);
 }
     
     // --- ส่วนงานจัดการการอนุมัติ ---
@@ -1482,47 +1526,59 @@ function resetAndGoBack() {
 function renderUpcomingLeaves(allLeaves, allStaff) {
     const upcomingContainer = document.getElementById('upcoming-leave-list');
     const statUpcoming = document.getElementById('stat-upcoming');
-    if(!upcomingContainer || !statUpcoming) return;
+
+    if (!upcomingContainer || !statUpcoming) return;
 
     const dateInput = document.getElementById('dashboard-date').value;
     const today = new Date(dateInput);
     today.setHours(0, 0, 0, 0);
 
-    upcomingContainer.innerHTML = '';
-    let count = 0;
-
     const filteredLeaves = allLeaves.filter(row => {
         const lDate = new Date(row.Date || row.date);
         lDate.setHours(0, 0, 0, 0);
+
         const lStatus = (row.Status || row.status || "").toString().toLowerCase();
+
         return lStatus === 'approved' && lDate > today;
     });
 
-    filteredLeaves.forEach(leave => {
-        const s = allStaff.find(x => String(x.studentid) === String(leave.id || leave.StudentID));
-        if (s) {
-            count++;
-            const d = new Date(leave.Date || leave.date);
-            const dStr = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-            // ดึงชื่อ Approved By มาแสดงผล
-            const approvedBy = leave.ApprovedBy || leave.approvedby || '-';
+    let count = 0;
 
-            upcomingContainer.innerHTML += `
-                <div class="flex items-center justify-between bg-slate-800/40 p-2 rounded-xl border border-white/5 mb-2 shadow-sm transition-all hover:bg-slate-700/50">
-                    <div class="flex items-center gap-3 min-w-0 flex-1">
-                        <img src="${s.imagedatabase64}" class="w-9 h-9 rounded-full object-cover border-2 border-indigo-500/30">
-                        <div class="overflow-hidden leading-tight">
-                            <p class="font-bold text-white text-[11px] truncate uppercase">${s.name}</p>
-                            <p class="text-[9px] text-slate-400 italic">Approved By: <span class="text-emerald-400 font-semibold">${approvedBy}</span></p>
-                        </div>
+    upcomingContainer.innerHTML = filteredLeaves.map(leave => {
+        const s = allStaff.find(x =>
+            String(x.studentid) === String(leave.id || leave.StudentID)
+        );
+
+        if (!s) return "";
+
+        count++;
+
+        const d = new Date(leave.Date || leave.date);
+        const dStr = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+        const approvedBy = leave.ApprovedBy || leave.approvedby || '-';
+
+        return `
+            <div class="flex items-center gap-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-2 min-w-[260px] shadow-sm">
+                <img src="${s.imagedatabase64 || ''}" class="w-10 h-10 rounded-full object-cover border-2 border-indigo-500/40">
+
+                <div class="text-left leading-tight min-w-0">
+                    <div class="text-white text-xs font-bold truncate">${s.name}</div>
+                    <div class="text-indigo-300 text-[10px]">
+                        ${leave.Type || leave.type} | ${dStr}
                     </div>
-                    <div class="text-right min-w-[65px] ml-1">
-                        <p class="text-[9px] font-bold text-amber-400 leading-none mb-1">${leave.Type || leave.type}</p>
-                        <p class="text-[10px] font-black text-white/90 tracking-tighter italic leading-none">${dStr}</p>
+                    <div class="text-emerald-400 text-[9px] truncate">
+                        Approved By: ${approvedBy}
                     </div>
-                </div>`;
-        }
-    });
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // ถ้ามีหลายรายการ ให้ clone เพื่อให้วิ่งต่อเนื่อง
+    if (count > 0) {
+        upcomingContainer.innerHTML += upcomingContainer.innerHTML;
+    }
+
     statUpcoming.innerText = count;
 }
 // 1. แก้ไขรูปแบบการ์ดลาล่วงหน้า (ดึง Approved By และเปลี่ยนเป็น ค.ศ.)
