@@ -404,8 +404,14 @@ window.onload = async () => {
     
     // ✅ เพิ่มตรงนี้ (สำคัญมาก)
     if (typeof renderAllStaffForScan === 'function') {
-        renderAllStaffForScan();
-    }
+    renderAllStaffForScan();
+
+    setTimeout(() => {
+        if (typeof startContinuousScroll === "function") {
+            startContinuousScroll();
+        }
+    }, 500);
+}
 
     if (typeof renderStudentTable === 'function') {
         renderStudentTable();
@@ -686,6 +692,11 @@ document.getElementById('stat-absent').innerText = absentPeople.length;
         setTimeout(() => { lucide.createIcons(); }, 150);
     }
 }
+    setTimeout(() => {
+    if (typeof startContinuousScroll === "function") {
+        startContinuousScroll();
+    }
+}, 500);
     
     // --- ส่วนงานจัดการการอนุมัติ ---
     function renderApprovalList() {
