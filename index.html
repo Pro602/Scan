@@ -402,6 +402,11 @@ window.onload = async () => {
 
     await loadAllData(); 
     
+    // ✅ เพิ่มตรงนี้ (สำคัญมาก)
+    if (typeof renderAllStaffForScan === 'function') {
+        renderAllStaffForScan();
+    }
+
     if (typeof renderStudentTable === 'function') {
         renderStudentTable();
     }
@@ -409,10 +414,10 @@ window.onload = async () => {
     console.log("Loading Face API in background...");
     initFaceAPI().then(() => {
         console.log("Face API Ready!");
-        if (typeof renderAllStaffForScan === 'function') renderAllStaffForScan();
+        // ❌ ลบบรรทัดนี้ออก
+        // renderAllStaffForScan();
     });
 
-    // ✅ ตัวนี้: อัปเดตข้อมูลทุก 30 วิ
     setInterval(async () => {
         const [aRes, vRes] = await Promise.all([
             apiCall({action:'getAttendance'}), 
@@ -423,7 +428,6 @@ window.onload = async () => {
         renderDashboard();
     }, 30000);
 
-    // ✅ ตัวนี้: เช็ควันใหม่ (ต้องแยกออกมา)
     setInterval(checkNewDayAndRefreshDashboard, 60000);
 };
     
