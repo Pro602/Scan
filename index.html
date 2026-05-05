@@ -102,6 +102,17 @@
     height: 24px;
     border-radius: 6px;
 }  
+
+    .scroll-wrapper {
+    display: flex;
+    flex-direction: column;
+    animation: autoScroll 40s linear infinite;
+}
+
+@keyframes autoScroll {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+}
 </style>
 
 <nav class="shadow-lg sticky top-0 z-50 p-3">
@@ -405,10 +416,6 @@ window.onload = async () => {
     // ✅ เพิ่มตรงนี้ (สำคัญมาก)
     if (typeof renderAllStaffForScan === 'function') {
     renderAllStaffForScan();
-
-setTimeout(() => {
-    startAutoScrollNow();
-}, 300);
 }
 
     if (typeof renderStudentTable === 'function') {
@@ -689,7 +696,12 @@ absentPeople.forEach(s => {
         const limit = (k === 'abs') ? 12 : 11;
 
         if (el.children.length > limit) {
-            el.innerHTML += el.innerHTML; // Clone ข้อมูลเพื่อให้เลื่อนต่อเนื่อง
+          el.innerHTML = `
+    <div class="scroll-wrapper">
+        ${el.innerHTML}
+        ${el.innerHTML}
+    </div>
+    `;// Clone ข้อมูลเพื่อให้เลื่อนต่อเนื่อง
             el.classList.add('auto-scroll-active');
         } else {
             el.classList.remove('auto-scroll-active');
@@ -711,11 +723,6 @@ document.getElementById('stat-absent').innerText = absentPeople.length;
 if (typeof lucide !== 'undefined') {
     setTimeout(() => { lucide.createIcons(); }, 150);
 }
-
-setTimeout(() => {
-    startAutoScrollNow();
-}, 300);
-
 }
     
     // --- ส่วนงานจัดการการอนุมัติ ---
