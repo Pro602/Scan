@@ -103,10 +103,13 @@
     border-radius: 6px;
 }  
 
-    .scroll-wrapper {
+.scroll-wrapper {
     display: flex;
     flex-direction: column;
-    animation: autoScroll 110s linear infinite;
+    animation-name: autoScroll;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    animation-duration: var(--scroll-duration, 110s);
 }
 
 @keyframes autoScroll {
@@ -703,6 +706,7 @@ document.getElementById('stat-absent').innerText = absentPeople.length;
 if (typeof lucide !== 'undefined') {
     setTimeout(() => { lucide.createIcons(); }, 150);
 }
+   setTimeout(updateScrollSpeed, 300); 
 }
     
     // --- ส่วนงานจัดการการอนุมัติ ---
@@ -1706,6 +1710,19 @@ function showScanSection(id, name, img) {
     
     // เปลี่ยนหน้าไปยังส่วนสแกน (ใช้คำสั่งเดิมในโปรแกรมคุณ)
     switchPage('scan-page'); 
+}
+
+    function updateScrollSpeed() {
+    document.querySelectorAll('.scroll-wrapper').forEach(wrapper => {
+        const height = wrapper.scrollHeight / 2;
+
+        // ยิ่งเลขมาก = ยิ่งช้า
+        const pxPerSecond = 10;
+
+        const duration = Math.max(80, height / pxPerSecond);
+
+        wrapper.style.setProperty('--scroll-duration', duration + 's');
+    });
 }
 </script>
     <div id="auth-modal" class="fixed inset-0 bg-slate-900/90 z-[9999] flex items-center justify-center hidden backdrop-blur-sm">
