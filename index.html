@@ -550,11 +550,11 @@ function renderDashboard() {
         String(a.location_name || '').trim() !== "ทำงานนอกสถานที่"
     );
 
-    const checkedInIds = new Set(
-        daily
-            .filter(a => String(a.type).toUpperCase() === 'IN')
-            .map(a => String(a.id))
-    );
+const checkedInIds = new Set(
+    dailyAll
+        .filter(a => String(a.type).toUpperCase() === 'IN')
+        .map(a => String(a.id))
+);
 
     const absentPeople = students.filter(s =>
         !checkedInIds.has(String(s.studentid))
