@@ -442,27 +442,7 @@ window.onload = async () => {
     setInterval(checkNewDayAndRefreshDashboard, 60000);
 };
 
-    function startAutoScrollNow() {
-    document.querySelectorAll('.auto-scroll-section').forEach(section => {
-        if (!section) return;
 
-        if (section._scrollTimer) {
-            clearInterval(section._scrollTimer);
-        }
-
-        if (section.scrollHeight <= section.clientHeight) return;
-
-        section.scrollTop = 0;
-
-        section._scrollTimer = setInterval(() => {
-            section.scrollTop += 1;
-
-            if (section.scrollTop + section.clientHeight >= section.scrollHeight) {
-                section.scrollTop = 0;
-            }
-        }, 40);
-    });
-}
     
     async function apiCall(p) {
         try { const r = await fetch(gasUrl, {method:'POST', body:JSON.stringify(p)}); return await r.json(); } 
