@@ -256,12 +256,12 @@
         <span class="tracking-wider">สแกนนอกสถานที่</span>
 
         <div class="flex gap-2">
-            <span id="stat-outside-in"
+            <span onclick="setDashboardFilter('outside','IN')" id="stat-outside-in"
                 class="min-w-[34px] h-7 flex items-center justify-center rounded-lg text-sm font-semibold bg-emerald-500 text-white shadow-md">
                 0
             </span>
 
-            <span id="stat-outside-out"
+            <span onclick="setDashboardFilter('outside','OUT')" id="stat-outside-out"
                 class="min-w-[34px] h-7 flex items-center justify-center rounded-lg text-sm font-semibold bg-blue-500 text-white shadow-md">
                 0
             </span>
@@ -426,9 +426,10 @@
     let targetMenu = null; // เก็บไว้ว่าเขากำลังจะเข้าเมนูไหน
     let supervisors = [];
     const AUTHORIZED_USERS = { "Weera": "TS001", "Jang": "TS002" };
-    let dashboardFilter = {
+  let dashboardFilter = {
   normal: "มาปกติ",
-  out: "ออกงาน"
+  out: "ออกงาน",
+  outside: "IN"
 };
 
 function setDashboardFilter(group, status) {
@@ -666,15 +667,18 @@ function renderDashboard() {
     });
 
     // รายงานนอกสถานที่
-    outsideDaily.forEach(a => {
-        const s = students.find(x => String(x.studentid) === String(a.id));
-        const typeVal = String(a.type || '').toUpperCase();
+outsideDaily.forEach(a => {
+    const s = students.find(x => String(x.studentid) === String(a.id));
+    const typeVal = String(a.type || '').toUpperCase();
 
-        if (typeVal === "IN") counts.outsideIn++;
-        if (typeVal === "OUT") counts.outsideOut++;
+    if (typeVal === "IN") counts.outsideIn++;
+    if (typeVal === "OUT") counts.outsideOut++;
 
+    // ✅ แสดงเฉพาะฝั่งที่กดเลือก
+    if (dashboardFilter.outside === typeVal) {
         lists.outside.innerHTML += createItem(a, s);
-    });
+    }
+});
 
     // ยังไม่สแกน
     absentPeople.forEach(s => {
